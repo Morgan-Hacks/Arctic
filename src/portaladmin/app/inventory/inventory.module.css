@@ -1,0 +1,511 @@
+/*
+ * The inventory screen.
+ *
+ * A module of its own, not more rules in globals.css -- nothing here is used
+ * anywhere else, and the shared stylesheet is edited by everybody at once.
+ *
+ * Every colour is a token from libs/ui/tokens.css. The only one that carries
+ * meaning on this screen is --warn, on a row that has fallen to its own
+ * threshold -- see the comment on .count below for why the pill alone is not
+ * enough.
+ *
+ * Deliberately not pinned to the viewport. A screen that reaches for
+ * height: 100dvh and overflow: hidden on its own <main> trades one scrollbar
+ * for two -- see the comment in templates.module.css, which found that the
+ * hard way. This one flows like /applicants and /people: the list grows to
+ * whatever height it needs and the window scrolls once.
+ *
+ * Built mobile-first on purpose. Somebody counting boxes in a storeroom is
+ * reading this on a phone, not a laptop, and +1 / -1 is the control they
+ * reach for most -- so the base rules below are the phone's one column, and a
+ * single row is something the screen earns at --bp-md and up.
+ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Event picker ------------------------------------------------------------ */
+
+.eventPicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 360px;
+  min-height: 42px;
+  margin-bottom: 20px;
+  padding-left: 14px;
+  border-radius: 12px;
+  background: var(--field);
+}
+
+.eventPicker > svg {
+  flex: none;
+  color: var(--muted);
+}
+
+.eventPicker > span:not(:has(select)) {
+  padding: 11px 14px 11px 0;
+  font-size: 13px;
+}
+
+.eventPicker select {
+  width: 100%;
+  height: 42px;
+  padding-block: 11px;
+  padding-left: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 13px;
+}
+
+.eventPicker:focus-within {
+  background: var(--field-active);
+}
+
+.eventPicker select:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* The list ----------------------------------------------------------------- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * One item. A card rather than a table row: the control somebody reaches for
+ * most is +1 / -1, and a table cell is too cramped to hold a tap target worth
+ * pressing with a thumb.
+ *
+ * Stacked by default -- thumbnail and name, then the count and its steppers,
+ * then the row actions, each on its own line -- and only pulled onto one row
+ * once there is room for it, in the media query at the bottom.
+ */
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+}
+
+/* The one thing this border is allowed to say. Not the stronger --stop: being
+   low is an instruction to reorder, not a thing that has already gone wrong. */
+.item[data-low] {
+  border-color: var(--warn);
+}
+
+.itemMain {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.thumb,
+.thumbPlaceholder {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 10px;
+}
+
+.thumb {
+  object-fit: cover;
+  background: var(--sunken);
+}
+
+.thumbPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sunken);
+  color: var(--faint);
+}
+
+.itemText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.itemName {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemMeta {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemNote {
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * The count and its steppers, together -- they are read and pressed as one
+ * unit, which is why they share a row even on a phone where everything else
+ * on the card stacks.
+ */
+.quantity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.itemCount {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+/*
+ * The number itself. Largest text on the card: this is the one thing
+ * logistics opens the page to read, and it should be legible from a step
+ * back without anybody leaning in.
+ *
+ * Low takes the warning colour here, on the number, rather than relying only
+ * on the pill beside it -- a pill at the end of a row is the part of a quick
+ * scan that gets skipped. The colour belongs on the thing already being read.
+ */
+.count {
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.item[data-low] .count {
+  color: var(--warn);
+}
+
+.lowPill {
+  padding: 2px 8px;
+  border: 1px solid var(--warn);
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Quick adjust -------------------------------------------------------------- */
+
+/*
+ * +1 / -1. 44px square, which is the tap target a thumb can hit reliably
+ * without the two buttons being mistaken for each other -- the whole reason
+ * this pair exists is to make one shirt out the door a single, confident tap.
+ */
+.step {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
+.stepButton {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+/* Row actions ---------------------------------------------------------------- */
+
+.itemActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rowAction {
+  height: 34px;
+  padding: 0 11px;
+  font-size: 12px;
+}
+
+.rowAction.danger {
+  color: var(--stop);
+  border-color: var(--stop);
+}
+
+.rowAction.danger:hover {
+  background: var(--stop-soft);
+}
+
+/* Dialogs -------------------------------------------------------------------- */
+
+.dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 24px;
+  overflow-y: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow: 0 20px 60px color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 28%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dialogHeader h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.closeButton {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.closeButton:hover {
+  background: var(--field);
+}
+
+.dialogDescription {
+  margin: 10px 0 20px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.dialogDescription strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.dialogActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--field);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.field input:focus,
+.field textarea:focus {
+  outline: none;
+  box-shadow: none;
+  background: var(--field-active);
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.fieldRow {
+  display: flex;
+  gap: 12px;
+}
+
+.fieldRow .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.optional {
+  color: var(--faint);
+  font-weight: 400;
+}
+
+.hint {
+  margin: -6px 0 14px;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+/* The add/take-out choice in the adjust dialog. A pair of buttons rather than
+   a signed number field -- typing "-12" into a box is a way to make the exact
+   mistake that typing 12 into a box already labelled "Take out" is not. */
+.directionChoice {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+
+.directionChoice label {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.directionChoice label[data-checked] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.directionChoice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* History ---------------------------------------------------------------- */
+
+.movements {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.movement {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 13px;
+}
+
+.movement:last-child {
+  border-bottom: 0;
+}
+
+.delta {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.delta[data-sign="in"] {
+  color: var(--ok);
+}
+
+.delta[data-sign="out"] {
+  color: var(--stop);
+}
+
+.balance {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.movementMeta {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.movementReason {
+  flex-basis: 100%;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+/* --bp-md: 40rem / 640px. A large phone or a small tablet -- the point where
+   a card has room to put the name on the same row as the count without
+   either one being squeezed. */
+@media (min-width: 640px) {
+  .item {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .itemMain {
+    flex: 1 1 220px;
+  }
+
+  .quantity {
+    flex: none;
+  }
+
+  .itemActions {
+    margin-left: auto;
+  }
+}
+
+/* --bp-sm: 30rem / 480px. Below this, keep the native keyboard from zooming
+   the page on focus -- a 16px input does not trigger it, a 14px one does. */
+@media (max-width: 480px) {
+  .field input,
+  .field textarea {
+    font-size: 16px;
+  }
+}

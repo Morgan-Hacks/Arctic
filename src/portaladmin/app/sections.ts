@@ -31,6 +31,10 @@
  * - Events, Forms and Applicants all read lists scoped to an event, and
  *   `GET /admin/events`, `GET /admin/forms` and `GET /admin/applicants` are
  *   each behind `applications.view`.
+ * - Inventory is `GET /admin/inventory`, behind `inventory.manage`. Unlike
+ *   the rows above, there is no separate read permission for this one --
+ *   every route under it needs `inventory.manage`, so reaching the screen at
+ *   all already means its buttons work.
  * - People is `GET /admin/people`, behind `people.view`.
  * - Mail is `GET /admin/campaigns`, behind `email.view_stats`.
  * - Audit is `GET /admin/audit`, behind `audit.view`.
@@ -78,6 +82,7 @@ const SECTIONS: readonly GatedSection[] = [
   { href: "/people", label: "People", needs: ["people.view"] },
   { href: "/forms", label: "Forms", needs: ["applications.view"] },
   { href: "/applicants", label: "Applicants", needs: ["applications.view"] },
+  { href: "/inventory", label: "Inventory", needs: ["inventory.manage"] },
   { href: "/mail", label: "Email Campaign", needs: ["email.view_stats"] },
   { href: "/templates", label: "Templates", needs: ["email.manage_templates", "email.delete_templates"] },
   { href: "/audit", label: "Audit", needs: ["audit.view"] },

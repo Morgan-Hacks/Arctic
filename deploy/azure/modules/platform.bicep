@@ -60,6 +60,13 @@ var storageName = 'stmh${environmentName}${uniqueString(subscription().subscript
 
 var resumeContainerName = 'resumes'
 
+// Photos of what logistics is holding. A second container in the same account
+// rather than a second account: the Blob Data Contributor grant below is scoped
+// to the account, so this is covered by it without another role assignment --
+// and a role assignment on a resource group that does not have one yet is how
+// the first production deploy failed.
+var inventoryContainerName = 'inventory'
+
 resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
   name: registryName
   scope: resourceGroup(registryResourceGroup)
@@ -238,6 +245,19 @@ resource resumeContainer 'Microsoft.Storage/storageAccounts/blobServices/contain
   properties: {
     // Said out loud rather than left to the default. This is the property that
     // decides whether a stranger holding a URL can read somebody's CV.
+    publicAccess: 'None'
+  }
+}
+
+resource inventoryContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobs
+  name: inventoryContainerName
+  properties: {
+    // None here too, though a photo of a box of shirts is not a CV. The account
+    // sets allowBlobPublicAccess: false, so this could not be public even if it
+    // asked to be -- saying it anyway keeps the two containers answering the
+    // same question the same way, rather than leaving the next reader to work
+    // out whether the difference was deliberate.
     publicAccess: 'None'
   }
 }

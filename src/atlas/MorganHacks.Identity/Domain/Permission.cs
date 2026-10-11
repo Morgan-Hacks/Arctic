@@ -137,6 +137,15 @@ public readonly record struct Permission(string Value)
     public static readonly Permission SponsorsEdit = new("sponsors.edit");
     public static readonly Permission SponsorsViewFinancials = new("sponsors.view_financials");
 
+    /// <summary>Add, correct and hand out what logistics is holding.</summary>
+    /// <remarks>
+    /// One permission rather than a read and a write pair. Everybody who needs
+    /// to look at the count is somebody who moves the boxes, and a logistics
+    /// volunteer who can see forty shirts but not record handing one over is a
+    /// tracker that goes stale on the day it matters most.
+    /// </remarks>
+    public static readonly Permission InventoryManage = new("inventory.manage");
+
     // Event ops — phase two
     public static readonly Permission CheckinScan = new("checkin.scan");
     public static readonly Permission SwagScan = new("swag.scan");
@@ -177,6 +186,7 @@ public readonly record struct Permission(string Value)
         SponsorsView, SponsorsEdit, SponsorsViewFinancials,
         CheckinScan, SwagScan, CheckinViewStats,
         JudgingScoreAssigned, JudgingViewAll, JudgingAssign,
+        InventoryManage,
         PeopleView, PeopleManageTeams, PeopleGrantPermissions, AuditView,
     };
 
