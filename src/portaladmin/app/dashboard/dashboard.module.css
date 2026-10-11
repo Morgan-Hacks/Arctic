@@ -1,0 +1,93 @@
+/*
+ * Read from across a room, not from a chair.
+ *
+ * Everything here is larger than the rest of the console on purpose. The
+ * tile value uses clamp() rather than a breakpoint because the useful size
+ * depends on how far away the screen is, which no media query knows -- it
+ * tracks the viewport and lands sensibly on a laptop at the desk and on a
+ * television on the wall.
+ */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.event {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.fresh {
+  margin: 0;
+  color: var(--faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Stale is a state with two levels, not a single alarm. A missed poll is a
+ * note; several missed polls is something somebody has to go and look at.
+ */
+.stale {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--warn);
+  border-radius: 10px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.stale[data-bad] {
+  border-color: var(--stop);
+  background: var(--stop-soft);
+  color: var(--stop);
+}
+
+.retry {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 14px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 22px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--raised);
+}
+
+/* The one number somebody is most likely to be looking for. */
+.tile[data-lead] {
+  border-color: var(--accent);
+}
+
+.tileValue {
+  font-size: clamp(2.25rem, 7vw, 4.5rem);
+  font-weight: 650;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.tileLabel {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
