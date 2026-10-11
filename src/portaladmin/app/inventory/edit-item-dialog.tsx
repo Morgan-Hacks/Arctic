@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Cancel01Icon, Edit02Icon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/components/ui/icon";
 import { updateItem } from "./actions";
+import { ImageField } from "./image-field";
 import type { ItemView } from "./api";
 import styles from "./inventory.module.css";
 
@@ -99,6 +100,9 @@ function EditItemForm({ item, onClose }: { item: ItemView; onClose: () => void }
             <Icon icon={Cancel01Icon} size={20} />
           </button>
         </div>
+
+        {/* Its own write, not part of Save -- see ImageField. */}
+        <ImageField item={item} />
 
         <div className={styles.field}>
           <label htmlFor="edit-item-name">Name</label>

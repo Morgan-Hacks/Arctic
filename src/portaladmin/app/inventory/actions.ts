@@ -218,3 +218,32 @@ export async function loadMovements(id: string): Promise<MovementsResult> {
   const read = await readMovements(id);
   return read.ok ? { ok: true, movements: read.movements } : { ok: false, error: read.error };
 }
+
+/**
+ * Takes the photo off an item.
+ *
+ * A server action, unlike setting one. This request carries an id and nothing
+ * else, so the body limit that rules out an action for the upload -- see
+ * ImageField -- does not apply to removing it.
+ */
+export async function clearItemImage(id: string): Promise<ItemState> {
+  let response: Response;
+  try {
+    response = await apiFetch(`/admin/inventory/${encodeURIComponent(id)}/image`, {
+      method: "DELETE",
+    });
+  } catch {
+    return { error: "The API could not be reached. Try again." };
+  }
+
+  if (response.status === 403) {
+    return { error: "You do not have inventory.manage. Ask an admin." };
+  }
+
+  if (!response.ok) {
+    return { error: await refusal(response, "That photo could not be removed.") };
+  }
+
+  revalidatePath("/inventory");
+  return {};
+}
