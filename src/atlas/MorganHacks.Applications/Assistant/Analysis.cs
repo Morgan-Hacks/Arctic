@@ -180,6 +180,18 @@ public static class Analyse
         };
     }
 
+
+    /// <summary>A whole percentage, spelled the same everywhere.</summary>
+    /// <remarks>
+    /// Not the "P0" format, which is culture-sensitive in a way that is easy
+    /// to miss: it writes "80%" under en-US and "80 %" under the invariant
+    /// culture the containers run with. That is a space nobody chose appearing
+    /// in production copy and in nothing a developer sees locally -- CI caught
+    /// it here, and only because a test happened to assert the string.
+    /// </remarks>
+    private static string Percent(double share) =>
+        $"{Math.Round(share * 100, MidpointRounding.AwayFromZero):0}%";
+
     /// <summary>A plain figure with its own breakdown.</summary>
     private static Analysis Count(int value, string noun, string basis, IReadOnlyList<AnalysisRow> rows) =>
         new($"{value:N0} {noun}", basis, rows);
@@ -316,7 +328,7 @@ public static class Analyse
 
         return new Analysis(
             // COPY: needs sign-off.
-            $"{share:P0} {verb} — {part:N0} of {whole:N0}",
+            $"{Percent(share)} {verb} — {part:N0} of {whole:N0}",
             basis,
             []);
     }
@@ -357,8 +369,8 @@ public static class Analyse
         var direction = then == 0
             ? (now > 0 ? "up from none" : "still none")
             : now == then ? "level with"
-            : now > then ? $"up {(double)(now - then) / then:P0} on"
-            : $"down {(double)(then - now) / then:P0} on";
+            : now > then ? $"up {Percent((double)(now - then) / then)} on"
+            : $"down {Percent((double)(then - now) / then)} on";
 
         return new Analysis(
             $"{now:N0} in the last {recent.Count} days — {direction} the {before.Count} before",

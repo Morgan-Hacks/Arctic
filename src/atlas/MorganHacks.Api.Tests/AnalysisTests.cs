@@ -244,4 +244,28 @@ public class AnalysisTests
         Assert.Contains("small number of real people", reading.Basis);
         Assert.Equal(30d / 32, reading.Rows[0].Share, 5);
     }
+
+    /// <summary>
+    /// A percentage is spelled the same wherever this runs.
+    /// </summary>
+    /// <remarks>
+    /// The "P0" format is culture-sensitive in a way that is easy to miss:
+    /// "80%" under en-US and "80 %" under the invariant culture the containers
+    /// run with. A developer would never see the space and every organizer
+    /// would. This asserts the string rather than the number for that reason.
+    /// </remarks>
+    [Theory]
+    [InlineData(AssistantMetric.AcceptanceRate)]
+    [InlineData(AssistantMetric.ConfirmRate)]
+    [InlineData(AssistantMetric.ShowRate)]
+    [InlineData(AssistantMetric.CompletionRate)]
+    [InlineData(AssistantMetric.DeclineRate)]
+    public void A_percentage_carries_no_space_before_its_sign(AssistantMetric metric)
+    {
+        var headline = Analyse.Of(metric, Data())!.Headline;
+
+        Assert.Contains("%", headline);
+        Assert.DoesNotContain(" %", headline);
+        Assert.DoesNotContain("\u00a0%", headline);
+    }
 }
