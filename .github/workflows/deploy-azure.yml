@@ -139,6 +139,7 @@ jobs:
           # decides, which is not the same as being told 'false'.
           ENABLE_HACKER_PORTAL_FEATURE: ${{ vars.ENABLE_HACKER_PORTAL_FEATURE }}
           PROXY_SHARED_SECRET: ${{ secrets.PROXY_SHARED_SECRET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: ./deploy/azure/deploy.sh ${{ steps.target.outputs.env }}
 
       - name: Deploy
@@ -163,6 +164,7 @@ jobs:
           # decides, which is not the same as being told 'false'.
           ENABLE_HACKER_PORTAL_FEATURE: ${{ vars.ENABLE_HACKER_PORTAL_FEATURE }}
           PROXY_SHARED_SECRET: ${{ secrets.PROXY_SHARED_SECRET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SKIP_PUSH: ${{ steps.target.outputs.skip_push }}
         run: ./deploy/azure/deploy.sh ${{ steps.target.outputs.env }} --apply ${{ steps.target.outputs.tag }}
 

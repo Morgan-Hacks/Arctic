@@ -186,10 +186,30 @@ builder.Services.AddSingleton<EmailAnalyticsStore>();
 // source, which is itself a singleton owning the connection pool.
 builder.Services.AddSingleton<IInventoryStore, PostgresInventoryStore>();
 
-// Reads a question into a plan. A table of words today, and whatever reads
-// sentences better later -- the swap is this line, because what an answer is
-// allowed to contain is decided by AssistantAnswer and not by the reader.
-builder.Services.AddSingleton<IQuestionRouter, WordRouter>();
+// Reads a question into a plan.
+//
+// The word table is the floor and is always built, because it is what answers
+// when there is no key, when the provider is down, and when a model says
+// something this cannot make sense of. The model is layered over it rather
+// than replacing it, so the assistant degrades to quieter instead of broken.
+builder.Services.AddHttpClient("openai");
+builder.Services.AddSingleton<IQuestionRouter>(services =>
+{
+    var words = new WordRouter();
+    var key = builder.Configuration["OpenAI:ApiKey"];
+
+    if (string.IsNullOrWhiteSpace(key))
+    {
+        return words;
+    }
+
+    return new OpenAiQuestionRouter(
+        services.GetRequiredService<IHttpClientFactory>().CreateClient("openai"),
+        key,
+        builder.Configuration["OpenAI:Model"] ?? "gpt-4o-mini",
+        words,
+        services.GetRequiredService<ILogger<OpenAiQuestionRouter>>());
+});
 
 // Resumes.
 //

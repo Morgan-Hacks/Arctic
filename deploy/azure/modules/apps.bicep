@@ -140,6 +140,14 @@ limit rather than an absent one.
 @secure()
 param proxySecret string = ''
 
+@description('''
+The key the assistant's question reader uses. Empty leaves the word table in
+charge, which answers the common phrasings without a network call -- so an
+absent key is a quieter assistant, never a broken one.
+''')
+@secure()
+param openAiApiKey string = ''
+
 @description('Whether the applicant portal is served. Empty leaves features.json to decide.')
 param enableHackerPortalFeature string = ''
 
@@ -259,6 +267,29 @@ var proxySecrets = hasProxySecret ? [
 
 var proxyEnv = hasProxySecret ? [
   { name: 'Network__ProxySecret', secretRef: 'proxy-secret' }
+] : []
+
+// The assistant's provider key, as a secret rather than a value.
+//
+// Same treatment as the proxy secret above and for the same reason: a @secure()
+// param wired as a plain env entry is readable out of `az containerapp show`
+// by anybody holding Reader, without the list-secrets permission that name
+// implies. This one is billable, so reading it is spending somebody's money.
+//
+// Absent rather than blank when unset, because Container Apps refuses a secret
+// with an empty value -- and atlas reads a missing key the same way it reads
+// an empty one, by keeping the word table.
+var hasOpenAi = !empty(openAiApiKey)
+
+var openAiSecrets = hasOpenAi ? [
+  {
+    name: 'openai-api-key'
+    value: openAiApiKey
+  }
+] : []
+
+var openAiEnv = hasOpenAi ? [
+  { name: 'OpenAI__ApiKey', secretRef: 'openai-api-key' }
 ] : []
 
 var hasSentry = !empty(sentryDsn)
@@ -382,7 +413,7 @@ resource atlas 'Microsoft.App/containerApps@2024-03-01' = {
         transport: 'auto'
       }
       registries: registryConfig
-      secrets: concat([dbSecret], sentrySecrets, googleSecrets, proxySecrets)
+      secrets: concat([dbSecret], sentrySecrets, googleSecrets, proxySecrets, openAiSecrets)
     }
     template: {
       containers: [
@@ -404,7 +435,7 @@ resource atlas 'Microsoft.App/containerApps@2024-03-01' = {
             // blip that restarts every replica turns a recoverable problem
             // into an outage.
             { name: 'ASPNETCORE_ENVIRONMENT', value: environmentName == 'prod' ? 'Production' : 'Staging' }
-          ], sentryEnv, googleEnv, portalEnv, resumeEnv, featureEnv, proxyEnv)
+          ], sentryEnv, googleEnv, portalEnv, resumeEnv, featureEnv, proxyEnv, openAiEnv)
           probes: [
             {
               type: 'Liveness'

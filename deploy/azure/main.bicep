@@ -109,6 +109,9 @@ rate limit rather than none.
 @secure()
 param proxySecret string = ''
 
+@secure()
+param openAiApiKey string = ''
+
 @description('''
 Replicas of the web-facing services kept warm rather than asleep.
 
@@ -258,6 +261,7 @@ module apps 'modules/apps.bicep' = if (deployApps) {
     larkWarmReplicas: larkWarmReplicas
     enableHackerPortalFeature: enableHackerPortalFeature
     proxySecret: proxySecret
+    openAiApiKey: openAiApiKey
     pullIdentityId: pullIdentity.outputs.id
     pullIdentityClientId: pullIdentity.outputs.clientId
     tags: commonTags

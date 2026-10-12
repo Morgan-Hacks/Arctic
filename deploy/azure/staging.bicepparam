@@ -72,5 +72,8 @@ param enableHackerPortalFeature = readEnvironmentVariable('ENABLE_HACKER_PORTAL_
 
 param proxySecret = readEnvironmentVariable('PROXY_SHARED_SECRET', '')
 
+// Empty leaves the word table in charge rather than breaking the assistant.
+param openAiApiKey = readEnvironmentVariable('OPENAI_API_KEY', '')
+
 param deployPlatform = bool(readEnvironmentVariable('DEPLOY_PLATFORM', 'true'))
 param deployApps = bool(readEnvironmentVariable('DEPLOY_APPS', 'true'))
