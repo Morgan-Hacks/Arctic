@@ -1,4 +1,5 @@
 import { ApplicantsTable } from "@/components/applicants/applicants-table";
+import { AskBox } from "@/components/assistant/ask-box";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Filters } from "@/components/applicants/filters";
 import { STATUSES } from "@/components/applicants/status";
@@ -71,6 +72,11 @@ export default async function Applicants({
           <h1>Applicants</h1>
           <p>Review applications for your event.</p>
         </div>
+
+        {/* Above the filters, not instead of them. It sets the same query
+            parameters the controls below do, so an answer is a link and
+            correcting it by hand is the ordinary gesture. */}
+        <AskBox eventId={chosen.id} />
 
         <Filters
           events={events}
