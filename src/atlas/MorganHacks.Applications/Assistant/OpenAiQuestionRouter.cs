@@ -87,9 +87,15 @@ public sealed class OpenAiQuestionRouter(
         the question yourself and you never invent data.
 
         Reply as JSON only:
-          view     "applicants" or "count"
+          view     "applicants", "count" or "analysis"
           statuses one or more of the statuses listed below
           countOf  one status, only when view is "count"
+          metric   only when view is "analysis", one of:
+                     acceptance-rate  what share of applicants got in
+                     confirm-rate     what share of those offered said yes
+                     show-rate        what share of those who said yes arrived
+                     pace             are applications speeding up or slowing
+                     schools          where applicants are coming from
           explain  a short phrase describing what you understood, in plain
                    words, beginning with a noun ("applicants whose status is
                    submitted", "how many applicants are checked in")
@@ -109,6 +115,12 @@ public sealed class OpenAiQuestionRouter(
           turned up, arrived, scanned in             checked_in
 
         Rules:
+        - A question about a rate, a share, a proportion, a trend, or where
+          applicants come from is view "analysis" with a metric. "What is our
+          acceptance rate" is an analysis, not the accepted pile.
+        - "How many of the people we X actually Y" is a proportion wearing a
+          count's clothes, and is an analysis too: it asks what share of one
+          group did something, not how many are sitting in a status.
         - "how many" or "count of" with exactly one status means view "count".
         - Somebody who "has not shown up", is a "no show", or "did not arrive"
           is status confirmed: statuses are exclusive, so everybody still at
@@ -201,6 +213,13 @@ public sealed class OpenAiQuestionRouter(
 
         switch (reply.View)
         {
+            case "analysis":
+                return Metrics.TryGetValue(reply.Metric ?? "", out var metric)
+                    ? AssistantAnswer.For(new AssistantPlan(
+                        AssistantView.Analysis, [], null, explain)
+                    { Metric = metric })
+                    : null;
+
             case "count":
                 if (!ApplicationStatuses.TryParse(reply.CountOf ?? "", out var counted))
                 {
@@ -227,10 +246,27 @@ public sealed class OpenAiQuestionRouter(
         }
     }
 
+    /// <summary>
+    /// The readings the model may ask for, by the name it is given.
+    /// </summary>
+    /// <remarks>
+    /// A dictionary rather than an enum parse, so the names in the prompt and
+    /// the names accepted here cannot drift into each other's spelling.
+    /// </remarks>
+    private static readonly Dictionary<string, AssistantMetric> Metrics = new()
+    {
+        ["acceptance-rate"] = AssistantMetric.AcceptanceRate,
+        ["confirm-rate"] = AssistantMetric.ConfirmRate,
+        ["show-rate"] = AssistantMetric.ShowRate,
+        ["pace"] = AssistantMetric.Pace,
+        ["schools"] = AssistantMetric.Schools,
+    };
+
     private sealed record ModelPlan(
         [property: JsonPropertyName("view")] string? View,
         [property: JsonPropertyName("statuses")] string[]? Statuses,
         [property: JsonPropertyName("countOf")] string? CountOf,
+        [property: JsonPropertyName("metric")] string? Metric,
         [property: JsonPropertyName("explain")] string? Explain,
         [property: JsonPropertyName("refusal")] string? Refusal);
 

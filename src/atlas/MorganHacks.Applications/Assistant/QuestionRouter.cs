@@ -113,6 +113,13 @@ public sealed class WordRouter : IQuestionRouter
                 "applicants who confirmed and have not checked in"));
         }
 
+        if (Reading(text) is { } reading)
+        {
+            return AssistantAnswer.For(new AssistantPlan(
+                AssistantView.Analysis, [], null, reading.Said)
+            { Metric = reading.Metric });
+        }
+
         var found = Matched(text);
         var counting = Counting.Any(text.Contains);
 
@@ -138,6 +145,57 @@ public sealed class WordRouter : IQuestionRouter
             found.Count == 1
                 ? $"applicants whose status is {Say(found[0])}"
                 : $"applicants whose status is {string.Join(" or ", found.Select(Say))}"));
+    }
+
+
+    /// <summary>
+    /// The readings, against the words people ask for them by.
+    /// </summary>
+    /// <remarks>
+    /// Checked before the status words, because "what is our acceptance rate"
+    /// contains "accepted" and is not a question about the accepted pile.
+    /// </remarks>
+    private static readonly (string[] Says, AssistantMetric Metric, string Said)[] Readings =
+    [
+        (["acceptance rate", "accept rate", "how selective", "what percent get in",
+          "what percentage get in", "how many get in"],
+         AssistantMetric.AcceptanceRate,
+         // COPY: needs sign-off.
+         "the acceptance rate"),
+
+        (["confirm rate", "confirmation rate", "rsvp rate", "how many rsvp",
+          "accept their place", "taking their place"],
+         AssistantMetric.ConfirmRate,
+         "the confirmation rate"),
+
+        (["show rate", "turnout", "turn out rate", "attendance rate",
+          "how many actually", "no show rate"],
+         AssistantMetric.ShowRate,
+         "the turnout rate"),
+
+        (["pace", "pacing", "on track", "this week vs", "compared to last week",
+          "trend", "trending", "how fast are applications", "slowing", "picking up"],
+         AssistantMetric.Pace,
+         "how applications are pacing"),
+
+        (["which schools", "what schools", "top schools", "schools are",
+          "where are applicants coming from", "where are they coming from",
+          "most applicants from"],
+         AssistantMetric.Schools,
+         "where applicants are coming from"),
+    ];
+
+    private static (AssistantMetric Metric, string Said)? Reading(string text)
+    {
+        foreach (var (says, metric, said) in Readings)
+        {
+            if (says.Any(text.Contains))
+            {
+                return (metric, said);
+            }
+        }
+
+        return null;
     }
 
     /// <summary>Words that turn the status after them into an exclusion.</summary>

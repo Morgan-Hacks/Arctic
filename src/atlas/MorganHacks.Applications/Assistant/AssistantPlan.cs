@@ -22,6 +22,9 @@ public enum AssistantView
 
     /// <summary>One number off the applicant analytics read.</summary>
     Count,
+
+    /// <summary>A reading over the counts rather than one of them.</summary>
+    Analysis,
 }
 
 /// <summary>
@@ -58,6 +61,9 @@ public sealed record AssistantPlan(
 {
     /// <summary>Which number, when <see cref="View"/> is a count.</summary>
     public ApplicationStatus? CountOf { get; init; }
+
+    /// <summary>Which reading, when <see cref="View"/> is an analysis.</summary>
+    public AssistantMetric? Metric { get; init; }
 }
 
 /// <summary>A plan, or the reason there isn't one.</summary>

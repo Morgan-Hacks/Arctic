@@ -28,11 +28,11 @@
  * built out of, because without that read there is no screen — only the
  * refusal:
  *
- * - D-Day is `GET /admin/analytics/applicants`, behind `applications.view` --
- *   the same read the home screen's overview is built out of, which is why it
- *   needed no new permission. Last in the list rather than first: it is the
- *   screen for the day itself, and before then there is nothing on it worth
- *   opening.
+ * - D-Day holds the screens for the day itself. Its board is
+ *   `GET /admin/analytics/applicants`, behind `applications.view` -- the same
+ *   read the home screen's overview is built out of, which is why it needed no
+ *   new permission. Last in the list rather than first: before the day there
+ *   is nothing under it worth opening.
  * - Events, Forms and Applicants all read lists scoped to an event, and
  *   `GET /admin/events`, `GET /admin/forms` and `GET /admin/applicants` are
  *   each behind `applications.view`.
@@ -88,11 +88,10 @@ const SECTIONS: readonly GatedSection[] = [
   { href: "/forms", label: "Forms", needs: ["applications.view"] },
   { href: "/applicants", label: "Applicants", needs: ["applications.view"] },
   { href: "/inventory", label: "Inventory", needs: ["inventory.manage"] },
-  { href: "/check-in", label: "Check-in", needs: ["checkin.scan", "checkin.view_stats"] },
   { href: "/mail", label: "Email Campaign", needs: ["email.view_stats"] },
   { href: "/templates", label: "Templates", needs: ["email.manage_templates", "email.delete_templates"] },
   { href: "/audit", label: "Audit", needs: ["audit.view"] },
-  { href: "/d-day", label: "D-Day", needs: ["applications.view"] },
+  { href: "/d-day", label: "D-Day", needs: ["applications.view", "checkin.scan", "checkin.view_stats"] },
 ];
 
 /**
@@ -114,6 +113,38 @@ export function sectionsFor(mine: ReadonlySet<string>, badges: Readonly<Record<s
       ...(href === "/forms" && mine.has("forms.manage")
         ? { children: [{ href: "/forms#new-form", label: "New Form" }] }
         : {}),
+      // D-Day is a place rather than a screen: what only matters once
+      // doors open. Its children are filtered the way the bar itself is,
+      // because they are not one permission -- the board is applicant
+      // analytics and the desk is a scanner, and a volunteer holding
+      // only checkin.scan should see the desk and not the numbers.
+      ...(href === "/d-day" ? { children: dDay(mine) } : {}),
     })),
   ];
+}
+
+/**
+ * What is under D-Day, for this person.
+ *
+ * Filtered rather than listed, for the reason the bar itself is: a child
+ * nobody may open is a tab that only ever refuses, which teaches its reader
+ * that the console is broken.
+ *
+ * Check-in is here rather than at the top level because it is the same kind of
+ * thing as the board -- neither means anything until the day -- and a desk
+ * volunteer looking for it on event morning will look where the day's screens
+ * are.
+ */
+function dDay(mine: ReadonlySet<string>): Section[] {
+  const under: Section[] = [];
+
+  if (mine.has("applications.view")) {
+    under.push({ href: "/d-day/dashboard", label: "Dashboard" });
+  }
+
+  if (mine.has("checkin.scan") || mine.has("checkin.view_stats")) {
+    under.push({ href: "/check-in", label: "Check-in" });
+  }
+
+  return under;
 }

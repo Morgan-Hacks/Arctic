@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AiMagicIcon, ArrowRight02Icon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/components/ui/icon";
 import Link from "next/link";
-import { ask, type AskedPlan } from "./ask";
+import { ask, type Answer, type AskedPlan } from "./ask";
 import styles from "./ask-box.module.css";
 
 /**
@@ -34,6 +34,7 @@ export function AskBox({ eventId }: { eventId?: string }) {
   const [question, setQuestion] = useState("");
   const [said, setSaid] = useState<string | null>(null);
   const [counted, setCounted] = useState<{ value: number; to: string } | null>(null);
+  const [reading, setReading] = useState<Extract<Answer, { headline: string }> | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -44,6 +45,7 @@ export function AskBox({ eventId }: { eventId?: string }) {
     setProblem(null);
     setSaid(null);
     setCounted(null);
+    setReading(null);
 
     start(async () => {
       const result = await ask(asked, eventId);
@@ -59,7 +61,15 @@ export function AskBox({ eventId }: { eventId?: string }) {
         // "how many are waitlisted" is very often followed by "show me" --
         // but moving the page for a figure somebody wanted at a glance would
         // cost them the screen they were already reading.
-        if (result.plan.view === "count" && result.answer) {
+        // A reading is the answer itself, so it stays on the page it was
+        // asked from. There is nowhere to send somebody for "the acceptance
+        // rate" -- no screen in the console shows one.
+        if (result.plan.view === "analysis" && result.answer?.headline) {
+          setReading(result.answer as Extract<Answer, { headline: string }>);
+          return;
+        }
+
+        if (result.plan.view === "count" && result.answer?.value !== undefined) {
           setCounted({ value: result.answer.value, to: destination(result.plan, eventId) });
           return;
         }
@@ -109,7 +119,32 @@ export function AskBox({ eventId }: { eventId?: string }) {
         </button>
       </form>
 
-      {counted ? (
+      {reading ? (
+        <div className={styles.reading} role="status">
+          <p className={styles.readingHead}>{reading.headline}</p>
+          {reading.rows.length > 0 ? (
+            <ol className={styles.readingRows}>
+              {reading.rows.map((row) => (
+                <li key={row.label} className={styles.readingRow}>
+                  <span className={styles.readingLabel}>{row.label}</span>
+                  <span className={styles.readingCount}>
+                    {row.count.toLocaleString("en-US")}
+                    {row.share > 0 ? (
+                      <span className={styles.readingShare}>
+                        {" "}
+                        {(row.share * 100).toFixed(0)}%
+                      </span>
+                    ) : null}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+          {/* The denominator, in words, because the number above means
+              nothing without it. */}
+          <p className={styles.readingBasis}>{reading.basis}</p>
+        </div>
+      ) : counted ? (
         <p className={styles.counted} role="status">
           {/* The figure is read off the same store the filter chips are, on
               the server. Nothing in this component computes it, and nothing

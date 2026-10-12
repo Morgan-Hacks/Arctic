@@ -1,4 +1,5 @@
 using MorganHacks.Applications.Assistant;
+using MorganHacks.Applications.Data;
 using MorganHacks.Applications.Domain;
 using MorganHacks.Applications.Services;
 using MorganHacks.Identity;
@@ -83,9 +84,34 @@ public static class AssistantEndpoints
     /// </para>
     /// </remarks>
     private static async Task<object?> AnswerAsync(
-        AssistantPlan plan, string? eventId, IApplicantStore applicants, CancellationToken ct)
+        AssistantPlan plan, string? eventId, IApplicantStore applicants,
+        PostgresApplicantAnalyticsStore analytics, CancellationToken ct)
     {
-        if (plan.CountOf is not { } counted || !Guid.TryParse(eventId, out var id))
+        if (!Guid.TryParse(eventId, out var id))
+        {
+            return null;
+        }
+
+        if (plan.Metric is { } metric)
+        {
+            // The same read the board is drawn from. `includeResponses: false`
+            // because none of these readings touch an answer somebody wrote --
+            // they are proportions of counts, and asking for the responses
+            // would be asking for more than the question needs.
+            var data = await analytics.ReadAsync(
+                id, includeResponses: false, DateOnly.FromDateTime(DateTime.UtcNow), ct);
+
+            return Analyse.Of(metric, data) is not { } reading
+                ? null
+                : new
+                {
+                    headline = reading.Headline,
+                    basis = reading.Basis,
+                    rows = reading.Rows.Select(r => new { label = r.Label, count = r.Count, share = r.Share }),
+                };
+        }
+
+        if (plan.CountOf is not { } counted)
         {
             return null;
         }
@@ -99,7 +125,7 @@ public static class AssistantEndpoints
 
     private static async Task<IResult> Ask(
         AskRequest? body, IQuestionRouter router, IApplicantStore applicants,
-        CancellationToken ct)
+        PostgresApplicantAnalyticsStore analytics, CancellationToken ct)
     {
         var question = body?.Question?.Trim() ?? "";
 
@@ -131,10 +157,15 @@ public static class AssistantEndpoints
 
         return Results.Ok(new
         {
-            answer = await AnswerAsync(plan, body?.EventId, applicants, ct),
+            answer = await AnswerAsync(plan, body?.EventId, applicants, analytics, ct),
             plan = new
             {
-                view = plan.View == AssistantView.Count ? "count" : "applicants",
+                view = plan.View switch
+                {
+                    AssistantView.Count => "count",
+                    AssistantView.Analysis => "analysis",
+                    _ => "applicants",
+                },
                 statuses = plan.Statuses.Select(s => s.ToWire()).ToArray(),
                 countOf = plan.CountOf?.ToWire(),
                 search = plan.Search,

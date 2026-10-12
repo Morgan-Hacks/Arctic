@@ -106,3 +106,65 @@
 .seeThem {
   font-size: 12px;
 }
+
+/*
+ * A reading, which is the answer rather than a route to one.
+ *
+ * Stays on the page it was asked from: no screen in the console shows an
+ * acceptance rate, so there is nowhere to send anybody for it.
+ */
+.reading {
+  margin: 10px 0 2px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--raised);
+}
+
+.readingHead {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.readingRows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.readingRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.readingLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.readingCount {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.readingShare {
+  color: var(--faint);
+}
+
+/* The denominator. Quiet, but never absent. */
+.readingBasis {
+  margin: 12px 0 0;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.5;
+}

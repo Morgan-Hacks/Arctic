@@ -13,14 +13,26 @@ import { apiFetch } from "@/lib/api";
  */
 
 export type AskedPlan = {
-  view: "applicants" | "count";
+  view: "applicants" | "count" | "analysis";
   statuses: string[];
   countOf: string | null;
   search: string | null;
   explain: string;
 };
 
-export type Answer = { value: number };
+export type AnalysisRow = { label: string; count: number; share: number };
+
+/**
+ * A figure, or a reading over several.
+ *
+ * `basis` travels with every reading rather than sitting in a tooltip,
+ * because each one divides one set of applicants by another and which went
+ * into the denominator is a choice. A rate whose basis is unstated is a rate
+ * two people read two ways.
+ */
+export type Answer =
+  | { value: number; headline?: never; basis?: never; rows?: never }
+  | { value?: never; headline: string; basis: string; rows: AnalysisRow[] };
 
 export type AskResult =
   | { plan: AskedPlan; answer: Answer | null; refusal?: never; error?: never }

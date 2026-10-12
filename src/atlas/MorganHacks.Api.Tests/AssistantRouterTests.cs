@@ -148,8 +148,11 @@ public class AssistantRouterTests
             .Select(p => p.Name)
             .ToArray();
 
+        // Every one of these names a screen, a filter, or a reading. None of
+        // them can hold a person. Adding a field here is meant to fail this
+        // test and make somebody say which of those three it is.
         Assert.Equal(
-            new[] { "View", "Statuses", "Search", "Explain", "CountOf" }.OrderBy(n => n),
+            new[] { "View", "Statuses", "Search", "Explain", "CountOf", "Metric" }.OrderBy(n => n),
             fields.OrderBy(n => n));
     }
 
@@ -241,5 +244,42 @@ public class AssistantRouterTests
 
         Assert.Null(answer.Plan);
         Assert.False(string.IsNullOrWhiteSpace(answer.Refusal));
+    }
+
+    // -------------------------------------------------------- the readings ---
+
+    /// <summary>
+    /// A question about a rate is not a question about the pile it names.
+    /// "What is our acceptance rate" contains the word accepted and is not a
+    /// request for the accepted applicants, which is why the readings are
+    /// matched before the status words.
+    /// </summary>
+    [Theory]
+    [InlineData("what is our acceptance rate", AssistantMetric.AcceptanceRate)]
+    [InlineData("how selective are we", AssistantMetric.AcceptanceRate)]
+    [InlineData("what is the rsvp rate", AssistantMetric.ConfirmRate)]
+    [InlineData("what was our turnout", AssistantMetric.ShowRate)]
+    [InlineData("are applications slowing down", AssistantMetric.Pace)]
+    [InlineData("which schools are they coming from", AssistantMetric.Schools)]
+    public void A_question_about_a_rate_is_a_reading(string question, AssistantMetric expected)
+    {
+        var plan = Plan(question);
+
+        Assert.Equal(AssistantView.Analysis, plan.View);
+        Assert.Equal(expected, plan.Metric);
+        Assert.Empty(plan.Statuses);
+    }
+
+    /// <summary>
+    /// A reading carries no filter, so nothing downstream can mistake it for a
+    /// list to open.
+    /// </summary>
+    [Fact]
+    public void A_reading_does_not_also_filter_a_list()
+    {
+        var plan = Plan("what is our acceptance rate");
+
+        Assert.Empty(plan.Statuses);
+        Assert.Null(plan.CountOf);
     }
 }

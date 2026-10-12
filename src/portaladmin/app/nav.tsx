@@ -4,6 +4,7 @@ import { NavigationLink as Link } from "@/components/ui/navigation-link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useId, useState } from "react";
 import {
+  Activity01Icon,
   ArrowRight01Icon,
   Audit02Icon,
   BoxIcon,
@@ -79,6 +80,7 @@ const sectionIcons: Record<string, IconSvgElement> = {
   "/mail": Mail01Icon,
   "/templates": Layout01Icon,
   "/audit": Audit02Icon,
+  "/d-day": Activity01Icon,
 };
 
 /** Sections are permission-filtered by the server; this only marks the route. */
