@@ -197,8 +197,12 @@ public sealed class OpenAiQuestionRouter(
                     return null;
                 }
 
-                return AssistantAnswer.For(new AssistantPlan(
-                    AssistantView.Count, [counted], null, explain) { CountOf = counted });
+                var counting = new AssistantPlan(AssistantView.Count, [counted], null, explain)
+                {
+                    CountOf = counted,
+                };
+
+                return AssistantAnswer.For(counting);
 
             case "applicants":
                 // An applicants view with no filter is the whole list, which
