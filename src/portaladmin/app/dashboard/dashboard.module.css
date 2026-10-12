@@ -91,3 +91,130 @@
   font-size: 13px;
   font-weight: 500;
 }
+
+/* ------------------------------------------------------------- panels ---
+ *
+ * Two below the tiles. The tiles answer "where are we"; these answer "how
+ * did we get here" and "who is here", which are the next two questions
+ * somebody asks after reading a number off a wall.
+ */
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.panel {
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--raised);
+}
+
+.panelTitle {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.panelEmpty,
+.panelFoot {
+  margin: 10px 0 0;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+/* --- applications a day --- */
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 120px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bar {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  min-width: 0;
+}
+
+/*
+ * min-height so a day with one application is still a mark rather than
+ * nothing -- a bar of zero height and a day that did not happen look the
+ * same, and they are not the same.
+ */
+.barFill {
+  width: 100%;
+  min-height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
+}
+
+.barLabel {
+  color: var(--faint);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- schools --- */
+.schools {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.school {
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.schoolName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schoolTrack {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--sunken);
+}
+
+.schoolFill {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.schoolCount {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visually gone, still read aloud. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

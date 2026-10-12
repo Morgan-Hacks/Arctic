@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadApplicantAnalytics } from "../home-actions";
-import { numbers, statusLabels, type AnalyticsResult, type AnalyticsView } from "../home-analytics";
+import {
+  dateLabel, numbers, statusLabels,
+  type ActivityDay, type AnalyticsResult, type AnalyticsView, type SchoolBucket,
+} from "../home-analytics";
 import styles from "./dashboard.module.css";
 
 /**
@@ -110,7 +113,13 @@ export function LiveBoard({ initial, eventId }: { initial: AnalyticsResult; even
       </div>
 
       {analytics ? (
-        <Tiles analytics={analytics} />
+        <>
+          <Tiles analytics={analytics} />
+          <div className={styles.panels}>
+            <Arrivals activity={analytics.activity} />
+            <Schools schools={analytics.schools} />
+          </div>
+        </>
       ) : (
         <div className="empty">
           {/* COPY: needs sign-off. */}
@@ -141,7 +150,11 @@ function Freshness({
     );
   }
 
-  const bad = age > STALE_MS;
+  // The same rounded figure the sentence shows decides how loud it is. Read
+  // off `age` directly these disagree: the label rounds up at two and a half
+  // minutes, so a board can read "3 minutes old" while still looking calm.
+  const old = Math.max(1, Math.round(age / 60_000));
+  const bad = old * 60_000 >= STALE_MS;
 
   return (
     <div className={styles.stale} data-bad={bad || undefined} role="status">
@@ -149,7 +162,7 @@ function Freshness({
           deciding whether to trust a count needs to know how old it is, not
           that something unspecified went wrong. */}
       <strong>{bad ? "Not refreshing" : "Could not refresh"}</strong>
-      <span>Showing {clock}, {minutes(age)} old.</span>
+      <span>Showing {clock}, {minutes(old)} old.</span>
       <button type="button" className={styles.retry} onClick={onRetry}>
         Try now
       </button>
@@ -188,8 +201,97 @@ function Tile({ label, value, lead }: { label: string; value: number; lead?: boo
   );
 }
 
+
+/**
+ * Applications per day, as plain bars.
+ *
+ * No chart library. Fourteen numbers and a maximum is a height calculation,
+ * and pulling a library in for it would cost more to load on a screen that
+ * reloads itself all day than the thing it draws.
+ *
+ * Submitted rather than started, because a started application is somebody
+ * who opened the form and a submitted one is somebody who finished -- only
+ * the second is a number worth watching a trend in.
+ */
+function Arrivals({ activity }: { activity: ActivityDay[] }) {
+  const days = activity.slice(-14);
+  const most = Math.max(1, ...days.map((day) => day.submitted));
+
+  if (days.length === 0) {
+    return (
+      <section className={styles.panel}>
+        <h2 className={styles.panelTitle}>Applications a day</h2>
+        {/* COPY: needs sign-off. */}
+        <p className={styles.panelEmpty}>Nothing submitted yet.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className={styles.panel}>
+      <h2 className={styles.panelTitle}>Applications a day</h2>
+      <ol className={styles.bars}>
+        {days.map((day) => (
+          <li key={day.date} className={styles.bar}>
+            {/* The number is on the bar's label rather than drawn, so a
+                reader using a screen reader gets the figure and not a shape. */}
+            <span
+              className={styles.barFill}
+              style={{ height: `${Math.round((day.submitted / most) * 100)}%` }}
+              aria-hidden="true"
+            />
+            <span className={styles.barLabel}>
+              <span className={styles.srOnly}>{dateLabel(day.date)}: </span>
+              {day.submitted}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className={styles.panelFoot}>
+        {dateLabel(days[0].date)} – {dateLabel(days[days.length - 1].date)}
+      </p>
+    </section>
+  );
+}
+
+/**
+ * Where applicants are coming from.
+ *
+ * Counts only. Which schools are over- or under-represented is a judgement
+ * against a baseline nobody here has written down, and a board that implies
+ * one it was never given is worse than a board that lists what arrived.
+ */
+function Schools({ schools }: { schools: SchoolBucket[] }) {
+  const top = schools.slice(0, 6);
+  const most = Math.max(1, ...top.map((school) => school.count));
+
+  return (
+    <section className={styles.panel}>
+      <h2 className={styles.panelTitle}>Schools</h2>
+      {top.length === 0 ? (
+        /* COPY: needs sign-off. */
+        <p className={styles.panelEmpty}>No schools answered yet.</p>
+      ) : (
+        <ol className={styles.schools}>
+          {top.map((school) => (
+            <li key={school.label} className={styles.school}>
+              <span className={styles.schoolName}>{school.label}</span>
+              <span className={styles.schoolTrack} aria-hidden="true">
+                <span
+                  className={styles.schoolFill}
+                  style={{ width: `${Math.round((school.count / most) * 100)}%` }}
+                />
+              </span>
+              <span className={styles.schoolCount}>{numbers.format(school.count)}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
 /** Whole minutes, because a wall clock does not need seconds. */
-function minutes(ms: number): string {
-  const total = Math.max(1, Math.round(ms / 60_000));
+function minutes(total: number): string {
   return total === 1 ? "1 minute" : `${total} minutes`;
 }
