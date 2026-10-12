@@ -25,10 +25,27 @@ import styles from "./dashboard.module.css";
  * on screen when a refresh fails -- blanking them would be worse, somebody
  * glancing up needs something -- but they are never shown without saying when
  * they are from, and the saying gets louder the older they get.
+ *
+ * That is decided by the **age of the numbers, not by whether a request
+ * errored**, and the difference is the whole point. A poll that is skipped
+ * rather than failed -- which is what the hidden-tab rule above does every
+ * time this screen is occluded, or the display sleeps, or the window goes
+ * behind something -- leaves perfectly old figures with nothing wrong to
+ * report. Keyed on failure, the board would sit there showing yesterday under
+ * a cheerful "Updated 14:32". Keyed on age it cannot.
  */
 
 /** How often to ask, awake. */
 const POLL_MS = 60_000;
+
+/**
+ * How old the numbers may get before the board has to admit it.
+ *
+ * One missed beat is ordinary -- a poll in flight, a slow query -- and
+ * shouting about it would train everybody to ignore the banner. Two is
+ * something a reader deserves to know before trusting a figure.
+ */
+const FRESH_MS = 2 * POLL_MS;
 
 /** Past this, the banner stops being a note and starts being a warning. */
 const STALE_MS = 3 * POLL_MS;
@@ -142,7 +159,7 @@ function Freshness({
 }: { at: number; age: number; problem: string | null; onRetry: () => void }) {
   const clock = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(at);
 
-  if (!problem) {
+  if (!problem && age < FRESH_MS) {
     return (
       <p className={styles.fresh} aria-live="off">
         Updated {clock}
@@ -161,7 +178,13 @@ function Freshness({
       {/* COPY: needs sign-off. The time is the load-bearing part: somebody
           deciding whether to trust a count needs to know how old it is, not
           that something unspecified went wrong. */}
-      <strong>{bad ? "Not refreshing" : "Could not refresh"}</strong>
+      <strong>
+        {problem
+          ? (bad ? "Not refreshing" : "Could not refresh")
+          /* Nothing failed -- the polling is asleep, which a hidden tab does
+             on purpose. Still old, so it still has to be said. */
+          : "Out of date"}
+      </strong>
       <span>Showing {clock}, {minutes(old)} old.</span>
       <button type="button" className={styles.retry} onClick={onRetry}>
         Try now
