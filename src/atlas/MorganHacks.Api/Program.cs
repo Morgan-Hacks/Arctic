@@ -196,6 +196,12 @@ builder.Services.AddSingleton<IInventoryStore, PostgresInventoryStore>();
 // when the key is missing.
 builder.Services.AddSingleton<IAssistantConversations, PostgresAssistantConversations>();
 
+// The seam between the assistant's tool layer and the stores that live
+// outside its assembly. See AssistantAdapters.
+builder.Services.AddSingleton<IEmailReachRead, EmailReachAdapter>();
+builder.Services.AddSingleton<IFormUptakeRead, FormUptakeAdapter>();
+builder.Services.AddSingleton<IInventoryBurnRead, InventoryBurnAdapter>();
+
 // Answers a question out of the reads it is allowed to make.
 //
 // Nothing stands in when there is no key. The single-shot box had a word

@@ -59,10 +59,23 @@ public class AssistantToolTests
         }
     }
 
-    /// <summary>An inventory store that fails the test if it is touched.</summary>
-    private sealed class Untouchable : IInventoryStore
+    /// <summary>
+    /// A shelf with one thing on it, for the tests that hold the permission.
+    /// </summary>
+    private sealed class Shelf : Untouchable
     {
-        public Task<IReadOnlyList<InventoryItemView>> ListAsync(
+        public override Task<IReadOnlyList<InventoryItemView>> ListAsync(
+            Guid eventId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<InventoryItemView>>(
+                [new InventoryItemView(
+                    Guid.NewGuid(), "T-shirts (M)", "Swag", "Store room", null,
+                    40, 120, false, null, DateTimeOffset.UtcNow)]);
+    }
+
+    /// <summary>An inventory store that fails the test if it is touched.</summary>
+    private class Untouchable : IInventoryStore
+    {
+        public virtual Task<IReadOnlyList<InventoryItemView>> ListAsync(
             Guid eventId, CancellationToken ct = default) =>
             throw new InvalidOperationException("The shelf was read without permission.");
 
@@ -95,13 +108,111 @@ public class AssistantToolTests
     }
 
     private static ToolContext Context(
-        Watched analytics, bool responses = false, bool inventory = false) =>
+        Watched analytics,
+        bool responses = false,
+        bool inventory = false,
+        bool emailStats = false,
+        IApplicantStore? applicants = null,
+        IInventoryStore? shelf = null,
+        bool answering = false) =>
         new(
             Guid.NewGuid(),
-            new Allowed(responses, inventory),
+            new Allowed(responses, inventory, emailStats),
             analytics,
-            new Untouchable(),
-            new DateOnly(2027, 2, 2));
+            shelf ?? new Untouchable(),
+            new DateOnly(2027, 2, 2))
+        {
+            Applicants = applicants,
+            FormUptake = answering ? new SomeQuestions() : new NeverAsked(),
+            Burn = answering ? new SomeBurn() : new NeverCounted(),
+            EmailReach = answering ? new SomeMail() : new NeverSent(),
+        };
+
+    /// <summary>Ports that fail the test if a refusal came too late.</summary>
+    private class NeverAsked : IFormUptakeRead
+    {
+        public virtual Task<IReadOnlyList<QuestionUptake>?> ReadAsync(
+            Guid eventId, CancellationToken ct = default) =>
+            throw new InvalidOperationException("Form answers were read without permission.");
+    }
+
+    private class NeverCounted : IInventoryBurnRead
+    {
+        public virtual Task<IReadOnlyList<Burn>> ReadAsync(
+            Guid eventId, CancellationToken ct = default) =>
+            throw new InvalidOperationException("The ledger was read without permission.");
+    }
+
+    private class NeverSent : IEmailReachRead
+    {
+        public virtual Task<EmailReach?> ReadAsync(CancellationToken ct = default) =>
+            throw new InvalidOperationException("Email figures were read without permission.");
+    }
+
+    /// <summary>
+    /// The same three ports, answering, for the tests that hold every
+    /// permission and are checking what comes back rather than whether it is
+    /// refused.
+    /// </summary>
+    private sealed class SomeQuestions : NeverAsked
+    {
+        public override Task<IReadOnlyList<QuestionUptake>?> ReadAsync(
+            Guid eventId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<QuestionUptake>?>(
+                [new QuestionUptake("Have you hacked before?", 90, 10,
+                    [new AnalysisRow("No", 60, 0.6), new AnalysisRow("Yes", 30, 0.3)])]);
+    }
+
+    private sealed class SomeBurn : NeverCounted
+    {
+        public override Task<IReadOnlyList<Burn>> ReadAsync(
+            Guid eventId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Burn>>(
+                [new Burn("T-shirts (M)", 120, 80, 200, 8.0, 15)]);
+    }
+
+    private sealed class SomeMail : NeverSent
+    {
+        public override Task<EmailReach?> ReadAsync(CancellationToken ct = default) =>
+            Task.FromResult<EmailReach?>(new EmailReach(400, 380, 95, 140, 380, 210, 12));
+    }
+
+    /// <summary>Two applicants, one of them with no name on the row.</summary>
+    private sealed class TwoPeople : IApplicantStore
+    {
+        public Task<ApplicantPage> PageAsync(
+            ApplicantSearch search, ApplicantCursor? after, int limit,
+            CancellationToken ct = default)
+        {
+            Asked = search;
+
+            return Task.FromResult(new ApplicantPage(
+                [One("ada@example.edu", "Ada", "Lovelace"), One("nameless@example.edu", null, null)],
+                null));
+        }
+
+        public ApplicantSearch? Asked { get; private set; }
+
+        private static Applicant One(string email, string? first, string? last) =>
+            new(Guid.NewGuid(), Guid.NewGuid(), email, first, last, "Morgan State",
+                ApplicationStatus.Confirmed, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow,
+                null, null, null, null, null, false);
+
+        public Task<Applicant?> ByIdAsync(Guid applicationId, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<ApplicantNote?> AddNoteAsync(
+            Guid applicationId, Guid authorId, string body, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyDictionary<ApplicationStatus, int>> CountsAsync(
+            Guid eventId, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<ApplicantNote>> NotesOfAsync(
+            Guid applicationId, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+    }
 
     private static JsonObject Metric(string name) => new() { ["metric"] = name };
 
@@ -286,14 +397,24 @@ public class AssistantToolTests
         Assert.NotNull(refused.Refusal);
     }
 
+    /// <summary>
+    /// The one tool that returns people, and the many that must not.
+    /// </summary>
+    /// <remarks>
+    /// <c>applicants</c> hands back names and addresses deliberately: it is
+    /// behind <c>applications.view</c>, it returns what that screen's rows
+    /// already show, and an organizer asking "who has not RSVPed" wants the
+    /// list rather than the count. Every other tool is an aggregate, and an
+    /// aggregate that grew a name would be a leak nobody ordered -- so the
+    /// exception is named here, once, and the rule is asserted around it.
+    /// </remarks>
     [Fact]
-    public async Task Nothing_a_tool_returns_carries_a_person()
+    public async Task Only_the_applicants_tool_returns_a_person()
     {
-        // The guarantee somebody will try to relax one afternoon. Every tool
-        // is run and its output searched for the fields an applicant row has:
-        // a name, an address, a phone number, an id.
         var store = new Watched();
-        var context = Context(store, responses: true, inventory: false);
+        var context = Context(
+            store, responses: true, inventory: true, emailStats: true,
+            applicants: new TwoPeople(), shelf: new Shelf(), answering: true);
 
         string[] forbidden =
             ["email", "firstName", "lastName", "phone", "personId", "applicationId", "resume"];
@@ -301,6 +422,11 @@ public class AssistantToolTests
         foreach (var tool in AssistantTools.Schema())
         {
             var name = tool!["function"]!["name"]!.GetValue<string>();
+
+            if (name == "applicants")
+            {
+                continue;
+            }
 
             var arguments = name == "reading" ? Metric("funnel") : null;
             var result = await AssistantTools.RunAsync(
@@ -311,11 +437,115 @@ public class AssistantToolTests
                 continue;
             }
 
-            using var parsed = JsonDocument.Parse(result.Json);
-            var text = result.Json;
-
             Assert.All(forbidden, field => Assert.DoesNotContain(
-                $"\"{field}\"", text, StringComparison.OrdinalIgnoreCase));
+                $"\"{field}\"", result.Json, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    [Fact]
+    public async Task The_applicants_tool_names_people_and_says_when_there_are_more()
+    {
+        var people = new TwoPeople();
+
+        var result = await AssistantTools.RunAsync(
+            "applicants", new JsonObject { ["status"] = "confirmed" },
+            Context(new Watched(), applicants: people), CancellationToken.None);
+
+        Assert.Null(result.Refusal);
+
+        var read = JsonNode.Parse(result.Json!)!;
+        var listed = read["applicants"]!.AsArray();
+
+        Assert.Equal(2, listed.Count);
+        Assert.Equal("Ada Lovelace", listed[0]!["name"]!.GetValue<string>());
+
+        // A row with no name falls back to the address rather than rendering
+        // an empty string, which would read as a person with no name.
+        Assert.Equal("nameless@example.edu", listed[1]!["name"]!.GetValue<string>());
+
+        Assert.False(read["more"]!.GetValue<bool>());
+        Assert.Equal(2, read["showing"]!.GetValue<int>());
+
+        // The status reached the store as a filter rather than being applied
+        // afterwards, which is what keeps the page size meaningful.
+        Assert.Equal(
+            ApplicationStatus.Confirmed,
+            Assert.Single(people.Asked!.Statuses!));
+    }
+
+    [Fact]
+    public async Task A_status_the_lifecycle_does_not_have_is_refused()
+    {
+        var result = await AssistantTools.RunAsync(
+            "applicants", new JsonObject { ["status"] = "vibing" },
+            Context(new Watched(), applicants: new TwoPeople()), CancellationToken.None);
+
+        Assert.Null(result.Json);
+        Assert.Contains("vibing", result.Refusal);
+    }
+
+    [Fact]
+    public async Task Asking_for_everybody_passes_no_status_filter()
+    {
+        var people = new TwoPeople();
+
+        await AssistantTools.RunAsync(
+            "applicants", null, Context(new Watched(), applicants: people),
+            CancellationToken.None);
+
+        Assert.Null(people.Asked!.Statuses);
+    }
+
+    [Fact]
+    public async Task Form_questions_are_refused_without_the_responses_permission()
+    {
+        // NeverAsked throws when read, so a refusal that came after the fetch
+        // fails here rather than passing on the strength of its wording.
+        var result = await AssistantTools.RunAsync(
+            "form_questions", null, Context(new Watched()), CancellationToken.None);
+
+        Assert.Null(result.Json);
+        Assert.Contains("applications.view_responses", result.Refusal);
+    }
+
+    [Fact]
+    public async Task The_burn_rate_is_refused_without_inventory_manage()
+    {
+        var result = await AssistantTools.RunAsync(
+            "inventory_burn", null, Context(new Watched()), CancellationToken.None);
+
+        Assert.Null(result.Json);
+        Assert.Contains("inventory.manage", result.Refusal);
+    }
+
+    [Fact]
+    public async Task Email_figures_are_refused_without_view_stats()
+    {
+        var result = await AssistantTools.RunAsync(
+            "email_reach", null, Context(new Watched()), CancellationToken.None);
+
+        Assert.Null(result.Json);
+        Assert.Contains("email.view_stats", result.Refusal);
+    }
+
+    [Fact]
+    public async Task A_port_that_is_absent_refuses_rather_than_throwing()
+    {
+        // The permission is held and the read is simply not wired. A console
+        // missing an adapter should say nothing is available, not 500.
+        var bare = new ToolContext(
+            Guid.NewGuid(),
+            new Allowed(true, true, true),
+            new Watched(),
+            new Untouchable(),
+            new DateOnly(2027, 2, 2));
+
+        foreach (var name in new[] { "form_questions", "inventory_burn", "email_reach", "applicants" })
+        {
+            var result = await AssistantTools.RunAsync(name, null, bare, CancellationToken.None);
+
+            Assert.Null(result.Json);
+            Assert.NotNull(result.Refusal);
         }
     }
 }

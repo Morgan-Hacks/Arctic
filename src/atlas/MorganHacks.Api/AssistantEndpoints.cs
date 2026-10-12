@@ -128,7 +128,9 @@ public static class AssistantEndpoints
     private static async Task<IResult> Chat(
         ChatRequest? body, HttpContext http, IChatAgent agent,
         IAssistantConversations conversations, IApplicantAnalyticsStore analytics,
-        IInventoryStore inventory, PermissionService permissions, CancellationToken ct)
+        IInventoryStore inventory, IApplicantStore applicants,
+        IEmailReachRead email, IFormUptakeRead uptake, IInventoryBurnRead burn,
+        PermissionService permissions, CancellationToken ct)
     {
         var question = body?.Question?.Trim() ?? "";
 
@@ -182,10 +184,17 @@ public static class AssistantEndpoints
             eventId,
             new Allowed(
                 Responses: mine.Can(Permission.ApplicationsViewResponses),
-                Inventory: mine.Can(Permission.InventoryManage)),
+                Inventory: mine.Can(Permission.InventoryManage),
+                EmailStats: mine.Can(Permission.EmailViewStats)),
             analytics,
             inventory,
-            DateOnly.FromDateTime(DateTime.UtcNow));
+            DateOnly.FromDateTime(DateTime.UtcNow))
+        {
+            Applicants = applicants,
+            FormUptake = uptake,
+            Burn = burn,
+            EmailReach = email,
+        };
 
         var reply = await agent.AnswerAsync(history, question, context, ct);
 

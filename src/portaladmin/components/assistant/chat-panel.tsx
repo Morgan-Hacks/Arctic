@@ -317,14 +317,14 @@ function Opening() {
   return (
     <div className={styles.opening}>
       <p className={styles.note}>
-        Ask about your applicants, the funnel, or what is on the shelf. Follow-ups
-        work — ask “and by school?” after anything.
+        Ask about your applicants, the form, the funnel, the mail, or what is on
+        the shelf. Follow-ups work — ask “and by school?” after anything.
       </p>
       <ul className={styles.examples}>
-        <li>What is our acceptance rate?</li>
         <li>How many offers should we send to fill 150 seats?</li>
-        <li>What should I tell a sponsor?</li>
-        <li>Will the review queue clear before the deadline?</li>
+        <li>Which form questions do people skip?</li>
+        <li>Who confirmed but has not checked in?</li>
+        <li>When do the medium shirts run out?</li>
       </ul>
     </div>
   );

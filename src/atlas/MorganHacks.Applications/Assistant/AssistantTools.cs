@@ -15,7 +15,7 @@ namespace MorganHacks.Applications.Assistant;
 /// made. The API fills these in from the caller's effective permissions, once,
 /// before any tool runs.
 /// </remarks>
-public sealed record Allowed(bool Responses, bool Inventory);
+public sealed record Allowed(bool Responses, bool Inventory, bool EmailStats);
 
 /// <summary>
 /// Everything a tool needs, and nothing a tool could use to reach further.
@@ -30,7 +30,25 @@ public sealed record ToolContext(
     Allowed Allowed,
     IApplicantAnalyticsStore Analytics,
     IInventoryStore Inventory,
-    DateOnly Today);
+    DateOnly Today)
+{
+    /// <summary>
+    /// Who has applied, by name.
+    /// </summary>
+    /// <remarks>
+    /// Row-level, and the only tool here that is. Behind
+    /// <c>applications.view</c> like the screen it reads from, and it returns
+    /// what that screen's rows show -- so nobody learns anything here they
+    /// could not have learned by scrolling.
+    /// </remarks>
+    public IApplicantStore? Applicants { get; init; }
+
+    public IFormUptakeRead? FormUptake { get; init; }
+
+    public IInventoryBurnRead? Burn { get; init; }
+
+    public IEmailReachRead? EmailReach { get; init; }
+}
 
 /// <summary>What a tool answered, and whether it would say.</summary>
 /// <param name="Refusal">
@@ -112,7 +130,47 @@ public static class AssistantTools
             "What logistics has on the shelf: each item, how many are left, "
             + "and whether it is below its low-stock mark.",
             null),
+
+        Tool("inventory_burn",
+            "How fast things are leaving the shelf, and when each one runs "
+            + "out at that rate. Use for whether to reorder.",
+            null),
+
+        Tool("form_questions",
+            "Every question on the application form, how many answered it, "
+            + "how many skipped it, and the spread of answers. Use for which "
+            + "questions to keep, cut, or reword.",
+            null),
+
+        Tool("email_reach",
+            "How the event's mail has performed: sent, opened, clicked.",
+            null),
+
+        Tool("applicants",
+            "Actual applicants, by name, with their status and school. Ask "
+            + "for a status when the question is about one -- who has not "
+            + "RSVPed, who is still waiting on a decision.",
+            new JsonObject
+            {
+                ["status"] = new JsonObject
+                {
+                    ["type"] = "string",
+                    ["enum"] = Statuses(),
+                    ["description"] = "Only applicants in this status.",
+                },
+            }),
     ];
+
+    private static JsonArray Statuses()
+    {
+        var names = new JsonArray();
+        foreach (var status in Enum.GetValues<ApplicationStatus>())
+        {
+            names.Add(status.ToWire());
+        }
+
+        return names;
+    }
 
     private static JsonArray Readings()
     {
@@ -193,6 +251,10 @@ public static class AssistantTools
             "daily_activity" => await ActivityAsync(context, ct),
             "schools" => await SchoolsAsync(context, ct),
             "inventory" => await InventoryAsync(context, ct),
+            "inventory_burn" => await BurnAsync(context, ct),
+            "form_questions" => await FormQuestionsAsync(context, ct),
+            "email_reach" => await EmailAsync(context, ct),
+            "applicants" => await ApplicantsAsync(arguments, context, ct),
 
             // A name nothing answers. Said plainly rather than thrown: the
             // loop shows this to the model, which picks a real tool next turn.
@@ -273,6 +335,168 @@ public static class AssistantTools
         var data = await DataAsync(context, ct);
 
         return ToolResult.Of(data.Schools.Select(s => new { school = s.Label, count = s.Count }));
+    }
+
+    /// <summary>
+    /// How many to show.
+    /// </summary>
+    /// <remarks>
+    /// A page, not the cohort. The question an organizer asks of a list is
+    /// "who are they" or "how many", and the second has a tool of its own --
+    /// so this answers the first for as many as fit in an answer somebody will
+    /// read, and says how many more there are.
+    /// </remarks>
+    private const int Shown = 40;
+
+    private static async Task<ToolResult> ApplicantsAsync(
+        JsonObject? arguments, ToolContext context, CancellationToken ct)
+    {
+        if (context.Applicants is null)
+        {
+            return ToolResult.No("Applicants cannot be read here.");
+        }
+
+        var asked = arguments?["status"]?.GetValue<string>();
+        IReadOnlyList<ApplicationStatus>? statuses = null;
+
+        if (!string.IsNullOrWhiteSpace(asked))
+        {
+            if (!ApplicationStatuses.TryParse(asked, out var status))
+            {
+                return ToolResult.No($"There is no status called \"{asked}\".");
+            }
+
+            statuses = [status];
+        }
+
+        var page = await context.Applicants.PageAsync(
+            new ApplicantSearch(context.EventId, null, statuses), null, Shown + 1, ct);
+
+        var people = page.Items.Take(Shown).Select(a => new
+        {
+            name = Named(a),
+            email = a.Email,
+            school = a.School,
+            status = a.Status.ToWire(),
+            submitted = a.SubmittedAt,
+            checkedIn = a.CheckedInAt,
+        });
+
+        return ToolResult.Of(new
+        {
+            applicants = people,
+
+            // Said rather than left to be inferred from a list that happens to
+            // be forty long. An answer that reads "these are the twelve" when
+            // there are two hundred is worse than no answer.
+            more = page.Items.Count > Shown,
+            showing = Math.Min(page.Items.Count, Shown),
+        });
+    }
+
+    private static string Named(Applicant a)
+    {
+        var name = string.Join(" ", new[] { a.FirstName, a.LastName }
+            .Where(part => !string.IsNullOrWhiteSpace(part)));
+
+        return name.Length == 0 ? a.Email : name;
+    }
+
+    private static async Task<ToolResult> FormQuestionsAsync(
+        ToolContext context, CancellationToken ct)
+    {
+        if (!context.Allowed.Responses)
+        {
+            // COPY: needs sign-off.
+            return ToolResult.No(
+                "This is what applicants wrote on the form, and this person "
+                + "does not have applications.view_responses. Say so, and name "
+                + "the permission.");
+        }
+
+        if (context.FormUptake is null)
+        {
+            return ToolResult.No("Form answers cannot be read here.");
+        }
+
+        if (await context.FormUptake.ReadAsync(context.EventId, ct) is not { } uptake)
+        {
+            // COPY: needs sign-off.
+            return ToolResult.No("This event has no application form yet.");
+        }
+
+        return ToolResult.Of(uptake.Select(q => new
+        {
+            question = q.Question,
+            answered = q.Answered,
+            skipped = q.Skipped,
+            answers = q.Answers.Select(a => new { a.Label, a.Count, a.Share }),
+        }));
+    }
+
+    private static async Task<ToolResult> BurnAsync(ToolContext context, CancellationToken ct)
+    {
+        if (!context.Allowed.Inventory)
+        {
+            // COPY: needs sign-off.
+            return ToolResult.No(
+                "This person does not have inventory.manage. Say so, and name "
+                + "the permission.");
+        }
+
+        if (context.Burn is null)
+        {
+            return ToolResult.No("The shelf's ledger cannot be read here.");
+        }
+
+        var burn = await context.Burn.ReadAsync(context.EventId, ct);
+
+        return ToolResult.Of(burn.Select(b => new
+        {
+            item = b.Item,
+            left = b.Left,
+            issued = b.Issued,
+            restocked = b.Restocked,
+            perDay = b.PerDay,
+            daysLeft = b.DaysLeft,
+        }));
+    }
+
+    private static async Task<ToolResult> EmailAsync(ToolContext context, CancellationToken ct)
+    {
+        if (!context.Allowed.EmailStats)
+        {
+            // COPY: needs sign-off.
+            return ToolResult.No(
+                "This person does not have email.view_stats. Say so, and name "
+                + "the permission.");
+        }
+
+        if (context.EmailReach is null)
+        {
+            return ToolResult.No("Email figures cannot be read here.");
+        }
+
+        if (await context.EmailReach.ReadAsync(ct) is not { } reach)
+        {
+            // COPY: needs sign-off.
+            return ToolResult.No("No mail has been sent yet.");
+        }
+
+        return ToolResult.Of(new
+        {
+            sent = reach.Sent,
+            opened = reach.Opened,
+            openTracked = reach.OpenTracked,
+            clicked = reach.Clicked,
+            totalClicks = reach.TotalClicks,
+
+            // Passed through rather than netted off. Opens are inflated by
+            // scanners and the store counts them separately for that reason;
+            // quietly subtracting them here would hide a figure somebody
+            // needs when an open rate looks too good.
+            automatedEvents = reach.AutomatedEvents,
+        });
     }
 
     private static async Task<ToolResult> InventoryAsync(
