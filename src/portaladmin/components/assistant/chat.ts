@@ -62,16 +62,23 @@ function unreachable(status: number): string | null {
   return null;
 }
 
+/**
+ * @param screen Which console screen the question was asked from, as one of
+ * the names in `screen.ts`. A hint about what an unspecific question means,
+ * never a permission -- the API matches it against its own list and every read
+ * still runs against the asking person's own permissions.
+ */
 export async function say(
   question: string,
   eventId: string,
   threadId?: string,
+  screen?: string,
 ): Promise<Said> {
   let response: Response;
   try {
     response = await apiFetch("/admin/assistant/chat", {
       method: "POST",
-      body: JSON.stringify({ question, eventId, threadId }),
+      body: JSON.stringify({ question, eventId, threadId, screen }),
       signal: AbortSignal.timeout(PATIENCE),
     });
   } catch {

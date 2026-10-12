@@ -45,7 +45,7 @@ public sealed class EmailReachAdapter(EmailAnalyticsStore analytics) : IEmailRea
 }
 
 /// <summary>
-/// Every question on the application form, and what people did with it.
+/// The event's forms, and what people did with them.
 /// </summary>
 /// <remarks>
 /// Counted here rather than in SQL because the answers are a JSONB document
@@ -53,9 +53,17 @@ public sealed class EmailReachAdapter(EmailAnalyticsStore analytics) : IEmailRea
 /// key to a question already exists in <see cref="FormQuestions"/>. Doing it
 /// in the database would mean a second copy of that mapping in a language
 /// that cannot share it.
+/// <para>
+/// Both kinds of form are read, and they are not the same read. An
+/// application lives in <c>applications.applications</c> with some answers
+/// promoted to columns; a survey lives in <c>applications.form_submissions</c>
+/// keyed by question. One method taking either and branching inside the query
+/// is how a count ends up over the wrong table.
+/// </para>
 /// </remarks>
-public sealed class FormUptakeAdapter(IFormStore forms, IResponseStore responses)
-    : IFormUptakeRead
+public sealed class FormsAdapter(
+    IFormStore forms, IResponseStore responses, ISurveyResponseStore surveys)
+    : IFormsRead
 {
     /// <summary>
     /// How many responses to read.
@@ -68,13 +76,47 @@ public sealed class FormUptakeAdapter(IFormStore forms, IResponseStore responses
     /// </remarks>
     private const int Read = 1000;
 
-    public async Task<IReadOnlyList<QuestionUptake>?> ReadAsync(
+    public async Task<IReadOnlyList<string>> NamesAsync(
+        Guid eventId, CancellationToken ct = default) =>
+        Labelled(await forms.ForEventAsync(eventId, ct)).Select(f => f.Label).ToArray();
+
+    public async Task<IReadOnlyList<FormSummary>> ListAsync(
         Guid eventId, CancellationToken ct = default)
     {
-        var form = (await forms.ForEventAsync(eventId, ct))
-            .FirstOrDefault(f => f.IsApplication);
+        var now = DateTimeOffset.UtcNow;
+        var listed = new List<FormSummary>();
 
-        if (form is null)
+        foreach (var (form, label) in Labelled(await forms.ForEventAsync(eventId, ct)))
+        {
+            var published = await forms.PublishedAsync(form.Id, ct);
+
+            listed.Add(new FormSummary(
+                Name: label,
+                Kind: form.Kind,
+                Status: published is null ? "draft" : form.IsOpen(now) ? "live" : "closed",
+
+                // Sections are page breaks, not questions. Counting them would
+                // put a form's question count one or two above what its author
+                // sees on the builder, and a figure that disagrees with the
+                // screen beside it is the kind nobody trusts again.
+                Questions: published?.Fields.Count(f => f.Type != FieldType.Section) ?? 0,
+                Responses: await forms.ResponseCountAsync(form, ct),
+                ClosesAt: form.ClosesAt));
+        }
+
+        return listed;
+    }
+
+    public async Task<IReadOnlyList<QuestionUptake>?> UptakeAsync(
+        Guid eventId, string? form, CancellationToken ct = default)
+    {
+        var all = Labelled(await forms.ForEventAsync(eventId, ct));
+
+        var chosen = form is null
+            ? all.FirstOrDefault(f => f.Form.IsApplication)
+            : all.FirstOrDefault(f => string.Equals(f.Label, form, StringComparison.OrdinalIgnoreCase));
+
+        if (chosen.Form is null)
         {
             return null;
         }
@@ -82,26 +124,60 @@ public sealed class FormUptakeAdapter(IFormStore forms, IResponseStore responses
         // Every version, not the published one, for the reason the applicant
         // detail screen reads them all: a question rebuilt under a new key
         // would file half the cohort's answers under a heading nobody saw.
-        var questions = FormQuestions.From(await forms.HistoryAsync(form.Id, ct));
-        var page = await responses.PageAsync(eventId, questions, null, Read, ct);
+        var questions = FormQuestions.From(await forms.HistoryAsync(chosen.Form.Id, ct));
 
-        if (page.Items.Count == 0)
-        {
-            return [];
-        }
+        var rows = chosen.Form.IsApplication
+            ? (await responses.PageAsync(eventId, questions, null, Read, ct)).Items
+            : (await surveys.PageAsync(chosen.Form.Id, null, Read, ct)).Items;
 
+        return Count(questions.Published, rows);
+    }
+
+    /// <summary>
+    /// The forms, each under a name that picks exactly one of them.
+    /// </summary>
+    /// <remarks>
+    /// Nothing stops an organizer calling two forms "testing", and the model
+    /// chooses a form by name -- so a repeated name carries the code that is
+    /// already in its link. Unique by construction rather than by a rule
+    /// somebody has to remember, and the same label is what the list shows, so
+    /// the name in an answer is the name that can be asked about next.
+    /// </remarks>
+    private static IReadOnlyList<(Form Form, string Label)> Labelled(IReadOnlyList<Form> all)
+    {
+        var repeated = all
+            .GroupBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return all
+            .Select(f => (f, repeated.Contains(f.Name) ? $"{f.Name} ({f.Code})" : f.Name))
+            .ToArray();
+    }
+
+    private static List<QuestionUptake> Count(
+        IReadOnlyList<FormField> fields, IReadOnlyList<FormResponse> rows)
+    {
         var uptake = new List<QuestionUptake>();
 
-        foreach (var field in questions.Published)
+        foreach (var field in fields)
         {
+            // A section is a page break with a heading on it. Reporting one as
+            // a question everybody skipped is both wrong and the sort of wrong
+            // that gets acted on -- somebody would cut the heading.
+            if (field.Type == FieldType.Section)
+            {
+                continue;
+            }
+
             var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             var answered = 0;
             var skipped = 0;
 
-            foreach (var response in page.Items)
+            foreach (var response in rows)
             {
-                if (!response.Answers.TryGetValue(field.Key, out var value)
-                    || Blank(value))
+                if (!response.Answers.TryGetValue(field.Key, out var value) || Blank(value))
                 {
                     skipped++;
                     continue;

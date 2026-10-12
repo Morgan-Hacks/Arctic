@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { usePathname } from "next/navigation";
 import {
   AiMagicIcon,
   ArrowRight02Icon,
@@ -18,6 +19,7 @@ import {
   type ThreadSummary,
   type Turn,
 } from "./chat";
+import { screenOf } from "./screen";
 import styles from "./chat-panel.module.css";
 
 /**
@@ -72,6 +74,11 @@ function Panel({ onClose }: { onClose: () => void }) {
 
   const foot = useRef<HTMLDivElement>(null);
 
+  // Read per render rather than when the panel opened. Somebody asks a
+  // question, navigates, and asks a follow-up without closing the panel, and
+  // the second question is about the screen they are on now.
+  const screen = screenOf(usePathname());
+
   useEffect(() => {
     let live = true;
 
@@ -113,7 +120,7 @@ function Panel({ onClose }: { onClose: () => void }) {
     ]);
 
     send(async () => {
-      const said = await say(asked, eventId, threadId);
+      const said = await say(asked, eventId, threadId, screen);
 
       // Guarded on the fields this uses rather than on the error, so the
       // narrowing is the compiler's rather than a promise made to it.

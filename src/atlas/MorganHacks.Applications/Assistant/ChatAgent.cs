@@ -63,9 +63,19 @@ public sealed class ChatAgent(
     public async Task<ChatReply> AnswerAsync(
         IReadOnlyList<Turn> history, string question, ToolContext context, CancellationToken ct)
     {
+        // The forms are read before anything is asked, because they are part
+        // of the question rather than an answer to it: their names become the
+        // closed list the model picks a form from, so it can neither invent a
+        // form nor have to guess which ones exist.
+        IReadOnlyList<string> forms = context.Forms is null
+            ? []
+            : await Named(context.Forms, context.EventId, ct);
+
+        var schema = AssistantTools.Schema(forms);
+
         var messages = new JsonArray
         {
-            Message("system", Brief),
+            Message("system", Brief + Standing(context)),
         };
 
         foreach (var turn in history.TakeLast(Remembered))
@@ -82,7 +92,7 @@ public sealed class ChatAgent(
         {
             for (var step = 0; step < AssistantTools.MaxCalls; step++)
             {
-                var choice = await AskAsync(messages, ct);
+                var choice = await AskAsync(messages, schema, ct);
 
                 if (choice is null)
                 {
@@ -172,7 +182,8 @@ public sealed class ChatAgent(
         return await AssistantTools.RunAsync(name, arguments, context, ct);
     }
 
-    private async Task<JsonObject?> AskAsync(JsonArray messages, CancellationToken ct)
+    private async Task<JsonObject?> AskAsync(
+        JsonArray messages, JsonArray schema, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(
             HttpMethod.Post, "https://api.openai.com/v1/chat/completions");
@@ -181,7 +192,7 @@ public sealed class ChatAgent(
         {
             ["model"] = model,
             ["messages"] = messages.DeepClone(),
-            ["tools"] = AssistantTools.Schema(),
+            ["tools"] = schema.DeepClone(),
             ["temperature"] = 0,
         });
 
@@ -201,6 +212,46 @@ public sealed class ChatAgent(
 
         return body?["choices"]?[0]?["message"]?.AsObject();
     }
+
+    /// <summary>
+    /// The event's form names, or none when they cannot be read.
+    /// </summary>
+    /// <remarks>
+    /// A failure here costs the form argument and nothing else. The forms read
+    /// is one of nine, and a question about the shelf should not fail because
+    /// the forms table was slow.
+    /// </remarks>
+    private async Task<IReadOnlyList<string>> Named(
+        IFormsRead forms, Guid eventId, CancellationToken ct)
+    {
+        try
+        {
+            return await forms.NamesAsync(eventId, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            log.LogWarning(e, "Assistant could not list the event's forms.");
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Where the question was asked from, when that is known.
+    /// </summary>
+    /// <remarks>
+    /// Appended to the brief rather than written into it, because it changes
+    /// per question and the brief does not. Said as a hint and not as a
+    /// subject: somebody on the inventory screen asking about applicants is
+    /// asking about applicants, and a sentence that read "they are asking
+    /// about the shelf" would make that answer wrong.
+    /// </remarks>
+    private static string Standing(ToolContext context) =>
+        Screens.Describe(context.Screen) is { } screen
+            ? $"\n\nThey are currently looking at {screen}. Take that as a hint "
+              + "about what an unspecific question means -- \"what is the title\" "
+              + "or \"how many of these are there\" -- and nothing more. It does "
+              + "not narrow a question that names its own subject."
+            : "";
 
     private static JsonObject Message(string role, string content) => new()
     {
@@ -239,6 +290,17 @@ public sealed class ChatAgent(
         many, and quote only as many as the answer needs. Do not paste a long
         list when a count and a handful of examples answers better.
 
+        A form and a question are different things, and the reads are
+        different too. A form is a whole page people fill in -- the
+        application, an RSVP, a feedback survey -- and "forms" lists them.
+        A question is one field on one of them, and "form_questions" lists
+        those. "Which form has the most responses" is a question about forms.
+        Never answer one out of the other, and never call a question a form.
+
+        Answer only out of what a read actually returned. If no read covers
+        what was asked, say what you cannot see and what you can -- that is a
+        useful answer. Guessing from a neighbouring read is not.
+
         How to answer:
         - Lead with the figure and the number it came out of. "90% finished --
           115 of 128" is an answer; "completion is high" is not.
@@ -246,6 +308,11 @@ public sealed class ChatAgent(
           the denominator is reconstructed rather than counted.
         - A proportion of a small group is a handful of real people. Say so
           rather than reporting a percentage that sounds like a trend.
+        - When several things tie, say they tie. Picking one and calling it
+          the most is wrong, and it is wrong in the direction somebody acts on.
+        - When a figure is the same for everything you counted, that is usually
+          a sign the question has not been answered yet -- say what you found
+          rather than dressing it as a ranking.
         - When a tool says the person may not see something, tell them that and
           name the permission. Never present it as there being no data.
         - When a tool says not enough has happened yet, say that. Do not report

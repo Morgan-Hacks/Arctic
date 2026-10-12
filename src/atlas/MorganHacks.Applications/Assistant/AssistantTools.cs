@@ -43,11 +43,14 @@ public sealed record ToolContext(
     /// </remarks>
     public IApplicantStore? Applicants { get; init; }
 
-    public IFormUptakeRead? FormUptake { get; init; }
+    public IFormsRead? Forms { get; init; }
 
     public IInventoryBurnRead? Burn { get; init; }
 
     public IEmailReachRead? EmailReach { get; init; }
+
+    /// <summary>Which screen the question was asked from, or null.</summary>
+    public string? Screen { get; init; }
 }
 
 /// <summary>What a tool answered, and whether it would say.</summary>
@@ -95,8 +98,16 @@ public static class AssistantTools
     /// </remarks>
     public const int MaxCalls = 8;
 
-    /// <summary>The tool list, as the provider's schema wants it.</summary>
-    public static JsonArray Schema() =>
+    /// <summary>
+    /// The tool list, as the provider's schema wants it.
+    /// </summary>
+    /// <param name="forms">
+    /// The event's forms by name. They become the closed list
+    /// <c>form_questions</c> chooses from, which is also how the model learns
+    /// which forms exist at all -- a schema built from the event's own data
+    /// rather than a sentence in a prompt that may be out of date.
+    /// </param>
+    public static JsonArray Schema(IReadOnlyList<string>? forms = null) =>
     [
         Tool("event_overview",
             "Totals and how many applicants are in each status. Start here for "
@@ -136,11 +147,19 @@ public static class AssistantTools
             + "out at that rate. Use for whether to reorder.",
             null),
 
-        Tool("form_questions",
-            "Every question on the application form, how many answered it, "
-            + "how many skipped it, and the spread of answers. Use for which "
-            + "questions to keep, cut, or reword.",
+        Tool("forms",
+            "Every form built for this event -- its name, what kind it is, "
+            + "whether it is live, how many questions it asks and how many "
+            + "responses it has. Use for any question about forms themselves: "
+            + "which has the most responses, what is still open, what exists.",
             null),
+
+        Tool("form_questions",
+            "The questions on one form, how many answered each, how many "
+            + "skipped it, and the spread of answers. This is questions within "
+            + "a form, not forms -- use \"forms\" for that. Use this for which "
+            + "questions to keep, cut, or reword.",
+            Named(forms)),
 
         Tool("email_reach",
             "How the event's mail has performed: sent, opened, clicked.",
@@ -160,6 +179,40 @@ public static class AssistantTools
                 },
             }),
     ];
+
+    /// <summary>
+    /// The form argument, when there is a form to name.
+    /// </summary>
+    /// <remarks>
+    /// Null when the event has no forms, which removes the argument rather
+    /// than offering an empty list. An enum with nothing in it is a value no
+    /// call can satisfy, and the provider is entitled to reject the schema
+    /// outright for it.
+    /// </remarks>
+    private static JsonObject? Named(IReadOnlyList<string>? forms)
+    {
+        if (forms is null || forms.Count == 0)
+        {
+            return null;
+        }
+
+        var names = new JsonArray();
+        foreach (var name in forms)
+        {
+            names.Add(name);
+        }
+
+        return new JsonObject
+        {
+            ["form"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["enum"] = names,
+                ["description"] =
+                    "Which form. Leave it out for the application form.",
+            },
+        };
+    }
 
     private static JsonArray Statuses()
     {
@@ -252,7 +305,8 @@ public static class AssistantTools
             "schools" => await SchoolsAsync(context, ct),
             "inventory" => await InventoryAsync(context, ct),
             "inventory_burn" => await BurnAsync(context, ct),
-            "form_questions" => await FormQuestionsAsync(context, ct),
+            "forms" => await FormsAsync(context, ct),
+            "form_questions" => await FormQuestionsAsync(arguments, context, ct),
             "email_reach" => await EmailAsync(context, ct),
             "applicants" => await ApplicantsAsync(arguments, context, ct),
 
@@ -402,36 +456,86 @@ public static class AssistantTools
         return name.Length == 0 ? a.Email : name;
     }
 
-    private static async Task<ToolResult> FormQuestionsAsync(
+    /// <summary>
+    /// What forms this event has.
+    /// </summary>
+    /// <remarks>
+    /// Behind nothing more than the assistant itself, which is
+    /// <c>applications.view</c> -- the same permission the forms list screen
+    /// is behind, and for the same reason. A form's name, kind and response
+    /// count are facts about the event; what people answered is a different
+    /// fact, and <see cref="FormQuestionsAsync"/> is where that is gated.
+    /// </remarks>
+    private static async Task<ToolResult> FormsAsync(
         ToolContext context, CancellationToken ct)
+    {
+        if (context.Forms is null)
+        {
+            return ToolResult.No("Forms cannot be read here.");
+        }
+
+        var forms = await context.Forms.ListAsync(context.EventId, ct);
+
+        if (forms.Count == 0)
+        {
+            // COPY: needs sign-off.
+            return ToolResult.No("This event has no forms yet.");
+        }
+
+        return ToolResult.Of(forms.Select(f => new
+        {
+            form = f.Name,
+            kind = f.Kind,
+            status = f.Status,
+            questions = f.Questions,
+            responses = f.Responses,
+            closesAt = f.ClosesAt,
+        }));
+    }
+
+    private static async Task<ToolResult> FormQuestionsAsync(
+        JsonObject? arguments, ToolContext context, CancellationToken ct)
     {
         if (!context.Allowed.Responses)
         {
             // COPY: needs sign-off.
             return ToolResult.No(
-                "This is what applicants wrote on the form, and this person "
+                "This is what people wrote on the form, and this person "
                 + "does not have applications.view_responses. Say so, and name "
                 + "the permission.");
         }
 
-        if (context.FormUptake is null)
+        if (context.Forms is null)
         {
             return ToolResult.No("Form answers cannot be read here.");
         }
 
-        if (await context.FormUptake.ReadAsync(context.EventId, ct) is not { } uptake)
+        var asked = arguments?["form"]?.GetValue<string>();
+
+        if (await context.Forms.UptakeAsync(context.EventId, asked, ct) is not { } uptake)
         {
+            // Two different absences, said apart. "There is no form called
+            // that" sends the model to the forms list; "there is no
+            // application form" is a fact about the event, and answering one
+            // with the other sends it looking for a form that was never there.
             // COPY: needs sign-off.
-            return ToolResult.No("This event has no application form yet.");
+            return ToolResult.No(asked is null
+                ? "This event has no application form yet."
+                : $"This event has no form called \"{asked}\". "
+                  + "Call \"forms\" to see which forms it does have.");
         }
 
-        return ToolResult.Of(uptake.Select(q => new
+        return ToolResult.Of(new
         {
-            question = q.Question,
-            answered = q.Answered,
-            skipped = q.Skipped,
-            answers = q.Answers.Select(a => new { a.Label, a.Count, a.Share }),
-        }));
+            form = asked ?? "the application form",
+            questions = uptake.Select(q => new
+            {
+                question = q.Question,
+                answered = q.Answered,
+                skipped = q.Skipped,
+                answers = q.Answers.Select(a => new { a.Label, a.Count, a.Share }),
+            }),
+        });
     }
 
     private static async Task<ToolResult> BurnAsync(ToolContext context, CancellationToken ct)

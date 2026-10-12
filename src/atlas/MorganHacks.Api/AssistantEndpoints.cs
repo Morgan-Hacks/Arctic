@@ -78,7 +78,14 @@ public static class AssistantEndpoints
     /// APIs bind the body before the permission filter runs, so a required
     /// body would answer a request the gate has not looked at yet.
     /// </remarks>
-    public sealed record ChatRequest(string? Question, string? EventId, string? ThreadId);
+    /// <param name="Screen">
+    /// Which console screen the question was asked from, as one of the names
+    /// <see cref="Screens"/> knows. Anything else is dropped rather than
+    /// refused: a browser that sends a screen this version has not heard of
+    /// should get its question answered, just without the hint.
+    /// </param>
+    public sealed record ChatRequest(
+        string? Question, string? EventId, string? ThreadId, string? Screen);
 
     private static async Task<IResult> Threads(
         HttpContext http, IAssistantConversations conversations, CancellationToken ct)
@@ -129,7 +136,7 @@ public static class AssistantEndpoints
         ChatRequest? body, HttpContext http, IChatAgent agent,
         IAssistantConversations conversations, IApplicantAnalyticsStore analytics,
         IInventoryStore inventory, IApplicantStore applicants,
-        IEmailReachRead email, IFormUptakeRead uptake, IInventoryBurnRead burn,
+        IEmailReachRead email, IFormsRead forms, IInventoryBurnRead burn,
         PermissionService permissions, CancellationToken ct)
     {
         var question = body?.Question?.Trim() ?? "";
@@ -191,9 +198,14 @@ public static class AssistantEndpoints
             DateOnly.FromDateTime(DateTime.UtcNow))
         {
             Applicants = applicants,
-            FormUptake = uptake,
+            Forms = forms,
             Burn = burn,
             EmailReach = email,
+
+            // Matched against the closed list here rather than carried as
+            // sent. What arrives goes into a prompt, and the browser is on the
+            // other side of a boundary.
+            Screen = Screens.Describe(body?.Screen) is null ? null : body?.Screen,
         };
 
         var reply = await agent.AnswerAsync(history, question, context, ct);

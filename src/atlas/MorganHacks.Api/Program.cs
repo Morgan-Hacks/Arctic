@@ -199,7 +199,7 @@ builder.Services.AddSingleton<IAssistantConversations, PostgresAssistantConversa
 // The seam between the assistant's tool layer and the stores that live
 // outside its assembly. See AssistantAdapters.
 builder.Services.AddSingleton<IEmailReachRead, EmailReachAdapter>();
-builder.Services.AddSingleton<IFormUptakeRead, FormUptakeAdapter>();
+builder.Services.AddSingleton<IFormsRead, FormsAdapter>();
 builder.Services.AddSingleton<IInventoryBurnRead, InventoryBurnAdapter>();
 
 // Answers a question out of the reads it is allowed to make.
