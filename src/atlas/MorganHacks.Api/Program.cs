@@ -179,6 +179,8 @@ builder.Services.AddSingleton<PostgresAnnouncementReactionStore>();
 // one way to change a status and this is deliberately not it.
 builder.Services.AddSingleton<IApplicantStore, PostgresApplicantStore>();
 builder.Services.AddSingleton<PostgresApplicantAnalyticsStore>();
+builder.Services.AddSingleton<IApplicantAnalyticsStore>(services =>
+    services.GetRequiredService<PostgresApplicantAnalyticsStore>());
 builder.Services.AddSingleton<EmailAnalyticsStore>();
 
 // What logistics has, where it is, and how much of it is left. A singleton
@@ -186,29 +188,36 @@ builder.Services.AddSingleton<EmailAnalyticsStore>();
 // source, which is itself a singleton owning the connection pool.
 builder.Services.AddSingleton<IInventoryStore, PostgresInventoryStore>();
 
-// Reads a question into a plan.
+// The assistant.
 //
-// The word table is the floor and is always built, because it is what answers
-// when there is no key, when the provider is down, and when a model says
-// something this cannot make sense of. The model is layered over it rather
-// than replacing it, so the assistant degrades to quieter instead of broken.
+// Two registrations and one of them can be absent. Conversations are stored
+// whether or not a model can be reached, because the history is ours and the
+// provider is not -- a thread somebody started yesterday should still open
+// when the key is missing.
+builder.Services.AddSingleton<IAssistantConversations, PostgresAssistantConversations>();
+
+// Answers a question out of the reads it is allowed to make.
+//
+// Nothing stands in when there is no key. The single-shot box had a word
+// table underneath it because a filter box must always do something, and that
+// silent degradation is exactly what hid a dead key for an afternoon: a
+// quieter answer looks identical to a good one. A conversation can say it
+// could not reach the model, so it does, and NoChatAgent is that sentence.
 builder.Services.AddHttpClient("openai");
-builder.Services.AddSingleton<IQuestionRouter>(services =>
+builder.Services.AddSingleton<IChatAgent>(services =>
 {
-    var words = new WordRouter();
     var key = builder.Configuration["OpenAI:ApiKey"];
 
     if (string.IsNullOrWhiteSpace(key))
     {
-        return words;
+        return new NoChatAgent();
     }
 
-    return new OpenAiQuestionRouter(
+    return new ChatAgent(
         services.GetRequiredService<IHttpClientFactory>().CreateClient("openai"),
         key,
         builder.Configuration["OpenAI:Model"] ?? "gpt-4o-mini",
-        words,
-        services.GetRequiredService<ILogger<OpenAiQuestionRouter>>());
+        services.GetRequiredService<ILogger<ChatAgent>>());
 });
 
 // Resumes.

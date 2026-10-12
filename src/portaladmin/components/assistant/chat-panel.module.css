@@ -1,0 +1,300 @@
+/*
+ * A panel on the side, not a page of its own.
+ *
+ * The assistant is something you consult while looking at a screen -- "what
+ * is this rate", "and by school" -- so it sits beside the screen rather than
+ * replacing it. A dedicated tab would mean leaving the thing you were asking
+ * about, which is the wrong trade for a follow-up.
+ */
+
+.launcher {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 40;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 18%);
+}
+
+.launcher:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  max-width: 100vw;
+
+  border-left: 1px solid var(--line);
+  background: var(--surface, var(--raised));
+}
+
+/* On a phone it is the screen, because 380px of panel beside nothing is not
+   a layout. */
+@media (max-width: 720px) {
+  .panel {
+    width: 100vw;
+  }
+}
+
+.head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 12px 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Which cohort the answers are about. Worth the space: a figure read against
+   last year's event is wrong in a way nothing on screen would show. */
+.event {
+  overflow: hidden;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headActions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.quiet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: var(--faint);
+  cursor: pointer;
+}
+
+.quiet:hover {
+  background: var(--line);
+  color: var(--ink);
+}
+
+.history {
+  flex: none;
+  max-height: 40%;
+  overflow-y: auto;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.threadList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.threadList li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.thread {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thread:hover {
+  background: var(--line);
+}
+
+.drop {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--faint);
+  cursor: pointer;
+}
+
+.drop:hover {
+  color: var(--stop);
+}
+
+.conversation {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.opening {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--faint);
+}
+
+.examples {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.examples li {
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.mine,
+.theirs {
+  margin-bottom: 12px;
+}
+
+.mine .body {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--line);
+}
+
+.body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+/*
+ * Which reads the answer came out of.
+ *
+ * Small and always there, rather than behind a hover. A reader deciding
+ * whether to paste a figure into a sponsor deck needs to know it was computed
+ * rather than remembered, and a tooltip is not where that belongs.
+ */
+.basis {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.thinking,
+.problem {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.problem {
+  color: var(--stop);
+}
+
+.composer {
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--raised);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  color: inherit;
+  resize: none;
+}
+
+.input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.send {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+}

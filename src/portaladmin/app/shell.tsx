@@ -2,6 +2,7 @@ import { currentPerson } from "@/lib/api";
 import { CHECK_IN_DESK, isOn } from "@/lib/features";
 import { sectionsFor } from "./sections";
 import { SidebarLayout, SidebarPage } from "./sidebar";
+import { ChatPanel } from "@/components/assistant/chat-panel";
 import { displayName } from "@/lib/person-profile";
 
 type SidebarOptions = {
@@ -29,7 +30,14 @@ async function sidebarProps({ fullName, email, templateCount }: SidebarOptions =
 }
 
 export async function ConsoleShell({ children }: { children: React.ReactNode }) {
-  return <SidebarLayout {...await sidebarProps()}>{children}</SidebarLayout>;
+  return (
+    <SidebarLayout {...await sidebarProps()}>
+      {children}
+      {/* One mount for the whole console, so a thread survives moving between
+          screens. It fetches nothing until somebody opens it. */}
+      <ChatPanel />
+    </SidebarLayout>
+  );
 }
 
 /** The server owns identity and permissions; the sidebar only renders them. */
@@ -50,6 +58,7 @@ export async function Shell({
   return (
     <SidebarPage {...await sidebarProps({ fullName, email, templateCount })}>
       {children}
+      <ChatPanel />
     </SidebarPage>
   );
 }

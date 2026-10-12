@@ -1,12 +1,14 @@
 using System.Globalization;
 using MorganHacks.Applications.Domain;
 using MorganHacks.Applications.Forms;
+using MorganHacks.Applications.Services;
 using Npgsql;
 using NpgsqlTypes;
 
 namespace MorganHacks.Applications.Data;
 
 public sealed class PostgresApplicantAnalyticsStore(NpgsqlDataSource dataSource, IFormStore forms)
+    : IApplicantAnalyticsStore
 {
     public async Task<ApplicantAnalytics> ReadAsync(
         Guid eventId, bool includeResponses, DateOnly today, CancellationToken ct = default)

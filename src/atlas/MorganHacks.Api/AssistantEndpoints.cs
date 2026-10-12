@@ -1,6 +1,4 @@
 using MorganHacks.Applications.Assistant;
-using MorganHacks.Applications.Data;
-using MorganHacks.Applications.Domain;
 using MorganHacks.Applications.Services;
 using MorganHacks.Identity;
 using MorganHacks.Identity.Domain;
@@ -9,42 +7,67 @@ using MorganHacks.Identity.Services;
 namespace MorganHacks.Api;
 
 /// <summary>
-/// Asking the console a question in words.
+/// Asking the console a question, and asking it a follow-up.
 /// </summary>
 /// <remarks>
 /// <para>
-/// One route, and it answers with a <see cref="AssistantPlan"/> -- a screen
-/// and the filters to put on it. It never answers with an applicant.
+/// The assistant answers out of reads it is allowed to make. It holds no
+/// connection and writes no query: it picks from a named list, each entry a
+/// call into a store the console already calls, scoped to one event, returning
+/// counted-up figures rather than people. The model chooses which read to
+/// make; it never chooses what the read says.
 /// </para>
 /// <para>
-/// That is not a limitation worked around, it is the design. The console takes
-/// the plan and fetches the named screen through the endpoint it already uses,
-/// as the person asking, and that endpoint applies the permission it always
-/// applied. Nothing here reads an application, so nothing here can leak one --
-/// and a reader that is confused, or talked into something by text it was
-/// shown, can at worst name a screen somebody may not open, which refuses on
-/// its own.
+/// Permission is decided here, once, before any read runs, and handed down as
+/// plain booleans. The reading built from form answers needs
+/// <c>applications.view_responses</c> and the shelf needs
+/// <c>inventory.manage</c>, exactly as they do on their own screens -- and a
+/// refusal names the permission rather than returning an empty result, because
+/// "nobody said" and "you may not see this" are different answers.
 /// </para>
 /// <para>
-/// <c>applications.view</c> on the route anyway. Not because a plan is
-/// sensitive -- it is three words and a status -- but because somebody who
-/// cannot open any of the screens this names has no business spending the
-/// question on, and the refusal they get here is the one they would get there.
+/// Threads belong to one person and are never shared. An answer was computed
+/// against the permissions its asker held at the time, and a stored sentence
+/// cannot be re-checked against somebody else's -- so the only safe reader is
+/// the person who asked.
 /// </para>
 /// </remarks>
 public static class AssistantEndpoints
 {
     /// <summary>
     /// Long enough for a real question, short enough that nobody pastes a
-    /// document into it. The reader downstream is told to answer questions;
-    /// a page of text is not one, and the cost of finding that out is paid
-    /// per call.
+    /// document in. A page of text is not a question, and the cost of finding
+    /// that out is paid per call.
     /// </summary>
-    private const int MaxQuestion = 300;
+    private const int MaxQuestion = 500;
+
+    /// <summary>How many threads the list offers.</summary>
+    private const int MaxThreads = 30;
+
+    /// <summary>
+    /// How long a conversation is kept.
+    /// </summary>
+    /// <remarks>
+    /// Threads hold figures about applicants and the questions somebody
+    /// thought to ask, which is worth keeping for a season and not worth
+    /// keeping forever. Thirty days spans a review cycle: long enough to pick
+    /// up Monday's thread on Friday, short enough that last year's questions
+    /// are not still sitting there.
+    /// </remarks>
+    private static readonly TimeSpan Keep = TimeSpan.FromDays(30);
 
     public static IEndpointRouteBuilder MapAssistant(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/admin/assistant/ask", Ask)
+        app.MapGet("/admin/assistant/threads", Threads)
+           .RequirePermission(Permission.ApplicationsView);
+
+        app.MapGet("/admin/assistant/threads/{id:guid}", Thread)
+           .RequirePermission(Permission.ApplicationsView);
+
+        app.MapDelete("/admin/assistant/threads/{id:guid}", Forget)
+           .RequirePermission(Permission.ApplicationsView);
+
+        app.MapPost("/admin/assistant/chat", Chat)
            .RequirePermission(Permission.ApplicationsView);
 
         return app;
@@ -55,91 +78,57 @@ public static class AssistantEndpoints
     /// APIs bind the body before the permission filter runs, so a required
     /// body would answer a request the gate has not looked at yet.
     /// </remarks>
-    public sealed record AskRequest(string? Question, string? EventId);
+    public sealed record ChatRequest(string? Question, string? EventId, string? ThreadId);
 
-
-    /// <summary>
-    /// The figure a counting question asked for, or nothing.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The number is read out of the same store the applicants screen reads it
-    /// out of. The model chose which figure; it never produced one, and there
-    /// is no path here by which it could -- which is what keeps "the assistant
-    /// cannot be confidently wrong about a number" true now that it answers
-    /// with numbers at all.
-    /// </para>
-    /// <para>
-    /// This is the line the feature holds as it grows: the assistant may hand
-    /// back what the screen it named would have shown this caller, and never
-    /// more. A count is already on that screen, on the filter chips. The route
-    /// is behind <c>applications.view</c>, which is the permission that screen
-    /// needs, so nobody learns anything here they could not have read by
-    /// clicking.
-    /// </para>
-    /// <para>
-    /// Absent rather than zero when the event is unknown or unreadable. Zero
-    /// is a real answer -- "none of them have checked in" -- and inventing it
-    /// out of a missing parameter would be the one kind of wrong this is built
-    /// not to be.
-    /// </para>
-    /// </remarks>
-    private static async Task<object?> AnswerAsync(
-        AssistantPlan plan, string? eventId, IApplicantStore applicants,
-        PostgresApplicantAnalyticsStore analytics, HttpContext http,
-        PermissionService permissions, CancellationToken ct)
+    private static async Task<IResult> Threads(
+        HttpContext http, IAssistantConversations conversations, CancellationToken ct)
     {
-        if (!Guid.TryParse(eventId, out var id))
+        // The sweep rides along on the list, which is the screen somebody
+        // opens before they ask anything. Atlas has no scheduler, so retention
+        // either happens off the back of ordinary use or it does not happen.
+        await conversations.SweepAsync(DateTimeOffset.UtcNow - Keep, ct);
+
+        var mine = await conversations.MineAsync(http.PersonId(), MaxThreads, ct);
+
+        return Results.Ok(new
         {
-            return null;
-        }
-
-        if (plan.Metric is { } metric)
-        {
-            // The same read the board is drawn from, and asked the same
-            // question about this caller: the responses come back only for
-            // somebody who may read them, exactly as they do on the analytics
-            // endpoint itself. A reading that needs them has already been
-            // refused above, so this is belt and braces rather than the gate.
-            var mine = await permissions.ForAsync(http.PersonId(), ct);
-
-            var data = await analytics.ReadAsync(
-                id,
-                mine.Can(Permission.ApplicationsViewResponses),
-                DateOnly.FromDateTime(DateTime.UtcNow),
-                ct);
-
-            return Analyse.Of(metric, data) is not { } reading
-                // Nothing to report rather than a reading of nothing. The
-                // caller turns this into a sentence; handing back an empty
-                // breakdown would read as "none of them" when the truth is
-                // "not enough has happened yet", and those are different
-                // answers.
-                ? (object)new { empty = true }
-                : new
-                {
-                    headline = reading.Headline,
-                    basis = reading.Basis,
-                    rows = reading.Rows.Select(r => new { label = r.Label, count = r.Count, share = r.Share }),
-                };
-        }
-
-        if (plan.CountOf is not { } counted)
-        {
-            return null;
-        }
-
-        var counts = await applicants.CountsAsync(id, ct);
-
-        // No key for a status nothing is sitting in, which is the store being
-        // careful rather than an absence of data -- so zero is right here.
-        return new { value = counts.TryGetValue(counted, out var n) ? n : 0 };
+            threads = mine.Select(t => new
+            {
+                id = t.Id,
+                title = t.Title,
+                eventId = t.EventId,
+                lastAt = t.LastAt,
+            }),
+            keptForDays = (int)Keep.TotalDays,
+        });
     }
 
-    private static async Task<IResult> Ask(
-        AskRequest? body, HttpContext http, IQuestionRouter router, IApplicantStore applicants,
-        PostgresApplicantAnalyticsStore analytics, PermissionService permissions,
-        CancellationToken ct)
+    private static async Task<IResult> Thread(
+        Guid id, HttpContext http, IAssistantConversations conversations, CancellationToken ct)
+    {
+        if (await conversations.ReadAsync(http.PersonId(), id, ct) is not { } thread)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Ok(Rendered(thread));
+    }
+
+    private static async Task<IResult> Forget(
+        Guid id, HttpContext http, IAssistantConversations conversations, CancellationToken ct)
+    {
+        await conversations.ForgetAsync(http.PersonId(), id, ct);
+
+        // 204 whether or not it was there. A thread that is not this person's
+        // answers the same as one that is gone, so nobody learns from a delete
+        // whether somebody else's thread exists.
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> Chat(
+        ChatRequest? body, HttpContext http, IChatAgent agent,
+        IAssistantConversations conversations, IApplicantAnalyticsStore analytics,
+        IInventoryStore inventory, PermissionService permissions, CancellationToken ct)
     {
         var question = body?.Question?.Trim() ?? "";
 
@@ -158,52 +147,75 @@ public static class AssistantEndpoints
             });
         }
 
-        var answer = await router.PlanAsync(question, ct);
-
-        if (answer.Plan is { Metric: { } wanted } && Analyse.NeedsResponses(wanted))
+        if (!Guid.TryParse(body?.EventId, out var eventId))
         {
-            var mine = await permissions.ForAsync(http.PersonId(), ct);
-            if (!mine.Can(Permission.ApplicationsViewResponses))
-            {
-                // Named rather than hidden. This reading is built out of what
-                // people wrote on the form, and answering with an empty
-                // breakdown would read as "nobody said" instead of "you may
-                // not see this" -- which is the difference between a fact
-                // about the event and a fact about the asker.
-                // COPY: needs sign-off.
-                return Results.Ok(new
-                {
-                    refusal = "That one is built from what applicants wrote on the "
-                            + "form. Ask an admin for applications.view_responses access.",
-                });
-            }
+            // Absent rather than guessed. Answering "how many confirmed"
+            // against whichever event came first is a wrong answer that looks
+            // right, which is the one kind of wrong this is built not to be.
+            // COPY: needs sign-off.
+            return Results.BadRequest(new { error = "Pick an event first." });
         }
 
-        if (answer.Plan is not { } plan)
+        var person = http.PersonId();
+
+        // The thread, or a new one titled after the question that opens it.
+        // A thread id that is not this person's is treated as absent rather
+        // than refused: the caller gets a new thread, and learns nothing about
+        // whose the other one was.
+        Guid threadId;
+        IReadOnlyList<Turn> history = [];
+
+        if (Guid.TryParse(body?.ThreadId, out var asked)
+            && await conversations.ReadAsync(person, asked, ct) is { } existing)
         {
-            // 200, not 400. The caller asked a well-formed question that this
-            // cannot place, which is an answer about the question rather than
-            // a fault in the request -- and the screen has a sentence to show
-            // either way.
-            return Results.Ok(new { refusal = answer.Refusal });
+            threadId = existing.Id;
+            history = existing.Turns;
         }
+        else
+        {
+            threadId = await conversations.StartAsync(person, eventId, question, ct);
+        }
+
+        var mine = await permissions.ForAsync(person, ct);
+
+        var context = new ToolContext(
+            eventId,
+            new Allowed(
+                Responses: mine.Can(Permission.ApplicationsViewResponses),
+                Inventory: mine.Can(Permission.InventoryManage)),
+            analytics,
+            inventory,
+            DateOnly.FromDateTime(DateTime.UtcNow));
+
+        var reply = await agent.AnswerAsync(history, question, context, ct);
+
+        // The question is recorded before the answer, so a thread reads in the
+        // order it happened even when two questions race.
+        await conversations.AppendAsync(
+            person, threadId, new Turn(Speaker.Person, question, [], DateTimeOffset.UtcNow), ct);
+        await conversations.AppendAsync(
+            person, threadId,
+            new Turn(Speaker.Assistant, reply.Body, reply.Basis, DateTimeOffset.UtcNow), ct);
 
         return Results.Ok(new
         {
-            answer = await AnswerAsync(plan, body?.EventId, applicants, analytics, http, permissions, ct),
-            plan = new
-            {
-                view = plan.View switch
-                {
-                    AssistantView.Count => "count",
-                    AssistantView.Analysis => "analysis",
-                    _ => "applicants",
-                },
-                statuses = plan.Statuses.Select(s => s.ToWire()).ToArray(),
-                countOf = plan.CountOf?.ToWire(),
-                search = plan.Search,
-                explain = plan.Explain,
-            },
+            threadId,
+            answer = reply.Body,
+            basis = reply.Basis,
         });
     }
+
+    private static object Rendered(ThreadDetail thread) => new
+    {
+        id = thread.Id,
+        title = thread.Title,
+        eventId = thread.EventId,
+        turns = thread.Turns.Select(t => new
+        {
+            speaker = t.Speaker == Speaker.Person ? "person" : "assistant",
+            body = t.Body,
+            basis = t.Basis,
+            at = t.At,
+        }),
+    };
 }
