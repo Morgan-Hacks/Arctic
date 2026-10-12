@@ -93,9 +93,18 @@ public sealed class OpenAiQuestionRouter(
           metric   only when view is "analysis", one of:
                      acceptance-rate  what share of applicants got in
                      confirm-rate     what share of those offered said yes
+                     decline-rate     what share of those offered said no
                      show-rate        what share of those who said yes arrived
+                     completion-rate  what share who start an application finish
+                     funnel           the whole pipeline, stage by stage
+                     outstanding      how much is still waiting on a decision
                      pace             are applications speeding up or slowing
+                     busiest-day      the day the most applications arrived
                      schools          where applicants are coming from
+                     reach            counts safe to give a sponsor or publish
+                     education        what year or level applicants are at
+                     experience       how many have hacked before
+                     gender           the gender mix, where it was asked
           explain  a short phrase describing what you understood, in plain
                    words, beginning with a noun ("applicants whose status is
                    submitted", "how many applicants are checked in")
@@ -114,6 +123,13 @@ public sealed class OpenAiQuestionRouter(
           on the fence, backup list                  waitlisted
           turned up, arrived, scanned in             checked_in
 
+        Decide in this order:
+        1. Does a metric below answer it? Then view "analysis". Most questions
+           that are not about finding particular people land here.
+        2. Does it ask how many are in one status? Then view "count".
+        3. Does it ask to see a group of applicants? Then view "applicants".
+        4. Only if none of those fit, refuse.
+
         Rules:
         - A question about a rate, a share, a proportion, a trend, or where
           applicants come from is view "analysis" with a metric. "What is our
@@ -121,6 +137,15 @@ public sealed class OpenAiQuestionRouter(
         - "How many of the people we X actually Y" is a proportion wearing a
           count's clothes, and is an analysis too: it asks what share of one
           group did something, not how many are sitting in a status.
+        - A question about what to tell a sponsor, what to put on the website,
+          how much reach the event has, or what to put in a pitch or a deck is
+          metric "reach". It is the bundle of figures that carry no personal
+          data. "What should I tell a sponsor" is asking for those figures, not
+          for advice, so answer it with reach rather than refusing it as an
+          opinion.
+        - education, experience and gender come from what applicants wrote on
+          the form. Choose them when asked, and let the caller worry about
+          whether the asker may see them.
         - "how many" or "count of" with exactly one status means view "count".
         - Somebody who "has not shown up", is a "no show", or "did not arrive"
           is status confirmed: statuses are exclusive, so everybody still at
@@ -130,9 +155,10 @@ public sealed class OpenAiQuestionRouter(
           ["submitted"] and must not include accepted.
         - Prefer mapping over refusing. A question naming any group of
           applicants, however loosely, has a status behind it.
-        - Refuse only when there is genuinely no status in it: a judgement
-          about who deserves a place, an opinion, a decision to make, or a
-          subject that is not applicants at all.
+        - Refuse only for a judgement about who deserves a place, an opinion,
+          a decision somebody has to make, or a subject that is not this event
+          at all. Not having a status in it is not a reason to refuse -- most
+          of the metrics have no status in them either.
 
         Statuses:
         """ + string.Join(", ", Enum.GetValues<ApplicationStatus>().Select(s => s.ToWire()));
@@ -257,9 +283,18 @@ public sealed class OpenAiQuestionRouter(
     {
         ["acceptance-rate"] = AssistantMetric.AcceptanceRate,
         ["confirm-rate"] = AssistantMetric.ConfirmRate,
+        ["decline-rate"] = AssistantMetric.DeclineRate,
         ["show-rate"] = AssistantMetric.ShowRate,
+        ["completion-rate"] = AssistantMetric.CompletionRate,
+        ["funnel"] = AssistantMetric.Funnel,
+        ["outstanding"] = AssistantMetric.Outstanding,
         ["pace"] = AssistantMetric.Pace,
+        ["busiest-day"] = AssistantMetric.BusiestDay,
         ["schools"] = AssistantMetric.Schools,
+        ["reach"] = AssistantMetric.Reach,
+        ["education"] = AssistantMetric.Education,
+        ["experience"] = AssistantMetric.Experience,
+        ["gender"] = AssistantMetric.Gender,
     };
 
     private sealed record ModelPlan(

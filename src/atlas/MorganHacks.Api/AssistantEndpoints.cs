@@ -4,6 +4,7 @@ using MorganHacks.Applications.Domain;
 using MorganHacks.Applications.Services;
 using MorganHacks.Identity;
 using MorganHacks.Identity.Domain;
+using MorganHacks.Identity.Services;
 
 namespace MorganHacks.Api;
 
@@ -85,7 +86,8 @@ public static class AssistantEndpoints
     /// </remarks>
     private static async Task<object?> AnswerAsync(
         AssistantPlan plan, string? eventId, IApplicantStore applicants,
-        PostgresApplicantAnalyticsStore analytics, CancellationToken ct)
+        PostgresApplicantAnalyticsStore analytics, HttpContext http,
+        PermissionService permissions, CancellationToken ct)
     {
         if (!Guid.TryParse(eventId, out var id))
         {
@@ -94,15 +96,26 @@ public static class AssistantEndpoints
 
         if (plan.Metric is { } metric)
         {
-            // The same read the board is drawn from. `includeResponses: false`
-            // because none of these readings touch an answer somebody wrote --
-            // they are proportions of counts, and asking for the responses
-            // would be asking for more than the question needs.
+            // The same read the board is drawn from, and asked the same
+            // question about this caller: the responses come back only for
+            // somebody who may read them, exactly as they do on the analytics
+            // endpoint itself. A reading that needs them has already been
+            // refused above, so this is belt and braces rather than the gate.
+            var mine = await permissions.ForAsync(http.PersonId(), ct);
+
             var data = await analytics.ReadAsync(
-                id, includeResponses: false, DateOnly.FromDateTime(DateTime.UtcNow), ct);
+                id,
+                mine.Can(Permission.ApplicationsViewResponses),
+                DateOnly.FromDateTime(DateTime.UtcNow),
+                ct);
 
             return Analyse.Of(metric, data) is not { } reading
-                ? null
+                // Nothing to report rather than a reading of nothing. The
+                // caller turns this into a sentence; handing back an empty
+                // breakdown would read as "none of them" when the truth is
+                // "not enough has happened yet", and those are different
+                // answers.
+                ? (object)new { empty = true }
                 : new
                 {
                     headline = reading.Headline,
@@ -124,8 +137,9 @@ public static class AssistantEndpoints
     }
 
     private static async Task<IResult> Ask(
-        AskRequest? body, IQuestionRouter router, IApplicantStore applicants,
-        PostgresApplicantAnalyticsStore analytics, CancellationToken ct)
+        AskRequest? body, HttpContext http, IQuestionRouter router, IApplicantStore applicants,
+        PostgresApplicantAnalyticsStore analytics, PermissionService permissions,
+        CancellationToken ct)
     {
         var question = body?.Question?.Trim() ?? "";
 
@@ -146,6 +160,25 @@ public static class AssistantEndpoints
 
         var answer = await router.PlanAsync(question, ct);
 
+        if (answer.Plan is { Metric: { } wanted } && Analyse.NeedsResponses(wanted))
+        {
+            var mine = await permissions.ForAsync(http.PersonId(), ct);
+            if (!mine.Can(Permission.ApplicationsViewResponses))
+            {
+                // Named rather than hidden. This reading is built out of what
+                // people wrote on the form, and answering with an empty
+                // breakdown would read as "nobody said" instead of "you may
+                // not see this" -- which is the difference between a fact
+                // about the event and a fact about the asker.
+                // COPY: needs sign-off.
+                return Results.Ok(new
+                {
+                    refusal = "That one is built from what applicants wrote on the "
+                            + "form. Ask an admin for applications.view_responses access.",
+                });
+            }
+        }
+
         if (answer.Plan is not { } plan)
         {
             // 200, not 400. The caller asked a well-formed question that this
@@ -157,7 +190,7 @@ public static class AssistantEndpoints
 
         return Results.Ok(new
         {
-            answer = await AnswerAsync(plan, body?.EventId, applicants, analytics, ct),
+            answer = await AnswerAsync(plan, body?.EventId, applicants, analytics, http, permissions, ct),
             plan = new
             {
                 view = plan.View switch

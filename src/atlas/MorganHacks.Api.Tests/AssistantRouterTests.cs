@@ -261,6 +261,15 @@ public class AssistantRouterTests
     [InlineData("what was our turnout", AssistantMetric.ShowRate)]
     [InlineData("are applications slowing down", AssistantMetric.Pace)]
     [InlineData("which schools are they coming from", AssistantMetric.Schools)]
+    [InlineData("what is our completion rate", AssistantMetric.CompletionRate)]
+    [InlineData("how many people drop off", AssistantMetric.CompletionRate)]
+    [InlineData("what is the decline rate", AssistantMetric.DeclineRate)]
+    [InlineData("show me the whole pipeline", AssistantMetric.Funnel)]
+    [InlineData("how much is still left to review", AssistantMetric.Outstanding)]
+    [InlineData("what was our busiest day", AssistantMetric.BusiestDay)]
+    [InlineData("what year are they in", AssistantMetric.Education)]
+    [InlineData("how many are first time hackers", AssistantMetric.Experience)]
+    [InlineData("what is the gender balance", AssistantMetric.Gender)]
     public void A_question_about_a_rate_is_a_reading(string question, AssistantMetric expected)
     {
         var plan = Plan(question);
@@ -281,5 +290,39 @@ public class AssistantRouterTests
 
         Assert.Empty(plan.Statuses);
         Assert.Null(plan.CountOf);
+    }
+
+    /// <summary>
+    /// The sponsorship and website questions, which are the same question:
+    /// what can we say out loud. They route to the one bundle that carries no
+    /// personal data.
+    /// </summary>
+    [Theory]
+    [InlineData("what should i tell a sponsor")]
+    [InlineData("what goes in the sponsorship deck")]
+    [InlineData("what numbers can we put on the website")]
+    [InlineData("what is our reach")]
+    public void Asking_what_is_safe_to_publish_is_one_reading(string question)
+    {
+        var plan = Plan(question);
+
+        Assert.Equal(AssistantView.Analysis, plan.View);
+        Assert.Equal(AssistantMetric.Reach, plan.Metric);
+    }
+
+    /// <summary>
+    /// "Decline rate" contains neither a status word nor "rate" alone, and
+    /// "completion rate" must not be read as a confirmation. Specific phrases
+    /// are matched before general ones, and this is what holds that order in
+    /// place.
+    /// </summary>
+    [Theory]
+    [InlineData("what is the decline rate", AssistantMetric.DeclineRate)]
+    [InlineData("what is the completion rate", AssistantMetric.CompletionRate)]
+    [InlineData("what is the confirmation rate", AssistantMetric.ConfirmRate)]
+    public void A_more_specific_reading_wins_over_a_general_one(
+        string question, AssistantMetric expected)
+    {
+        Assert.Equal(expected, Plan(question).Metric);
     }
 }

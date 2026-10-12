@@ -31,8 +31,10 @@ export type AnalysisRow = { label: string; count: number; share: number };
  * two people read two ways.
  */
 export type Answer =
-  | { value: number; headline?: never; basis?: never; rows?: never }
-  | { value?: never; headline: string; basis: string; rows: AnalysisRow[] };
+  | { value: number; headline?: never; basis?: never; rows?: never; empty?: never }
+  | { value?: never; headline: string; basis: string; rows: AnalysisRow[]; empty?: never }
+  /** The reading exists but there is not enough yet to compute it. */
+  | { empty: true; value?: never; headline?: never; basis?: never; rows?: never };
 
 export type AskResult =
   | { plan: AskedPlan; answer: Answer | null; refusal?: never; error?: never }

@@ -64,8 +64,19 @@ export function AskBox({ eventId }: { eventId?: string }) {
         // A reading is the answer itself, so it stays on the page it was
         // asked from. There is nowhere to send somebody for "the acceptance
         // rate" -- no screen in the console shows one.
-        if (result.plan.view === "analysis" && result.answer?.headline) {
-          setReading(result.answer as Extract<Answer, { headline: string }>);
+        if (result.plan.view === "analysis") {
+          if (result.answer?.headline) {
+            setReading(result.answer as Extract<Answer, { headline: string }>);
+            return;
+          }
+
+          // Nothing to compute yet. Said plainly, because a blank panel reads
+          // as a broken screen and "none" reads as a finding.
+          // COPY: needs sign-off.
+          setProblem(
+            `There is not enough yet to work out ${result.plan.explain}. `
+              + "It will answer once more applications have come in.",
+          );
           return;
         }
 
