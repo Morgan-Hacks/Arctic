@@ -32,9 +32,10 @@ public interface IQuestionRouter
 /// tests hold for any other reader that comes later.
 /// </para>
 /// <para>
-/// What it deliberately does not do is guess. A question with no status word
-/// and no counting word in it is refused rather than answered with the
-/// dashboard on the theory that something is better than nothing.
+/// What it deliberately does not do is guess. A question with no status word,
+/// no counting word and no reading in it is refused rather than answered with
+/// the nearest thing to hand, on the theory that something is better than
+/// nothing. A confident answer to a question nobody asked is worse.
 /// </para>
 /// </remarks>
 public sealed class WordRouter : IQuestionRouter
