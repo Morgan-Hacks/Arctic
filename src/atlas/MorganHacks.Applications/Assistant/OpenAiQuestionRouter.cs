@@ -88,7 +88,8 @@ public sealed class OpenAiQuestionRouter(
 
         Reply as JSON only:
           view     "applicants", "count" or "analysis"
-          statuses one or more of the statuses listed below
+          statuses the statuses listed below, and empty for "analysis" --
+                   a reading is about everybody, so it names no status
           countOf  one status, only when view is "count"
           metric   only when view is "analysis", one of:
                      acceptance-rate  what share of applicants got in
@@ -108,7 +109,9 @@ public sealed class OpenAiQuestionRouter(
           explain  a short phrase describing what you understood, in plain
                    words, beginning with a noun ("applicants whose status is
                    submitted", "how many applicants are checked in")
-          refusal  a sentence, only when the question maps to no status at all
+          refusal  a sentence, only when step 4 below is reached. Say what
+                   you cannot answer, and never that the question "maps to
+                   no status" -- most answerable questions name no status
 
         Organizers do not say status names. Map what they mean:
           waiting to hear back, pending, undecided   submitted, under_review
