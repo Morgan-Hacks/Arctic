@@ -28,6 +28,9 @@
  * built out of, because without that read there is no screen — only the
  * refusal:
  *
+ * - Dashboard is `GET /admin/analytics/applicants`, behind
+ *   `applications.view` -- the same read the home screen's overview is built
+ *   out of, which is why it needed no new permission.
  * - Events, Forms and Applicants all read lists scoped to an event, and
  *   `GET /admin/events`, `GET /admin/forms` and `GET /admin/applicants` are
  *   each behind `applications.view`.
@@ -74,10 +77,11 @@ type GatedSection = Section & { needs: readonly string[] };
 /**
  * The sections, in the order the work happens in.
  *
- * A list rather than seven hand-written links so the bar cannot end up marking
- * two sections current, or none.
+ * A list rather than hand-written links so the bar cannot end up marking two
+ * sections current, or none.
  */
 const SECTIONS: readonly GatedSection[] = [
+  { href: "/dashboard", label: "Dashboard", needs: ["applications.view"] },
   { href: "/events", label: "Events", needs: ["applications.view"] },
   { href: "/people", label: "People", needs: ["people.view"] },
   { href: "/forms", label: "Forms", needs: ["applications.view"] },
