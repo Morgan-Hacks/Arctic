@@ -8,6 +8,12 @@ namespace MorganHacks.Applications.Assistant;
 /// these already exists, is already reachable from the sidebar, and is already
 /// behind a permission -- which is the property that makes the whole feature
 /// safe, and the reason a free-text answer was never on the table.
+/// <para>
+/// D-Day is deliberately not among them. It is the screen for the day itself
+/// and is empty of meaning before then, so an assistant that offered it as an
+/// answer would be sending somebody somewhere there is nothing to read. It
+/// goes back in the set when the day is what people are asking about.
+/// </para>
 /// </remarks>
 public enum AssistantView
 {
@@ -16,9 +22,6 @@ public enum AssistantView
 
     /// <summary>One number off the applicant analytics read.</summary>
     Count,
-
-    /// <summary>The board: totals, arrivals a day, schools.</summary>
-    Dashboard,
 }
 
 /// <summary>

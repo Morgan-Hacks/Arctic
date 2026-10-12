@@ -4,7 +4,14 @@ import { loadApplicantAnalytics } from "../home-actions";
 import { LiveBoard } from "./live";
 
 /**
- * The screen somebody leaves up at the organizer desk.
+ * The screen somebody leaves up at the organizer desk, on the day.
+ *
+ * Named for the day rather than for the shape of it. This is where the things
+ * that only matter once doors open collect -- the live counts now, check-in
+ * and whatever the desk turns out to need beside it later -- and keeping that
+ * boundary in the name is what stops it becoming the console's front page by
+ * accretion. Before the day there is nothing here worth looking at, and
+ * nothing should send anybody to it.
  *
  * Deliberately not the home screen. Home is read by one person sitting down
  * to work and answers "what should I do next"; this is read from across a
@@ -18,9 +25,9 @@ import { LiveBoard } from "./live";
  * Nothing here is a control. The endpoint is behind `applications.view`, and
  * a person without it gets the refusal that loader already writes.
  */
-export const metadata = { title: "Dashboard" };
+export const metadata = { title: "D-Day" };
 
-export default async function Dashboard({
+export default async function DDay({
   searchParams,
 }: {
   searchParams: Promise<{ eventId?: string }>;

@@ -13,24 +13,26 @@ import { apiFetch } from "@/lib/api";
  */
 
 export type AskedPlan = {
-  view: "applicants" | "count" | "dashboard";
+  view: "applicants" | "count";
   statuses: string[];
   countOf: string | null;
   search: string | null;
   explain: string;
 };
 
-export type AskResult =
-  | { plan: AskedPlan; refusal?: never; error?: never }
-  | { plan?: never; refusal: string; error?: never }
-  | { plan?: never; refusal?: never; error: string };
+export type Answer = { value: number };
 
-export async function ask(question: string): Promise<AskResult> {
+export type AskResult =
+  | { plan: AskedPlan; answer: Answer | null; refusal?: never; error?: never }
+  | { plan?: never; answer?: never; refusal: string; error?: never }
+  | { plan?: never; answer?: never; refusal?: never; error: string };
+
+export async function ask(question: string, eventId?: string): Promise<AskResult> {
   let response: Response;
   try {
     response = await apiFetch("/admin/assistant/ask", {
       method: "POST",
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, eventId }),
       signal: AbortSignal.timeout(15000),
     });
   } catch {
@@ -45,7 +47,7 @@ export async function ask(question: string): Promise<AskResult> {
     return { error: "Your session has ended. Sign in again." };
   }
 
-  let body: { plan?: AskedPlan; refusal?: string; error?: string };
+  let body: { plan?: AskedPlan; answer?: Answer | null; refusal?: string; error?: string };
   try {
     body = await response.json();
   } catch {
@@ -63,5 +65,7 @@ export async function ask(question: string): Promise<AskResult> {
     return { refusal: body.refusal };
   }
 
-  return body.plan ? { plan: body.plan } : { error: "That question could not be read." };
+  return body.plan
+    ? { plan: body.plan, answer: body.answer ?? null }
+    : { error: "That question could not be read." };
 }

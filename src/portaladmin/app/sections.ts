@@ -28,9 +28,11 @@
  * built out of, because without that read there is no screen — only the
  * refusal:
  *
- * - Dashboard is `GET /admin/analytics/applicants`, behind
- *   `applications.view` -- the same read the home screen's overview is built
- *   out of, which is why it needed no new permission.
+ * - D-Day is `GET /admin/analytics/applicants`, behind `applications.view` --
+ *   the same read the home screen's overview is built out of, which is why it
+ *   needed no new permission. Last in the list rather than first: it is the
+ *   screen for the day itself, and before then there is nothing on it worth
+ *   opening.
  * - Events, Forms and Applicants all read lists scoped to an event, and
  *   `GET /admin/events`, `GET /admin/forms` and `GET /admin/applicants` are
  *   each behind `applications.view`.
@@ -81,7 +83,6 @@ type GatedSection = Section & { needs: readonly string[] };
  * sections current, or none.
  */
 const SECTIONS: readonly GatedSection[] = [
-  { href: "/dashboard", label: "Dashboard", needs: ["applications.view"] },
   { href: "/events", label: "Events", needs: ["applications.view"] },
   { href: "/people", label: "People", needs: ["people.view"] },
   { href: "/forms", label: "Forms", needs: ["applications.view"] },
@@ -91,6 +92,7 @@ const SECTIONS: readonly GatedSection[] = [
   { href: "/mail", label: "Email Campaign", needs: ["email.view_stats"] },
   { href: "/templates", label: "Templates", needs: ["email.manage_templates", "email.delete_templates"] },
   { href: "/audit", label: "Audit", needs: ["audit.view"] },
+  { href: "/d-day", label: "D-Day", needs: ["applications.view"] },
 ];
 
 /**

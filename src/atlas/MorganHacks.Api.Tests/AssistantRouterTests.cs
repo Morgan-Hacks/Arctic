@@ -227,9 +227,19 @@ public class AssistantRouterTests
         Assert.Equal(ApplicationStatus.Accepted, Plan(question).CountOf);
     }
 
-    [Fact]
-    public void A_total_with_no_status_named_is_the_board()
+    /// <summary>
+    /// A total has nowhere to go now that D-Day is out of the set, so it is
+    /// refused rather than pointed at a screen that is empty of meaning until
+    /// the day.
+    /// </summary>
+    [Theory]
+    [InlineData("how many applicants in total")]
+    [InlineData("how many applicants overall")]
+    public void A_total_with_no_status_named_is_refused(string question)
     {
-        Assert.Equal(AssistantView.Dashboard, Plan("how many applicants in total").View);
+        var answer = WordRouter.Plan(question);
+
+        Assert.Null(answer.Plan);
+        Assert.False(string.IsNullOrWhiteSpace(answer.Refusal));
     }
 }

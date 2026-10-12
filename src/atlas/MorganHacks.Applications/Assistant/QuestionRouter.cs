@@ -118,14 +118,9 @@ public sealed class WordRouter : IQuestionRouter
 
         if (found.Count == 0)
         {
-            // "how many applicants" with no status named is still answerable:
-            // it is the board.
-            return counting || text.Contains("overall") || text.Contains("in total")
-                ? AssistantAnswer.For(new AssistantPlan(
-                    AssistantView.Dashboard, [], null,
-                    // COPY: needs sign-off.
-                    "the totals for this event"))
-                : AssistantAnswer.CannotPlace(asked);
+            // A total with no status named has nowhere to go: D-Day is the
+            // only screen that shows one and it is not for now.
+            return AssistantAnswer.CannotPlace(asked);
         }
 
         if (counting && found.Count == 1)

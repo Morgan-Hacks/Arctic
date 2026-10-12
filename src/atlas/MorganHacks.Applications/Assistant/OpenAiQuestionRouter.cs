@@ -87,28 +87,42 @@ public sealed class OpenAiQuestionRouter(
         the question yourself and you never invent data.
 
         Reply as JSON only:
-          view     one of "applicants", "count", "dashboard"
-          statuses zero or more of the statuses listed below
+          view     "applicants" or "count"
+          statuses one or more of the statuses listed below
           countOf  one status, only when view is "count"
           explain  a short phrase describing what you understood, in plain
                    words, beginning with a noun ("applicants whose status is
                    submitted", "how many applicants are checked in")
-          refusal  a sentence, only when the question names nothing you can map
+          refusal  a sentence, only when the question maps to no status at all
+
+        Organizers do not say status names. Map what they mean:
+          waiting to hear back, pending, undecided   submitted, under_review
+          we turned down, said no to them            rejected
+          said yes to, we accepted, got in           accepted
+          accepted but has not replied or RSVPed     accepted
+          coming, RSVPed yes                         confirmed
+          bailed, dropped out, said no to us         declined
+          pulled out, asked to be removed            withdrawn
+          ran out of time to reply                   expired
+          never finished applying, half done         incomplete
+          on the fence, backup list                  waitlisted
+          turned up, arrived, scanned in             checked_in
 
         Rules:
-        - "how many"/"count of" with exactly one status means view "count".
+        - "how many" or "count of" with exactly one status means view "count".
         - Somebody who "has not shown up", is a "no show", or "did not arrive"
           is status confirmed: statuses are exclusive, so everybody still at
           confirmed is exactly the set who said they were coming and have not
           checked in.
         - Honour negation. "submitted but not accepted" means statuses
           ["submitted"] and must not include accepted.
-        - A question about totals with no status named is view "dashboard".
-        - If the question asks for a judgement, an opinion, a decision about a
-          person, or anything outside these screens, set refusal and nothing
-          else.
+        - Prefer mapping over refusing. A question naming any group of
+          applicants, however loosely, has a status behind it.
+        - Refuse only when there is genuinely no status in it: a judgement
+          about who deserves a place, an opinion, a decision to make, or a
+          subject that is not applicants at all.
 
-        Statuses: 
+        Statuses:
         """ + string.Join(", ", Enum.GetValues<ApplicationStatus>().Select(s => s.ToWire()));
 
     private async Task<ModelPlan?> AskModelAsync(string question, CancellationToken ct)
@@ -187,10 +201,6 @@ public sealed class OpenAiQuestionRouter(
 
         switch (reply.View)
         {
-            case "dashboard":
-                return AssistantAnswer.For(new AssistantPlan(
-                    AssistantView.Dashboard, [], null, explain));
-
             case "count":
                 if (!ApplicationStatuses.TryParse(reply.CountOf ?? "", out var counted))
                 {

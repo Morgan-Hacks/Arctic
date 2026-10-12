@@ -77,3 +77,32 @@
 .problem {
   color: var(--stop);
 }
+
+/*
+ * A counting question gets its number here rather than a list to count.
+ *
+ * The figure is large because it is the answer; the phrase beside it is what
+ * was understood, and the link is there because "how many are waitlisted" is
+ * so often followed by "show me".
+ */
+.counted {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 9px 2px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.counted strong {
+  font-size: 26px;
+  font-weight: 650;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.seeThem {
+  font-size: 12px;
+}

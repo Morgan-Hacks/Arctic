@@ -1,5 +1,6 @@
 using MorganHacks.Applications.Assistant;
 using MorganHacks.Applications.Domain;
+using MorganHacks.Applications.Services;
 using MorganHacks.Identity;
 using MorganHacks.Identity.Domain;
 
@@ -52,10 +53,53 @@ public static class AssistantEndpoints
     /// APIs bind the body before the permission filter runs, so a required
     /// body would answer a request the gate has not looked at yet.
     /// </remarks>
-    public sealed record AskRequest(string? Question);
+    public sealed record AskRequest(string? Question, string? EventId);
+
+
+    /// <summary>
+    /// The figure a counting question asked for, or nothing.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The number is read out of the same store the applicants screen reads it
+    /// out of. The model chose which figure; it never produced one, and there
+    /// is no path here by which it could -- which is what keeps "the assistant
+    /// cannot be confidently wrong about a number" true now that it answers
+    /// with numbers at all.
+    /// </para>
+    /// <para>
+    /// This is the line the feature holds as it grows: the assistant may hand
+    /// back what the screen it named would have shown this caller, and never
+    /// more. A count is already on that screen, on the filter chips. The route
+    /// is behind <c>applications.view</c>, which is the permission that screen
+    /// needs, so nobody learns anything here they could not have read by
+    /// clicking.
+    /// </para>
+    /// <para>
+    /// Absent rather than zero when the event is unknown or unreadable. Zero
+    /// is a real answer -- "none of them have checked in" -- and inventing it
+    /// out of a missing parameter would be the one kind of wrong this is built
+    /// not to be.
+    /// </para>
+    /// </remarks>
+    private static async Task<object?> AnswerAsync(
+        AssistantPlan plan, string? eventId, IApplicantStore applicants, CancellationToken ct)
+    {
+        if (plan.CountOf is not { } counted || !Guid.TryParse(eventId, out var id))
+        {
+            return null;
+        }
+
+        var counts = await applicants.CountsAsync(id, ct);
+
+        // No key for a status nothing is sitting in, which is the store being
+        // careful rather than an absence of data -- so zero is right here.
+        return new { value = counts.TryGetValue(counted, out var n) ? n : 0 };
+    }
 
     private static async Task<IResult> Ask(
-        AskRequest? body, IQuestionRouter router, CancellationToken ct)
+        AskRequest? body, IQuestionRouter router, IApplicantStore applicants,
+        CancellationToken ct)
     {
         var question = body?.Question?.Trim() ?? "";
 
@@ -87,14 +131,10 @@ public static class AssistantEndpoints
 
         return Results.Ok(new
         {
+            answer = await AnswerAsync(plan, body?.EventId, applicants, ct),
             plan = new
             {
-                view = plan.View switch
-                {
-                    AssistantView.Applicants => "applicants",
-                    AssistantView.Count => "count",
-                    _ => "dashboard",
-                },
+                view = plan.View == AssistantView.Count ? "count" : "applicants",
                 statuses = plan.Statuses.Select(s => s.ToWire()).ToArray(),
                 countOf = plan.CountOf?.ToWire(),
                 search = plan.Search,

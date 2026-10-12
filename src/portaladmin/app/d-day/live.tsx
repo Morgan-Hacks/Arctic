@@ -6,7 +6,7 @@ import {
   dateLabel, numbers, statusLabels,
   type ActivityDay, type AnalyticsResult, type AnalyticsView, type SchoolBucket,
 } from "../home-analytics";
-import styles from "./dashboard.module.css";
+import styles from "./d-day.module.css";
 
 /**
  * The numbers, refreshed on their own.
@@ -110,7 +110,7 @@ export function LiveBoard({ initial, eventId }: { initial: AnalyticsResult; even
   if (!good) {
     return (
       <>
-        <h1>Dashboard</h1>
+        <h1>D-Day</h1>
         <div className="empty">{problem ?? "Nothing to show yet."}</div>
       </>
     );
@@ -123,7 +123,7 @@ export function LiveBoard({ initial, eventId }: { initial: AnalyticsResult; even
     <>
       <div className={styles.head}>
         <div>
-          <h1>Dashboard</h1>
+          <h1>D-Day</h1>
           {chosen ? <p className={styles.event}>{chosen.name}</p> : null}
         </div>
         <Freshness at={good.at} age={age} problem={problem} onRetry={refresh} />
