@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
 using MorganHacks.Api;
+using MorganHacks.Applications.Assistant;
 using MorganHacks.Applications.Forms;
 using MorganHacks.Applications.Data;
 using MorganHacks.Applications.Logistics;
@@ -184,6 +185,11 @@ builder.Services.AddSingleton<EmailAnalyticsStore>();
 // for the same reason the stores above are: it holds nothing but the data
 // source, which is itself a singleton owning the connection pool.
 builder.Services.AddSingleton<IInventoryStore, PostgresInventoryStore>();
+
+// Reads a question into a plan. A table of words today, and whatever reads
+// sentences better later -- the swap is this line, because what an answer is
+// allowed to contain is decided by AssistantAnswer and not by the reader.
+builder.Services.AddSingleton<IQuestionRouter, WordRouter>();
 
 // Resumes.
 //
@@ -450,6 +456,7 @@ app.MapEmailTracking();
 app.MapEmailUnsubscribe();
 app.MapCampaigns();
 app.MapSavedValues();
+app.MapAssistant();
 app.MapEmailTriggers();
 app.MapSesWebhook();
 
