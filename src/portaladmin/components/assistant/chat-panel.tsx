@@ -22,6 +22,7 @@ import {
   type Turn,
 } from "./chat";
 import { eventOf, screenOf } from "./screen";
+import { Prose } from "./prose";
 import styles from "./chat-panel.module.css";
 
 /**
@@ -331,7 +332,16 @@ function Panel({ onClose }: { onClose: () => void }) {
             key={`${turn.at}-${at}`}
             className={turn.speaker === "person" ? styles.mine : styles.theirs}
           >
-            <p className={styles.body}>{turn.body}</p>
+            {/* Only the assistant's side is read as Markdown. A question is
+                what somebody typed into a box, and asterisks in it are
+                asterisks. */}
+            {turn.speaker === "person" ? (
+              <p className={styles.body}>{turn.body}</p>
+            ) : (
+              <div className={styles.body}>
+                <Prose text={turn.body} />
+              </div>
+            )}
 
             {/* The reads the answer came out of, named. A figure that came
                 from the funnel read and one the model recalled look identical

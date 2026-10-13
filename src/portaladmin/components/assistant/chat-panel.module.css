@@ -270,6 +270,53 @@
 }
 
 /*
+ * The assistant's side, once it has been read as Markdown.
+ *
+ * pre-wrap is off here: the renderer has already decided where the paragraphs
+ * are, and keeping it would add the source's own line breaks on top of them.
+ */
+.theirs .body {
+  white-space: normal;
+}
+
+.proseParagraph {
+  margin: 0 0 8px;
+}
+
+.proseParagraph:last-child {
+  margin-bottom: 0;
+}
+
+.proseHeading {
+  margin: 10px 0 4px;
+  font-weight: 600;
+}
+
+.proseHeading:first-child {
+  margin-top: 0;
+}
+
+.proseList {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
+
+.proseList:last-child {
+  margin-bottom: 0;
+}
+
+.proseList li {
+  margin-bottom: 3px;
+}
+
+.body code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--line);
+  font-size: 12px;
+}
+
+/*
  * Which reads the answer came out of.
  *
  * Small and always there, rather than behind a hover. A reader deciding
