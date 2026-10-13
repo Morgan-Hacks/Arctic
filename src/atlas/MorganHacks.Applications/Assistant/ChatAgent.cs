@@ -236,16 +236,41 @@ public sealed class ChatAgent(
     }
 
     /// <summary>
+    /// What is true of this question in particular: which event, which screen.
+    /// </summary>
+    /// <remarks>
+    /// Appended to the brief rather than written into it, because these change
+    /// per question and the brief does not.
+    /// </remarks>
+    private static string Standing(ToolContext context) => Cohort(context) + Screen(context);
+
+    /// <summary>
+    /// Which event every read is scoped to.
+    /// </summary>
+    /// <remarks>
+    /// Said in words as well as enforced in the reads, because the two do
+    /// different jobs. The scoping makes the figures right; the sentence makes
+    /// the answer say which cohort they are about -- and an organizer running
+    /// two cycles at once has no way to tell a right figure from a figure
+    /// about last year unless the answer names it.
+    /// </remarks>
+    private static string Cohort(ToolContext context) =>
+        context.Event is { } chosen
+            ? $"\n\nEvery read you can make is scoped to {chosen.Name}, which is "
+              + "the event they have selected. You cannot read any other event, "
+              + "and you should not offer to compare with one. If they ask about "
+              + "a different event, tell them to select it first."
+            : "";
+
+    /// <summary>
     /// Where the question was asked from, when that is known.
     /// </summary>
     /// <remarks>
-    /// Appended to the brief rather than written into it, because it changes
-    /// per question and the brief does not. Said as a hint and not as a
-    /// subject: somebody on the inventory screen asking about applicants is
-    /// asking about applicants, and a sentence that read "they are asking
-    /// about the shelf" would make that answer wrong.
+    /// Said as a hint and not as a subject: somebody on the inventory screen
+    /// asking about applicants is asking about applicants, and a sentence that
+    /// read "they are asking about the shelf" would make that answer wrong.
     /// </remarks>
-    private static string Standing(ToolContext context) =>
+    private static string Screen(ToolContext context) =>
         Screens.Describe(context.Screen) is { } screen
             ? $"\n\nThey are currently looking at {screen}. Take that as a hint "
               + "about what an unspecific question means -- \"what is the title\" "

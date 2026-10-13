@@ -137,7 +137,7 @@ public static class AssistantEndpoints
         IAssistantConversations conversations, IApplicantAnalyticsStore analytics,
         IInventoryStore inventory, IApplicantStore applicants,
         IEmailReachRead email, IFormsRead forms, IInventoryBurnRead burn,
-        PermissionService permissions, CancellationToken ct)
+        IEventStore events, PermissionService permissions, CancellationToken ct)
     {
         var question = body?.Question?.Trim() ?? "";
 
@@ -163,6 +163,18 @@ public static class AssistantEndpoints
             // right, which is the one kind of wrong this is built not to be.
             // COPY: needs sign-off.
             return Results.BadRequest(new { error = "Pick an event first." });
+        }
+
+        // Resolved rather than taken on trust, and refused rather than fallen
+        // back from. The applicants screen answers for the newest event when
+        // the one asked for is not there, which is right for a screen somebody
+        // is looking at -- the picker beside it shows which one they got. An
+        // answer in a sentence has no picker beside it, so the same fallback
+        // here would read as a figure about the event they chose.
+        if (await events.ByIdAsync(eventId, ct) is not { } chosen)
+        {
+            // COPY: needs sign-off.
+            return Results.BadRequest(new { error = "That event is not one of ours." });
         }
 
         var person = http.PersonId();
@@ -197,6 +209,10 @@ public static class AssistantEndpoints
             inventory,
             DateOnly.FromDateTime(DateTime.UtcNow))
         {
+            // The event itself, not the store that finds events. A tool layer
+            // handed IEventStore could create one; handed the record it cannot
+            // do anything but read what this request already resolved.
+            Event = chosen,
             Applicants = applicants,
             Forms = forms,
             Burn = burn,
@@ -223,6 +239,12 @@ public static class AssistantEndpoints
             threadId,
             answer = reply.Body,
             basis = reply.Basis,
+
+            // Which cohort this was about, said back. The panel shows it
+            // beside the answer, because an event is the one premise a figure
+            // carries that nothing in the sentence would reveal if it were
+            // wrong.
+            eventName = chosen.Name,
         });
     }
 

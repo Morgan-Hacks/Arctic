@@ -43,3 +43,19 @@ export function screenOf(pathname: string | null): string | undefined {
       return undefined;
   }
 }
+
+/**
+ * Which event the page has selected.
+ *
+ * Read from the URL because that is where the console keeps it: every picker
+ * on every screen navigates rather than holding the choice in React state, so
+ * an organizer can send somebody the exact view they are looking at. Two
+ * spellings because two screens chose differently -- `/applicants?event=` and
+ * `/inventory?eventId=` -- and the panel sits beside both.
+ *
+ * Undefined when the page has not said, which is most of them. The caller
+ * falls back to the same event the applicants screen would have shown.
+ */
+export function eventOf(params: URLSearchParams | null): string | undefined {
+  return params?.get("event") ?? params?.get("eventId") ?? undefined;
+}

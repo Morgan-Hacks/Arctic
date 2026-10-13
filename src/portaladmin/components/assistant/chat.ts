@@ -44,8 +44,20 @@ export type ThreadDetail = {
 };
 
 export type Said =
-  | { threadId: string; answer: string; basis: string[]; error?: never }
-  | { threadId?: never; answer?: never; basis?: never; error: string };
+  | {
+      threadId: string;
+      answer: string;
+      basis: string[];
+      eventName: string;
+      error?: never;
+    }
+  | {
+      threadId?: never;
+      answer?: never;
+      basis?: never;
+      eventName?: never;
+      error: string;
+    };
 
 /** How long to wait. The agent may make several reads before it answers. */
 const PATIENCE = 60000;
@@ -90,7 +102,13 @@ export async function say(
     return { error: refused };
   }
 
-  let body: { threadId?: string; answer?: string; basis?: string[]; error?: string };
+  let body: {
+    threadId?: string;
+    answer?: string;
+    basis?: string[];
+    eventName?: string;
+    error?: string;
+  };
   try {
     body = await response.json();
   } catch {
@@ -102,7 +120,16 @@ export async function say(
   }
 
   return body.threadId && body.answer
-    ? { threadId: body.threadId, answer: body.answer, basis: body.basis ?? [] }
+    ? {
+        threadId: body.threadId,
+        answer: body.answer,
+        basis: body.basis ?? [],
+
+        // Which event the API actually answered about, rather than the one
+        // this side believed it had asked about. They should be the same; the
+        // whole reason to carry it is the case where they are not.
+        eventName: body.eventName ?? "",
+      }
     : { error: "That answer came back empty." };
 }
 
@@ -152,19 +179,26 @@ export async function forget(id: string): Promise<void> {
 export type Here = { eventId: string | null; name: string | null };
 
 /**
- * Which event the panel asks about when the page has not said.
+ * Which event the panel asks about.
  *
- * The same event the applicants screen defaults to, read the same way, rather
- * than a choice made here. The panel appears on every screen and most of them
- * have no event in their URL, so without this it would open asking a question
- * before it could answer one -- and picking whichever event came back first
- * would make "how many confirmed" a wrong answer that looks right.
+ * The same event the console's own screens resolve, read the same way, rather
+ * than a choice made here. Pass the id the page has selected and this confirms
+ * it and names it; pass nothing and it answers with whatever the applicants
+ * screen would have defaulted to -- the panel appears on every screen and most
+ * of them have no event in their URL, so without that it would open asking a
+ * question before it could answer one.
+ *
+ * Note the fallback is the applicants endpoint's and not ours: an id it does
+ * not recognise comes back as the newest event rather than as nothing. That is
+ * why the name is returned and shown, and why `say` reports which event it
+ * actually answered about.
  */
-export async function here(): Promise<Here> {
+export async function here(eventId?: string): Promise<Here> {
   try {
-    const response = await apiFetch("/admin/applicants", {
-      signal: AbortSignal.timeout(10000),
-    });
+    const response = await apiFetch(
+      `/admin/applicants${eventId ? `?event=${encodeURIComponent(eventId)}` : ""}`,
+      { signal: AbortSignal.timeout(10000) },
+    );
 
     if (!response.ok) {
       return { eventId: null, name: null };
