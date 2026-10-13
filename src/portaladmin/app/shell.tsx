@@ -1,4 +1,6 @@
 import { currentPerson } from "@/lib/api";
+import { currentEvent } from "@/lib/current-event";
+import { dDayLock, when } from "./d-day/lock";
 import { CHECK_IN_DESK, isOn } from "@/lib/features";
 import { sectionsFor } from "./sections";
 import { SidebarLayout, SidebarPage } from "./sidebar";
@@ -12,12 +14,21 @@ type SidebarOptions = {
 };
 
 async function sidebarProps({ fullName, email, templateCount }: SidebarOptions = {}) {
-  const person = await currentPerson();
+  const [person, event] = await Promise.all([currentPerson(), currentEvent()]);
   const address = email ?? person?.email ?? null;
+
+  // Shut until the day before, and the bar says so rather than only the
+  // screen -- somebody who can see the tab should be able to tell why it is
+  // quiet without opening it.
+  const lock = dDayLock(event?.startsAt);
+
   return {
     sections: sectionsFor(
       person?.permissions ?? new Set<string>(),
       templateCount === undefined ? {} : { "/templates": templateCount },
+      lock.locked
+        ? { "/d-day": { why: `The board opens ${when(lock)}, the day before the event.` } }
+        : {},
       // A tab that only ever refuses teaches its reader that the console
       // is broken, so the desk stays out of the nav until its flag is on.
     ).filter((section) => section.href !== "/check-in" || isOn(CHECK_IN_DESK)),

@@ -147,6 +147,21 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+/*
+ * A padlock beside a section that is shut for now.
+ *
+ * Muted rather than coloured. This is not a warning and not a refusal -- it
+ * is a date that has not arrived, and it opens by itself. Something red here
+ * would have people asking an admin for a permission that does not exist.
+ */
+.navLock {
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--sidebar-muted);
+  opacity: 0.75;
+}
+
 .navBadge {
   display: grid;
   min-width: 20px;
@@ -161,7 +176,22 @@
   line-height: 1;
 }
 .navItem:hover .navBadge,
-.navItem[aria-current="page"] .navBadge {
+.navItem[aria-current="page"] /*
+ * A padlock beside a section that is shut for now.
+ *
+ * Muted rather than coloured. This is not a warning and not a refusal -- it
+ * is a date that has not arrived, and it opens by itself. Something red here
+ * would have people asking an admin for a permission that does not exist.
+ */
+.navLock {
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--sidebar-muted);
+  opacity: 0.75;
+}
+
+.navBadge {
   background: color-mix(in srgb, var(--sidebar-ink) 10%, var(--sidebar-active));
   color: var(--sidebar-ink);
 }

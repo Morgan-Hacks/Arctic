@@ -17,6 +17,7 @@ import {
   Menu01Icon,
   UserAccountIcon,
   UserGroupIcon,
+  SquareLock02Icon,
 } from "@hugeicons/core-free-icons";
 import { Icon, type IconSvgElement } from "@/components/ui/icon";
 import type { Section } from "./sections";
@@ -40,6 +41,7 @@ function NavSection({ section, badge, pathname, collapsed, onNavigate }: {
       title={collapsed ? section.label : undefined} aria-current={active ? "page" : undefined} onClick={onNavigate}>
       <Icon icon={icon} />
       <span className={styles.navLabel}>{section.label}</span>
+      {!collapsed && section.locked ? <Lock why={section.locked.why} /> : null}
       {!collapsed && badge !== undefined ? <span className={styles.navBadge} aria-label={`${badge} total`}>{badge}</span> : null}
     </Link>;
   }
@@ -56,6 +58,7 @@ function NavSection({ section, badge, pathname, collapsed, onNavigate }: {
       <Link href={section.href} className={styles.navParentLink} aria-current={active ? "page" : undefined} onClick={onNavigate}>
         {section.label}
       </Link>
+      {section.locked ? <Lock why={section.locked.why} /> : null}
       {badge !== undefined ? <span className={styles.navBadge} aria-label={`${badge} total`}>{badge}</span> : null}
     </div>
     <div id={submenuId} className={styles.navSubmenu} hidden={!expanded}>
@@ -64,10 +67,26 @@ function NavSection({ section, badge, pathname, collapsed, onNavigate }: {
         const href = event && child.href === "/forms#new-form" ? `/forms?${new URLSearchParams({ event })}#new-form` : child.href;
         return <Link key={child.href} href={href} className={styles.navSubItem} onClick={onNavigate}>
           <span>{child.label}</span>
+          {child.locked ? <Lock why={child.locked.why} /> : null}
         </Link>;
       })}
     </div>
   </div>;
+}
+
+/**
+ * A padlock, and the reason under it.
+ *
+ * The reason is the point. A padlock alone reads as "you are not allowed",
+ * which sends somebody to an admin for a permission that would not help --
+ * this one is a date, and it opens by itself.
+ */
+function Lock({ why }: { why: string }) {
+  return (
+    <span className={styles.navLock} title={why} aria-label={why}>
+      <Icon icon={SquareLock02Icon} size={14} />
+    </span>
+  );
 }
 
 const sectionIcons: Record<string, IconSvgElement> = {

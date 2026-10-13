@@ -71,7 +71,23 @@
  */
 
 /** A place in the nav bar. */
-export type Section = { href: string; label: string; badge?: number; children?: Section[] };
+export type Section = {
+  href: string;
+  label: string;
+  badge?: number;
+  children?: Section[];
+
+  /**
+   * Shut for now, and why.
+   *
+   * Carried rather than worked out in the bar, for the reason the permissions
+   * are: the browser is told what to show, not what the rule was. The reason
+   * travels with it because a padlock on its own is a question -- somebody
+   * reads it as "I am not allowed" and asks an admin for a permission that
+   * would not help.
+   */
+  locked?: { why: string };
+};
 
 /** A section, with the permissions any one of which makes it worth opening. */
 type GatedSection = Section & { needs: readonly string[] };
@@ -101,7 +117,11 @@ const SECTIONS: readonly GatedSection[] = [
  * stay on this side: the bar in the browser is told where it may go, not what
  * the rule was, and cannot start making the decision a second time.
  */
-export function sectionsFor(mine: ReadonlySet<string>, badges: Readonly<Record<string, number>> = {}): Section[] {
+export function sectionsFor(
+  mine: ReadonlySet<string>,
+  badges: Readonly<Record<string, number>> = {},
+  locks: Readonly<Record<string, { why: string }>> = {},
+): Section[] {
   return [
     { href: "/", label: "Home" },
     ...SECTIONS.filter((section) =>
@@ -110,6 +130,7 @@ export function sectionsFor(mine: ReadonlySet<string>, badges: Readonly<Record<s
       href,
       label,
       badge: badges[href],
+      ...(locks[href] ? { locked: locks[href] } : {}),
       ...(href === "/forms" && mine.has("forms.manage")
         ? { children: [{ href: "/forms#new-form", label: "New Form" }] }
         : {}),
@@ -118,7 +139,7 @@ export function sectionsFor(mine: ReadonlySet<string>, badges: Readonly<Record<s
       // because they are not one permission -- the board is applicant
       // analytics and the desk is a scanner, and a volunteer holding
       // only checkin.scan should see the desk and not the numbers.
-      ...(href === "/d-day" ? { children: dDay(mine) } : {}),
+      ...(href === "/d-day" ? { children: dDay(mine, locks) } : {}),
     })),
   ];
 }
@@ -135,11 +156,23 @@ export function sectionsFor(mine: ReadonlySet<string>, badges: Readonly<Record<s
  * volunteer looking for it on event morning will look where the day's screens
  * are.
  */
-function dDay(mine: ReadonlySet<string>): Section[] {
+function dDay(
+  mine: ReadonlySet<string>,
+  locks: Readonly<Record<string, { why: string }>>,
+): Section[] {
   const under: Section[] = [];
 
   if (mine.has("applications.view")) {
-    under.push({ href: "/d-day/dashboard", label: "Dashboard" });
+    under.push({
+      href: "/d-day/dashboard",
+      label: "Dashboard",
+
+      // The board is what the date shuts, and the padlock goes on it rather
+      // than only on the section above. Check-in is under D-Day as well and
+      // is not gated by this -- a desk that cannot scan because of an event
+      // date somebody mistyped is a worse failure than a quiet board.
+      ...(locks["/d-day"] ? { locked: locks["/d-day"] } : {}),
+    });
   }
 
   if (mine.has("checkin.scan") || mine.has("checkin.view_stats")) {

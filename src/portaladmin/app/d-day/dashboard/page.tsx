@@ -1,6 +1,9 @@
 import { readPageData } from "@/lib/page-data";
+import { currentEvent } from "@/lib/current-event";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Shell } from "../../shell";
 import { loadApplicantAnalytics } from "../../home-actions";
+import { dDayLock, when } from "../lock";
 import { LiveBoard } from "./live";
 
 /**
@@ -33,6 +36,37 @@ export default async function Dashboard({
   searchParams: Promise<{ eventId?: string }>;
 }) {
   const { eventId } = await searchParams;
+
+  // The lock is read before the board, not instead of a permission. Anyone
+  // reaching this already holds applications.view -- the analytics endpoint
+  // sees to that -- so this decides whether there is anything worth showing,
+  // which is a different question and is answered by the calendar.
+  const event = await currentEvent();
+  const lock = dDayLock(event?.startsAt);
+
+  if (lock.locked) {
+    const { person } = await readPageData(async () => null);
+
+    return (
+      <Shell personId={person.personId}>
+        <EmptyState
+          variant="data"
+          size="page"
+          title="The day's board opens the day before"
+          description={
+            <>
+              Everything on it is counted from the doors opening — who has
+              arrived, how full the room is, how the queue is moving — and none
+              of that has happened yet. A board of zeroes now would look like a
+              broken one. It opens {when(lock)}
+              {event?.name ? `, ahead of ${event.name}` : ""}.
+            </>
+          }
+        />
+      </Shell>
+    );
+  }
+
   const { person, data: initial } = await readPageData(() => loadApplicantAnalytics(eventId));
 
   return (
