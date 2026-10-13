@@ -176,41 +176,49 @@ export async function forget(id: string): Promise<void> {
   }
 }
 
-export type Here = { eventId: string | null; name: string | null };
+export type EventChoice = { id: string; name: string };
+
+/** The events somebody may ask about, and the one the console would default to. */
+export type Events = { events: EventChoice[]; chosen: EventChoice | null };
 
 /**
- * Which event the panel asks about.
+ * Which events there are to ask about.
  *
- * The same event the console's own screens resolve, read the same way, rather
- * than a choice made here. Pass the id the page has selected and this confirms
- * it and names it; pass nothing and it answers with whatever the applicants
- * screen would have defaulted to -- the panel appears on every screen and most
- * of them have no event in their URL, so without that it would open asking a
- * question before it could answer one.
+ * Read from the applicants endpoint rather than from an endpoint of its own,
+ * because that is the list the console's own pickers are drawn from and a
+ * second source would eventually disagree with it about which event is
+ * current.
  *
- * Note the fallback is the applicants endpoint's and not ours: an id it does
- * not recognise comes back as the newest event rather than as nothing. That is
- * why the name is returned and shown, and why `say` reports which event it
- * actually answered about.
+ * The panel asks once, when it opens, and the chosen event is fixed for a
+ * conversation. An event is the one premise every figure carries and nothing
+ * in a sentence would reveal if it were wrong, so it is picked deliberately
+ * rather than inferred from whatever screen somebody happened to be on.
  */
-export async function here(eventId?: string): Promise<Here> {
+export async function events(): Promise<Events> {
   try {
-    const response = await apiFetch(
-      `/admin/applicants${eventId ? `?event=${encodeURIComponent(eventId)}` : ""}`,
-      { signal: AbortSignal.timeout(10000) },
-    );
+    const response = await apiFetch("/admin/applicants", {
+      signal: AbortSignal.timeout(10000),
+    });
 
     if (!response.ok) {
-      return { eventId: null, name: null };
+      return { events: [], chosen: null };
     }
 
     const body = await response.json();
-    const chosen = body?.chosen ?? null;
 
-    return chosen?.id
-      ? { eventId: chosen.id, name: chosen.name ?? null }
-      : { eventId: null, name: null };
+    const all: EventChoice[] = (body?.events ?? [])
+      .filter((one: { id?: string }) => Boolean(one?.id))
+      .map((one: { id: string; name?: string }) => ({
+        id: one.id,
+        name: one.name ?? "Untitled event",
+      }));
+
+    const chosen = body?.chosen?.id
+      ? all.find((one) => one.id === body.chosen.id) ?? null
+      : null;
+
+    return { events: all, chosen: chosen ?? all[0] ?? null };
   } catch {
-    return { eventId: null, name: null };
+    return { events: [], chosen: null };
   }
 }

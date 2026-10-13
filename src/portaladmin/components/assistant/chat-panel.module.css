@@ -162,6 +162,19 @@
   background: var(--line);
 }
 
+.threadTitle,
+.threadEvent {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.threadEvent {
+  font-size: 11px;
+  color: var(--faint);
+}
+
 .drop {
   display: flex;
   flex: none;
@@ -199,6 +212,26 @@
   font-size: 12px;
   line-height: 1.5;
   color: var(--faint);
+}
+
+/*
+ * Which event the questions are about.
+ *
+ * At the top of the opening rather than in the header, because it is the first
+ * decision and not a setting. It disappears once the conversation starts: the
+ * thread is about that cohort by then, and a control that cannot change
+ * anything is worse than no control.
+ */
+.pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.pick > span {
+  flex: none;
 }
 
 .examples {
