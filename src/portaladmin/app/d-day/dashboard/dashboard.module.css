@@ -92,6 +92,26 @@
   font-weight: 500;
 }
 
+/*
+ * Under the one tile that runs on its own clock.
+ *
+ * Read from the chair rather than the room -- the number is what the room
+ * reads, and this line is for whoever has walked up to it and is deciding
+ * whether it has moved. Always present while there is a figure, for the same
+ * reason the banner's "Updated 14:32" always is: normal has to be visible for
+ * "not live" to mean anything.
+ */
+.tileNote {
+  color: var(--faint);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tileNote[data-not-live] {
+  color: var(--warn);
+  font-weight: 600;
+}
+
 /* ------------------------------------------------------------- panels ---
  *
  * Two below the tiles. The tiles answer "where are we"; these answer "how

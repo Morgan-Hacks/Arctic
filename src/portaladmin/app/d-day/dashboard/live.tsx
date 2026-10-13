@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { loadCheckInCounts } from "../actions";
 import { loadApplicantAnalytics } from "../../home-actions";
 import {
   dateLabel, numbers, statusLabels,
   type ActivityDay, type AnalyticsResult, type AnalyticsView, type SchoolBucket,
 } from "../../home-analytics";
+import { CHECK_IN_POLL_MS, checkedInTile, type CheckInTile, type Figure } from "./checked-in";
 import styles from "./dashboard.module.css";
 
 /**
@@ -14,8 +16,16 @@ import styles from "./dashboard.module.css";
  * Once a minute, not once a second. Every poll is a query against a Burstable
  * Postgres, and on the one day this screen matters that database is also
  * serving check-in -- a dashboard that costs the desk its responsiveness has
- * made things worse. Nothing here changes faster than a minute anyway: a
- * number on a wall is read by somebody glancing up, not watched.
+ * made things worse. A number on a wall is read by somebody glancing up, not
+ * watched, and almost nothing here moves faster than that.
+ *
+ * The exception is the one the issue left open, and this component now makes
+ * the call: **the checked-in count runs on its own, faster clock.** It is the
+ * number people at the door read while they are working, and it is the only
+ * thing on the screen that changes while you watch it. The rest keeps its
+ * minute; checked-in.ts holds the interval, and the action behind it holds the
+ * reason the fast read is a different request rather than this one asked more
+ * often.
  *
  * Polling stops while the tab is hidden and catches up on the way back, so a
  * tab left open behind other work is not quietly spending queries all day.
@@ -50,6 +60,46 @@ const FRESH_MS = 2 * POLL_MS;
 /** Past this, the banner stops being a note and starts being a warning. */
 const STALE_MS = 3 * POLL_MS;
 
+/**
+ * Ask on a clock, but only while somebody could be looking.
+ *
+ * Two clocks here rather than one, which is the whole reason this is a hook
+ * and not a pair of intervals written out twice: the rule -- asleep while the
+ * tab is hidden, caught up on the way back -- has to hold for both feeds, and
+ * the second copy of it is the one that would eventually be edited without
+ * the first.
+ *
+ * Both feeds are server actions, and Next dispatches those **one at a time
+ * per client**, so the fast feed can queue behind an in-flight slow poll once
+ * a minute. That costs a number on this board at most the length of one
+ * analytics read, and the tile's own age is what decides whether it says
+ * anything -- so the coupling shows up as a slightly older `As of` line, never
+ * as a fresh-looking figure nobody has checked. Worth knowing rather than
+ * working around: the fix would be a route handler, and trading this
+ * convention for a delay nobody can see is not a trade.
+ *
+ * `enabled` exists because the fast feed exists for one tile. While there is
+ * no analytics payload there is no tile to feed, and a board left open on a
+ * refusal should not be spending ten-second queries to say nothing to nobody.
+ */
+function usePoll(ask: () => void, every: number, enabled = true) {
+  useEffect(() => {
+    if (!enabled) return;
+
+    const askIfVisible = () => {
+      if (document.visibilityState === "visible") void ask();
+    };
+
+    const id = setInterval(askIfVisible, every);
+    document.addEventListener("visibilitychange", askIfVisible);
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", askIfVisible);
+    };
+  }, [ask, every, enabled]);
+}
+
 export function LiveBoard({ initial, eventId }: { initial: AnalyticsResult; eventId?: string }) {
   // What is on screen, and when it was true. Held separately from the last
   // attempt, which is the whole point: a failed refresh must not take the
@@ -59,11 +109,25 @@ export function LiveBoard({ initial, eventId }: { initial: AnalyticsResult; even
   );
   const [problem, setProblem] = useState<string | null>(initial.error ?? null);
 
+  // The fast feed's figure, seeded from the payload the page already carries
+  // so the tile does not open by claiming a number from nowhere. From here it
+  // is refreshed on its own clock, and its age alone decides whether the tile
+  // says anything about it -- see checked-in.ts.
+  const [checkIn, setCheckIn] = useState<Figure | null>(
+    initial.data?.analytics
+      ? {
+          count: initial.data.analytics.statuses.checked_in ?? 0,
+          at: Date.parse(initial.updatedAt),
+        }
+      : null,
+  );
+
   // Re-rendered on a timer as well as on a poll, so "4 minutes ago" is not
   // itself a stale number while the tab sits there failing to refresh.
   const [now, setNow] = useState(() => Date.now());
 
   const inFlight = useRef(false);
+  const checkInInFlight = useRef(false);
 
   const refresh = useCallback(async () => {
     if (inFlight.current) return;
@@ -85,25 +149,45 @@ export function LiveBoard({ initial, eventId }: { initial: AnalyticsResult; even
     }
   }, [eventId]);
 
+  /**
+   * The fast feed.
+   *
+   * A failure sets no state of its own, deliberately. What the tile shows is
+   * the age of the last figure it was given, and a failed attempt that leaves
+   * that figure a second old is not worth a word -- which is the same rule the
+   * banner above works to, learned here the same way: keyed on the attempt
+   * rather than on the age, a feed that goes quiet has nothing to report.
+   */
+  const refreshCheckIn = useCallback(async () => {
+    if (checkInInFlight.current) return;
+    checkInInFlight.current = true;
+    try {
+      const next = await loadCheckInCounts(eventId);
+      if (next.counts) {
+        setCheckIn({ count: next.counts.checked_in ?? 0, at: Date.parse(next.updatedAt) });
+      }
+    } catch {
+      // See above: the age of what is on screen is what says so.
+    } finally {
+      checkInInFlight.current = false;
+      setNow(Date.now());
+    }
+  }, [eventId]);
+
+  /** Both feeds, because the banner's offer is about the board, not one of them. */
+  const retry = useCallback(() => {
+    void refresh();
+    void refreshCheckIn();
+  }, [refresh, refreshCheckIn]);
+
+  // The clock the two freshness readings are read against.
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 15_000);
-    const poll = setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, POLL_MS);
+    return () => clearInterval(tick);
+  }, []);
 
-    // Coming back to the tab should not wait out the rest of an interval that
-    // was running while nobody could see it.
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void refresh();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-
-    return () => {
-      clearInterval(tick);
-      clearInterval(poll);
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, [refresh]);
+  usePoll(refresh, POLL_MS);
+  usePoll(refreshCheckIn, CHECK_IN_POLL_MS, Boolean(good?.view.analytics));
 
   // Nothing ever loaded. There is no number to protect, so the refusal from
   // the loader is the whole screen.
@@ -119,6 +203,16 @@ export function LiveBoard({ initial, eventId }: { initial: AnalyticsResult; even
   const { analytics, chosen } = good.view;
   const age = now - good.at;
 
+  // The checked-in figure, whichever of the two feeds is holding the newer
+  // one, and what the tile has to say about it. The board's own read is the
+  // fallback rather than a blank: when the fast feed stops, the number drops
+  // back to the pace the rest of the board runs at, which is slower but is
+  // never the silence this screen exists to avoid.
+  const boardFigure: Figure | null = analytics
+    ? { count: analytics.statuses.checked_in ?? 0, at: good.at }
+    : null;
+  const checkedIn = checkedInTile(checkIn, boardFigure, now);
+
   return (
     <>
       <div className={styles.head}>
@@ -126,12 +220,12 @@ export function LiveBoard({ initial, eventId }: { initial: AnalyticsResult; even
           <h1>Dashboard</h1>
           {chosen ? <p className={styles.event}>{chosen.name}</p> : null}
         </div>
-        <Freshness at={good.at} age={age} problem={problem} onRetry={refresh} />
+        <Freshness at={good.at} age={age} problem={problem} onRetry={retry} />
       </div>
 
       {analytics ? (
         <>
-          <Tiles analytics={analytics} />
+          <Tiles analytics={analytics} checkedIn={checkedIn} />
           <div className={styles.panels}>
             <Arrivals activity={analytics.activity} />
             <Schools schools={analytics.schools} />
@@ -201,8 +295,20 @@ function Freshness({
  * are *now* and not a funnel -- an accepted applicant who confirms stops
  * counting as accepted. They are labelled as states for that reason, and
  * nothing here adds them up.
+ *
+ * Checked in is deliberately not one of `statuses` for long. It takes the
+ * newer of the fast feed and the payload, so on a good day it is up to fifty
+ * seconds ahead of the three beside it -- the trade the issue named, made
+ * because it is the number the door reads while working. The line underneath
+ * it is what keeps that honest at a glance: the other three are covered by
+ * the banner, and this one says for itself when its feed has gone quiet.
  */
-function Tiles({ analytics }: { analytics: NonNullable<AnalyticsView["analytics"]> }) {
+function Tiles({
+  analytics, checkedIn,
+}: {
+  analytics: NonNullable<AnalyticsView["analytics"]>;
+  checkedIn: CheckInTile;
+}) {
   const { statuses } = analytics;
 
   return (
@@ -210,16 +316,39 @@ function Tiles({ analytics }: { analytics: NonNullable<AnalyticsView["analytics"
       <Tile label="Submitted" value={analytics.submittedApplications} lead />
       <Tile label={statusLabels.accepted} value={statuses.accepted ?? 0} />
       <Tile label={statusLabels.confirmed} value={statuses.confirmed ?? 0} />
-      <Tile label={statusLabels.checked_in} value={statuses.checked_in ?? 0} />
+      <Tile
+        label={statusLabels.checked_in}
+        value={checkedIn.count ?? statuses.checked_in ?? 0}
+        note={checkedIn.note}
+      />
     </div>
   );
 }
 
-function Tile({ label, value, lead }: { label: string; value: number; lead?: boolean }) {
+function Tile({
+  label, value, lead, note,
+}: {
+  label: string;
+  value: number;
+  lead?: boolean;
+  note?: { text: string; live: boolean } | null;
+}) {
   return (
     <div className={styles.tile} data-lead={lead || undefined}>
       <span className={styles.tileValue}>{numbers.format(value)}</span>
       <span className={styles.tileLabel}>{label}</span>
+      {/* COPY: needs sign-off. The time is the whole point of the line --
+          a reader deciding whether a number has moved needs to know when it
+          was read, not that something unspecified is different.
+
+          No aria-live: this text changes every ten seconds while healthy,
+          and a screen reader that announces each of those is one somebody
+          turns off, taking the one announcement that mattered with it. */}
+      {note ? (
+        <span className={styles.tileNote} data-not-live={note.live ? undefined : ""}>
+          {note.text}
+        </span>
+      ) : null}
     </div>
   );
 }
