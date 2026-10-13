@@ -23,8 +23,15 @@ import styles from "./chat-panel.module.css";
 /** `**bold**`, `` `code` ``, and `*italic*`. In that order, because `**` must win. */
 const INLINE = /(\*\*[^*\n]+\*\*|`[^`\n]+`|\*[^*\s][^*\n]*\*)/g;
 
-const BULLET = /^\s*[-*•]\s+/;
-const NUMBER = /^\s*\d+[.)]\s+/;
+/**
+ * A list marker, and the indentation in front of it.
+ *
+ * The indentation is captured because it is the only thing that says a line
+ * belongs under the one above rather than beside it. A model writing out an
+ * inventory item and its quantity writes exactly that.
+ */
+const BULLET = /^(\s*)[-*•]\s+/;
+const NUMBER = /^(\s*)\d+[.)]\s+/;
 const HEADING = /^\s*#{1,6}\s+/;
 
 export function Prose({ text }: { text: string }) {
@@ -39,27 +46,33 @@ export function Prose({ text }: { text: string }) {
  * compiler keeps both shapes in play and no property is safe to read. Four
  * members cost two lines and make the discriminant actually discriminate.
  */
-type Block =
-  | { kind: "p"; lines: string[] }
-  | { kind: "h"; lines: string[] }
-  | { kind: "ul"; items: string[] }
-  | { kind: "ol"; items: string[] };
+type List = { kind: "ul" | "ol"; items: Item[] };
+type Item = { text: string; nested: List | null };
+
+type Block = { kind: "p"; lines: string[] } | { kind: "h"; lines: string[] } | List;
+
+/** Where in the nesting the parser currently is. */
+type Level = { indent: number; list: List };
 
 /**
  * One pass over the lines, grouping by what each one looks like.
  *
- * A blank line ends a paragraph and does not end a list. That asymmetry is the
- * whole of this function and it is not a nicety: models put a blank line
- * between numbered points, and closing the list on it gives six lists of one
- * item, every one of them numbered "1". It is also what Markdown itself does
- * with a blank line inside a list.
+ * A blank line ends a paragraph and does not end a list. That asymmetry is not
+ * a nicety: models put a blank line between numbered points, and closing the
+ * list on it gives six lists of one item, every one of them numbered "1". It
+ * is also what Markdown itself does with a blank line inside a list.
  *
- * A list ends when the next line is not an item of it -- which includes being
- * an item of the other kind, so bullets following numbers start a new list.
+ * Indentation nests. A line indented past the one above it belongs under it,
+ * which is how "- Lanyards" with "- Quantity: 70" beneath it reads on the
+ * page and how it should read on the screen. Anything that is not a list item
+ * closes every open list, because a paragraph is not part of one.
  */
 function blocks(text: string): Block[] {
   const out: Block[] = [];
   let open: Block | null = null;
+
+  // Outermost first. Empty whenever no list is open.
+  let levels: Level[] = [];
 
   for (const line of text.trim().split("\n")) {
     const trimmed = line.trim();
@@ -70,27 +83,56 @@ function blocks(text: string): Block[] {
       continue;
     }
 
-    if (BULLET.test(trimmed)) {
-      const item = trimmed.replace(BULLET, "");
-      if (open?.kind === "ul") open.items.push(item);
-      else out.push((open = { kind: "ul", items: [item] }));
+    const bullet = BULLET.exec(line);
+    const numbered = bullet ? null : NUMBER.exec(line);
+    const marker = bullet ?? numbered;
+
+    if (marker) {
+      const kind = bullet ? "ul" : "ol";
+      const indent = marker[1].length;
+      const item: Item = { text: line.replace(marker[0], ""), nested: null };
+
+      // Out of any level deeper than this one.
+      while (levels.length > 0 && indent < levels[levels.length - 1].indent) {
+        levels.pop();
+      }
+
+      let here = levels.at(-1);
+
+      // Same depth, other kind: a sibling list rather than more of this one.
+      if (here && indent === here.indent && here.list.kind !== kind) {
+        levels.pop();
+        here = levels.at(-1);
+      } else if (here && indent === here.indent) {
+        here.list.items.push(item);
+        open = here.list;
+        continue;
+      }
+
+      const list: List = { kind, items: [item] };
+
+      // Deeper than the level above: hangs off that level's last item. With
+      // no item to hang off -- a document that opens indented -- it is a list
+      // of its own rather than nothing.
+      const under = here && indent > here.indent ? here.list.items.at(-1) : undefined;
+
+      if (under) under.nested = list;
+      else out.push(list);
+
+      levels.push({ indent, list });
+      open = list;
       continue;
     }
 
-    if (NUMBER.test(trimmed)) {
-      const item = trimmed.replace(NUMBER, "");
-      if (open?.kind === "ol") open.items.push(item);
-      else out.push((open = { kind: "ol", items: [item] }));
-      continue;
-    }
+    // Not a list item, so every open list has ended.
+    levels = [];
 
     if (HEADING.test(trimmed)) {
       out.push((open = { kind: "h", lines: [trimmed.replace(HEADING, "")] }));
       continue;
     }
 
-    // A wrapped paragraph is still one paragraph, and a plain line after a
-    // list ends the list rather than joining it.
+    // A wrapped paragraph is still one paragraph.
     if (open?.kind === "p") open.lines.push(trimmed);
     else out.push((open = { kind: "p", lines: [trimmed] }));
   }
@@ -99,24 +141,12 @@ function blocks(text: string): Block[] {
 }
 
 function render(block: Block, key: number): ReactNode {
-  if (block.kind === "ul") {
-    return (
-      <ul key={key} className={styles.proseList}>
-        {block.items.map((item, at) => (
-          <li key={at}>{inline(item)}</li>
-        ))}
-      </ul>
-    );
-  }
-
-  if (block.kind === "ol") {
-    return (
-      <ol key={key} className={styles.proseList}>
-        {block.items.map((item, at) => (
-          <li key={at}>{inline(item)}</li>
-        ))}
-      </ol>
-    );
+  // On the property rather than on the kind. `List` carries `"ul" | "ol"` in
+  // one member, so ruling out both literals still leaves it in play and no
+  // field is safe to read -- the same narrowing trap the four-member split
+  // above avoids, in the one place the split cannot go.
+  if ("items" in block) {
+    return list(block, key);
   }
 
   const text = block.lines.join(" ");
@@ -132,6 +162,21 @@ function render(block: Block, key: number): ReactNode {
     <p key={key} className={styles.proseParagraph}>
       {inline(text)}
     </p>
+  );
+}
+
+function list(block: List, key: number): ReactNode {
+  const Tag = block.kind === "ul" ? "ul" : "ol";
+
+  return (
+    <Tag key={key} className={styles.proseList}>
+      {block.items.map((item, at) => (
+        <li key={at}>
+          {inline(item.text)}
+          {item.nested ? list(item.nested, -1) : null}
+        </li>
+      ))}
+    </Tag>
   );
 }
 

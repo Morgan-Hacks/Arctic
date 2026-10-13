@@ -309,6 +309,19 @@
   margin-bottom: 3px;
 }
 
+/*
+ * A list inside a list item.
+ *
+ * Tight against its parent and with no gap after the last child, because the
+ * nesting is doing the separating. The panel is 380px wide, so the indent is
+ * smaller than the top level's -- two levels at 18px each would leave a third
+ * of the width for the text.
+ */
+.proseList .proseList {
+  margin: 3px 0 0;
+  padding-left: 14px;
+}
+
 .body code {
   padding: 1px 4px;
   border-radius: 4px;
