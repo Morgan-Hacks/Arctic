@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { usePathname } from "next/navigation";
+import { Suspense, useEffect, useRef, useState, useTransition } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   AiMagicIcon,
   ArrowRight02Icon,
@@ -19,7 +19,7 @@ import {
   type ThreadSummary,
   type Turn,
 } from "./chat";
-import { screenOf } from "./screen";
+import { eventOf, screenOf } from "./screen";
 import styles from "./chat-panel.module.css";
 
 /**
@@ -54,7 +54,15 @@ export function ChatPanel() {
         </button>
       )}
 
-      {open ? <Panel onClose={() => setOpen(false)} /> : null}
+      {/* The boundary lives here rather than at the mount sites, because the
+          hook that needs one is inside Panel and a boundary two files away is
+          one somebody deletes. Nothing to fall back to: the panel is already
+          empty until its first read answers. */}
+      {open ? (
+        <Suspense fallback={null}>
+          <Panel onClose={() => setOpen(false)} />
+        </Suspense>
+      ) : null}
     </>
   );
 }
@@ -70,6 +78,7 @@ function Panel({ onClose }: { onClose: () => void }) {
   const [ready, setReady] = useState(false);
   const [question, setQuestion] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
+  const [moved, setMoved] = useState<string | null>(null);
   const [sending, send] = useTransition();
 
   const foot = useRef<HTMLDivElement>(null);
@@ -79,24 +88,91 @@ function Panel({ onClose }: { onClose: () => void }) {
   // the second question is about the screen they are on now.
   const screen = screenOf(usePathname());
 
+  // The event the page has selected, which is the one the answers must be
+  // about. Changing it in the picker has to change what the panel asks about,
+  // or it quietly keeps answering for whatever was selected when it opened.
+  const selected = eventOf(useSearchParams());
+
   useEffect(() => {
+    // A page that names no event leaves the panel on the one it already had.
+    //
+    // Most screens carry no event in their URL -- mail, the desk, the team --
+    // and re-resolving on each of them would reset to the newest event every
+    // time somebody navigated away from the applicants screen, discarding the
+    // conversation on the way. A page that says nothing has not changed the
+    // subject.
+    if (!selected && eventId) return;
+
     let live = true;
 
     (async () => {
-      const [where, listed] = await Promise.all([here(), readThreads()]);
+      const where = await here(selected);
       if (!live) return;
 
       setEventId(where.eventId);
       setEventName(where.name);
-      setHistory(listed.threads);
-      setKeptForDays(listed.keptForDays);
       setReady(true);
     })();
 
     return () => {
       live = false;
     };
+    // eventId is read to decide whether to resolve at all, and setting it must
+    // not re-run this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+
+  // Separate from the event, because the thread list does not depend on it and
+  // re-fetching it every time somebody changes the picker would be a request
+  // for an answer that cannot have changed.
+  useEffect(() => {
+    let live = true;
+
+    (async () => {
+      const listed = await readThreads();
+      if (!live) return;
+
+      setHistory(listed.threads);
+      setKeptForDays(listed.keptForDays);
+    })();
+
+    return () => {
+      live = false;
+    };
   }, []);
+
+  // A conversation belongs to the event it was held about.
+  //
+  // Not carried across, and this is the whole reason the thread's event is
+  // stored. "And by school?" means "of the applicants we were just discussing"
+  // -- answered against a different cohort it is a wrong answer with no sign
+  // on it. So changing the event starts a new thread, and the old one is still
+  // in the history under the event it was about.
+  // How much there was to lose, read inside an effect that must not depend on
+  // the conversation itself -- an effect that re-ran on every turn would reset
+  // the thread on the turn after the event changed rather than on it.
+  const said = useRef(0);
+  said.current = turns.length;
+
+  const held = useRef(eventId);
+  useEffect(() => {
+    if (eventId && held.current && eventId !== held.current) {
+      setThreadId(undefined);
+      setProblem(null);
+
+      // Said rather than left to be noticed. A conversation that empties
+      // itself when you touch the picker reads as a bug, and the reason it
+      // emptied is the thing worth knowing. Nothing to say when there was
+      // nothing to clear.
+      if (said.current > 0) {
+        setMoved("Different event, so this is a new conversation.");
+      }
+
+      setTurns([]);
+    }
+
+    held.current = eventId;
+  }, [eventId]);
 
   // Follows the conversation down as it grows, including while an answer is
   // being waited on, so the "thinking" line is what you are looking at.
@@ -109,6 +185,7 @@ function Panel({ onClose }: { onClose: () => void }) {
     if (asked.length === 0 || !eventId) return;
 
     setProblem(null);
+    setMoved(null);
     setQuestion("");
 
     // Shown immediately, before the answer exists. The round trip can take
@@ -130,6 +207,14 @@ function Panel({ onClose }: { onClose: () => void }) {
       }
 
       setThreadId(said.threadId);
+
+      // What the API says it answered about, which is the figure's one
+      // unstated premise. They agree in every ordinary case; this is here for
+      // the case where they do not.
+      if (said.eventName) {
+        setEventName(said.eventName);
+      }
+
       setTurns((before) => [
         ...before,
         {
@@ -150,6 +235,17 @@ function Panel({ onClose }: { onClose: () => void }) {
     setTurns(found.turns);
     setShowHistory(false);
     setProblem(null);
+
+    // The thread's event, not the page's. Reopening Monday's questions about
+    // last cycle and asking "and by school?" has to answer about last cycle --
+    // the alternative is a follow-up that silently changes cohort between one
+    // turn and the next.
+    if (found.eventId && found.eventId !== eventId) {
+      const its = await here(found.eventId);
+      held.current = its.eventId;
+      setEventId(its.eventId);
+      setEventName(its.name);
+    }
   }
 
   async function drop(id: string) {
@@ -167,6 +263,7 @@ function Panel({ onClose }: { onClose: () => void }) {
     setThreadId(undefined);
     setTurns([]);
     setProblem(null);
+    setMoved(null);
     setShowHistory(false);
   }
 
@@ -246,6 +343,8 @@ function Panel({ onClose }: { onClose: () => void }) {
       ) : null}
 
       <div className={styles.conversation}>
+        {moved ? <p className={styles.note}>{moved}</p> : null}
+
         {turns.length === 0 && !sending ? <Opening /> : null}
 
         {turns.map((turn, at) => (

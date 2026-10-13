@@ -41,6 +41,17 @@ public sealed record ToolContext(
     /// what that screen's rows show -- so nobody learns anything here they
     /// could not have learned by scrolling.
     /// </remarks>
+    /// <summary>
+    /// Which event this is, as a record rather than a way of finding one.
+    /// </summary>
+    /// <remarks>
+    /// Every read below is already scoped to <see cref="EventId"/>. This is so
+    /// the answer can say which event that was, and so the model can do the
+    /// date arithmetic nobody should trust it to do in its head -- how long
+    /// until the doors open, whether registration has closed.
+    /// </remarks>
+    public EventDetail? Event { get; init; }
+
     public IApplicantStore? Applicants { get; init; }
 
     public IFormsRead? Forms { get; init; }
@@ -324,14 +335,41 @@ public static class AssistantTools
         ToolContext context, CancellationToken ct)
     {
         var data = await DataAsync(context, ct);
+        var today = context.Today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
         return ToolResult.Of(new
         {
+            // Named here so every answer built on the overview can say which
+            // cohort it is about. The console shows the event in a picker; a
+            // sentence has nowhere to show it but in the sentence.
+            @event = context.Event is { } e ? new
+            {
+                name = e.Name,
+                startsAt = e.StartsAt,
+                endsAt = e.EndsAt,
+                registrationOpensAt = e.RegistrationOpensAt,
+                registrationClosesAt = e.RegistrationClosesAt,
+                decisionsAnnouncedAt = e.DecisionsAnnouncedAt,
+                capacity = e.Capacity,
+
+                // Counted here rather than left to the model. "How long until
+                // the doors open" is the question behind half of what gets
+                // asked in the last fortnight, and a model doing date
+                // arithmetic in prose gets it wrong quietly.
+                daysUntilStart = Days(today, e.StartsAt),
+                daysUntilRegistrationCloses = Days(today, e.RegistrationClosesAt),
+            } : null,
+
+            today = context.Today.ToString("yyyy-MM-dd"),
             applicants = data.TotalApplicants,
             submitted = data.SubmittedApplications,
             byStatus = data.Statuses,
         });
     }
+
+    /// <summary>Whole days from today to a date, negative once it has passed.</summary>
+    private static int? Days(DateTime today, DateTimeOffset? at) =>
+        at is { } when ? (int)Math.Floor((when.UtcDateTime - today).TotalDays) : null;
 
     private static async Task<ToolResult> ReadingAsync(
         JsonObject? arguments, ToolContext context, CancellationToken ct)

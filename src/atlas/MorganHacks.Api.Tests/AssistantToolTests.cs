@@ -114,7 +114,8 @@ public class AssistantToolTests
         bool emailStats = false,
         IApplicantStore? applicants = null,
         IInventoryStore? shelf = null,
-        bool answering = false) =>
+        bool answering = false,
+        EventDetail? chosen = null) =>
         new(
             Guid.NewGuid(),
             new Allowed(responses, inventory, emailStats),
@@ -122,6 +123,7 @@ public class AssistantToolTests
             shelf ?? new Untouchable(),
             new DateOnly(2027, 2, 2))
         {
+            Event = chosen,
             Applicants = applicants,
             Forms = answering ? new SomeForms() : new NeverAsked(),
             Burn = answering ? new SomeBurn() : new NeverCounted(),
@@ -534,6 +536,53 @@ public class AssistantToolTests
     /// as the winning form, twice, confidently. A missing read does not
     /// announce itself: the model fills the gap with the nearest thing it has.
     /// </remarks>
+    /// <remarks>
+    /// Every read is already scoped to one event by the context. This is about
+    /// the answer saying which: an organizer running two cycles at once has no
+    /// way to tell a right figure from a figure about last year, because a
+    /// sentence has no picker beside it the way a screen does.
+    /// </remarks>
+    [Fact]
+    public async Task The_overview_says_which_event_it_counted()
+    {
+        var hackathon = new EventDetail(
+            Guid.NewGuid(), "morganhacks-27", "MorganHacks 2027",
+            new DateTimeOffset(2027, 3, 5, 17, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2027, 3, 7, 17, 0, 0, TimeSpan.Zero),
+            null,
+            new DateTimeOffset(2027, 2, 20, 5, 0, 0, TimeSpan.Zero),
+            null, 400, DateTimeOffset.UtcNow, null);
+
+        var result = await AssistantTools.RunAsync(
+            "event_overview", null, Context(new Watched(), chosen: hackathon),
+            CancellationToken.None);
+
+        Assert.Null(result.Refusal);
+        Assert.Contains("MorganHacks 2027", result.Json);
+
+        // The date arithmetic is done here rather than left to a model writing
+        // prose. Today is 2 February 2027 and the doors open on the 5th of
+        // March, which is thirty-one days.
+        var counted = JsonDocument.Parse(result.Json!)
+            .RootElement.GetProperty("event");
+
+        Assert.Equal(31, counted.GetProperty("daysUntilStart").GetInt32());
+        Assert.Equal(18, counted.GetProperty("daysUntilRegistrationCloses").GetInt32());
+    }
+
+    [Fact]
+    public async Task An_overview_with_no_event_on_it_still_counts()
+    {
+        // The event is a label on the answer, not a thing a count depends on.
+        // A context without one should still report the figures rather than
+        // refuse, because the reads are scoped by id either way.
+        var result = await AssistantTools.RunAsync(
+            "event_overview", null, Context(new Watched()), CancellationToken.None);
+
+        Assert.Null(result.Refusal);
+        Assert.NotNull(result.Json);
+    }
+
     [Fact]
     public async Task The_forms_list_does_not_need_the_responses_permission()
     {
