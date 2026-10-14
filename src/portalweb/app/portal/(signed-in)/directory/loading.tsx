@@ -1,0 +1,1 @@
+export default function Loading(){return <div role="status" aria-label="Loading directory"><p>Loading directory…</p><div className="directory-grid">{[1,2,3].map(i=><div key={i} className="panel directory-skeleton" />)}</div></div>}
