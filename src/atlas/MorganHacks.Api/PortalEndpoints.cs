@@ -136,7 +136,7 @@ public static class PortalEndpoints
     /// guesses is accepted here.
     /// </para>
     /// </remarks>
-    public sealed record RsvpRequest(string? Answer);
+    public sealed record RsvpRequest(string? Answer, bool JoinDirectory = false);
 
     /// <summary>
     /// Their application, in the words they are allowed to read.
@@ -390,6 +390,8 @@ public static class PortalEndpoints
         IApplicantPortalStore store,
         IApplicationStore applications,
         TriggeredEmails triggered,
+        MorganHacks.Directory.IDirectory directory,
+        IFeatures features,
         ILogger<RsvpRequest> log,
         CancellationToken ct)
     {
@@ -477,10 +479,16 @@ public static class PortalEndpoints
         // same projection every other route serves. The lifecycle timestamps
         // this move stamped were the trigger's to write, and guessing them
         // here would be a second opinion about when somebody answered.
+        var directoryJoined = false;
+        if (request!.JoinDirectory && answer == RsvpAnswer.Confirm && features.IsOn(Flags.Directory))
+        {
+            try { await directory.OptIn(personId, current.EventId, ct); directoryJoined = true; }
+            catch (Exception) { log.LogWarning("Directory opt-in failed after RSVP. {PersonId}", personId); }
+        }
         var updated = await store.FindForPersonAsync(personId, ct);
         return updated is null
-            ? Results.Ok(new { application = (object?)null })
-            : Results.Ok(new { application = Describe(updated) });
+            ? Results.Ok(new { application = (object?)null, directoryJoined })
+            : Results.Ok(new { application = Describe(updated), directoryJoined });
     }
 
     /// <summary>

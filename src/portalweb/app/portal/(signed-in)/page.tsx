@@ -1,3 +1,4 @@
+import {isOn} from "@/lib/features";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentPortal, readableDate } from "@/lib/api";
@@ -67,6 +68,7 @@ export default async function Status() {
         it in and the same one the API says the day in.
       */}
       <RsvpPanel
+        directoryEnabled={isOn("enable_directory_feature")}
         rsvp={application.rsvp}
         deadline={readableTime(application.rsvp.deadline)}
       />

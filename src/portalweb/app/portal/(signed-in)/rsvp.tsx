@@ -29,7 +29,9 @@ import { answerRsvp } from "../actions";
 export function RsvpPanel({
   rsvp,
   deadline,
+  directoryEnabled=false,
 }: {
+  directoryEnabled?: boolean;
   rsvp: Rsvp;
   deadline: string | null;
 }) {
@@ -39,6 +41,7 @@ export function RsvpPanel({
   // The window has gone but the row has not been expired yet, so the status
   // line above still reads "confirm by". Said plainly rather than left to be
   // inferred from two buttons that are missing.
+  if(state.done&&state.message)return <section className="panel" role="status"><p>{state.message}</p><a href="/portal/directory/profile">Your directory profile</a></section>;
   if (!rsvp.open) {
     return rsvp.closedReason !== null && deadline !== null ? (
       <section className="panel" aria-label="Your spot">
@@ -65,6 +68,7 @@ export function RsvpPanel({
       ) : null}
 
       <form action={action}>
+        {directoryEnabled&&!confirmingDecline?<div><label><input type="checkbox" name="joinDirectory" value="true"/> Show me in the hacker directory so other hackers can find me as a teammate.</label><p>Only RSVP’d hackers can see it. You can change this anytime in the portal. <a href="https://static.mlh.io/docs/mlh-code-of-conduct.pdf" target="_blank" rel="noopener noreferrer">Code of conduct</a></p></div>:null}
         {confirmingDecline ? (
           /*
            * aria-live, because this replaces the controls under the pointer

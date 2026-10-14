@@ -172,7 +172,7 @@ export async function answerRsvp(
     response = await apiFetch("/portal/rsvp", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ answer }),
+      body: JSON.stringify({ answer, joinDirectory: form.get("joinDirectory")==="true" }),
     });
   } catch {
     return { error: "We could not save that just now. Try again in a minute." };
@@ -193,7 +193,9 @@ export async function answerRsvp(
   // answer, so every screen that reads the application has to be redrawn.
   revalidatePath("/portal");
   revalidatePath("/portal/profile");
-  return { done: true };
+  const result=await response.json();
+  const asked=text(form,"answer")==="confirm"&&form.get("joinDirectory")==="true";
+  return {done:true,message:asked?(result.directoryJoined?"You’re in the hacker directory. Add a photo and your team status in the portal.":"We couldn’t add you to the directory right now. You can join from the portal."):undefined};
 }
 
 /**
