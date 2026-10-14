@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../MorganHacks.Directory.Contracts/MorganHacks.Directory.Contracts.csproj" />
+    <ProjectReference Include="../../../libs/audit/MorganHacks.Audit/MorganHacks.Audit.csproj" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
+</Project>

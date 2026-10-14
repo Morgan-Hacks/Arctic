@@ -77,3 +77,5 @@ param openAiApiKey = readEnvironmentVariable('OPENAI_API_KEY', '')
 
 param deployPlatform = bool(readEnvironmentVariable('DEPLOY_PLATFORM', 'true'))
 param deployApps = bool(readEnvironmentVariable('DEPLOY_APPS', 'true'))
+
+param enableHackerDirectoryFeature = readEnvironmentVariable('ENABLE_DIRECTORY_FEATURE', '')

@@ -150,6 +150,7 @@ param openAiApiKey string = ''
 
 @description('Whether the applicant portal is served. Empty leaves features.json to decide.')
 param enableHackerPortalFeature string = ''
+param enableHackerDirectoryFeature string = ''
 
 param tags object = {}
 
@@ -374,9 +375,11 @@ var portalEnv = concat(
 // somebody might have chosen.
 //
 // Adding the next flag is this block again under another name.
-var featureEnv = empty(enableHackerPortalFeature) ? [] : [
+var featureEnv = concat(empty(enableHackerPortalFeature) ? [] : [
   { name: 'ENABLE_HACKER_PORTAL_FEATURE', value: enableHackerPortalFeature }
-]
+], empty(enableHackerDirectoryFeature) ? [] : [
+  { name: 'ENABLE_DIRECTORY_FEATURE', value: enableHackerDirectoryFeature }
+])
 
 // Where resumes go. No key and no connection string: the account name plus the
 // identity is the whole configuration, which is the point of choosing an

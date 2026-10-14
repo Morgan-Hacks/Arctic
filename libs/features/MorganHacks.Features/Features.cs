@@ -20,6 +20,7 @@ namespace MorganHacks.Features;
 /// </remarks>
 public static class Flags
 {
+    public const string Directory = "enable_directory_feature";
     /// <summary>The applicant portal: /portal in the web app, /portal/* in the API.</summary>
     public const string HackerPortal = "enable_hacker_portal_feature";
 }

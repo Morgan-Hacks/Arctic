@@ -129,6 +129,7 @@ param larkWarmReplicas int = 1
 
 @description('Whether the applicant portal is served. Empty leaves features.json to decide.')
 param enableHackerPortalFeature string = ''
+param enableHackerDirectoryFeature string = ''
 
 @description('''
 False on the first pass. The registry has to exist and hold the images before
@@ -260,6 +261,7 @@ module apps 'modules/apps.bicep' = if (deployApps) {
     warmReplicas: warmReplicas
     larkWarmReplicas: larkWarmReplicas
     enableHackerPortalFeature: enableHackerPortalFeature
+    enableHackerDirectoryFeature: enableHackerDirectoryFeature
     proxySecret: proxySecret
     openAiApiKey: openAiApiKey
     pullIdentityId: pullIdentity.outputs.id

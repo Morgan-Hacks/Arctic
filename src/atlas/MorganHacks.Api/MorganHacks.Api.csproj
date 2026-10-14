@@ -24,4 +24,6 @@
     <ProjectReference Include="..\\..\\..\\libs\\features\\MorganHacks.Features\\MorganHacks.Features.csproj" />
   </ItemGroup>
 
+  <ItemGroup><ProjectReference Include="../MorganHacks.Directory.Contracts/MorganHacks.Directory.Contracts.csproj" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../MorganHacks.Directory/MorganHacks.Directory.csproj" /></ItemGroup>
 </Project>

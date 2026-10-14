@@ -1,4 +1,5 @@
 {
+  "enable_directory_feature": false,
   // Feature flags this service reads. The key names are the same in every
   // service and every frontend, so one flag can be searched for by name.
   //

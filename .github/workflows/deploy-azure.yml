@@ -137,6 +137,7 @@ jobs:
           REGISTRY_NAME: ${{ vars.REGISTRY_NAME || 'crmharctic' }}
           # Empty on purpose when the variable is unset: features.json then
           # decides, which is not the same as being told 'false'.
+          ENABLE_DIRECTORY_FEATURE: ${{ vars.ENABLE_DIRECTORY_FEATURE }}
           ENABLE_HACKER_PORTAL_FEATURE: ${{ vars.ENABLE_HACKER_PORTAL_FEATURE }}
           PROXY_SHARED_SECRET: ${{ secrets.PROXY_SHARED_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -162,6 +163,7 @@ jobs:
           REGISTRY_NAME: ${{ vars.REGISTRY_NAME || 'crmharctic' }}
           # Empty on purpose when the variable is unset: features.json then
           # decides, which is not the same as being told 'false'.
+          ENABLE_DIRECTORY_FEATURE: ${{ vars.ENABLE_DIRECTORY_FEATURE }}
           ENABLE_HACKER_PORTAL_FEATURE: ${{ vars.ENABLE_HACKER_PORTAL_FEATURE }}
           PROXY_SHARED_SECRET: ${{ secrets.PROXY_SHARED_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

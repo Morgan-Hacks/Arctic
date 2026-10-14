@@ -74,6 +74,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     }
 });
 
+builder.Services.AddScoped<MorganHacks.Directory.Contracts.IDirectoryApplicantSource, DirectoryApplicantSource>();
+builder.Services.AddScoped<MorganHacks.Directory.Data.DirectoryStore>();
+builder.Services.AddScoped<MorganHacks.Directory.IDirectory, MorganHacks.Directory.HackerDirectory>();
 builder.Services.AddIdentityModule(connectionString);
 // Magic links are queued, not sent here. Sending inline would put SES's
 // availability in the path of somebody clicking "sign in", and would skip the
