@@ -18,6 +18,8 @@ export const events: Record<string, string> = {
   "grant.removed": "Permission removed",
   "baseline.added": "Team permission added",
   "baseline.removed": "Team permission removed",
+  "checkin.overridden": "Check-in overridden",
+  "application.corrected": "Name corrected at the desk",
 };
 
 export const ranges: Record<string, string> = {
