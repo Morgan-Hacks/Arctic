@@ -478,6 +478,7 @@ app.MapAuth();
 app.MapEvents();
 app.MapForms();
 app.MapPortal();
+app.MapDirectory();
 app.MapAnnouncements();
 app.MapCheckIn();
 app.MapResumes();
