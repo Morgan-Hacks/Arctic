@@ -1,3 +1,5 @@
+import {apiFetch} from "@/lib/api";
+import {isOn} from "@/lib/features";
 import { Tabs } from "./tabs";
 
 /**
@@ -12,12 +14,14 @@ import { Tabs } from "./tabs";
  * because a layout that redirected would be a check somebody could route
  * around by adding a page beside it.
  */
-export default function SignedInLayout({
+export default async function SignedInLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  let directoryEligible=false;
+  if(isOn("enable_directory_feature")){try{const response=await apiFetch("/portal/directory/status");if(response.ok)directoryEligible=(await response.json()).eligible===true}catch{}}
   return (
     <>
-      <Tabs />
+      <Tabs directoryEligible={directoryEligible} />
       <main>{children}</main>
     </>
   );

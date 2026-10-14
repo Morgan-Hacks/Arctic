@@ -37,11 +37,12 @@ const tabs = [
  * the marking; the underline is the visual echo of it, not the other way
  * round, so a screen reader gets the same answer as a sighted reader.
  */
-export function Tabs() {
+export function Tabs({directoryEligible=false}:{directoryEligible?:boolean}) {
   const pathname = usePathname();
 
   return (
     <nav className="portal__tabs" aria-label="Your application">
+      {directoryEligible?<Link href="/portal/directory" aria-current={pathname.startsWith("/portal/directory")?"page":undefined}>Directory</Link>:null}
       {tabs.map(({ href, label }) => (
         <Link
           key={href}

@@ -1,0 +1,4 @@
+import Link from "next/link";
+import {directoryContext} from "@/lib/directory-server";
+import {BrowseDirectory} from "./browse";
+export default async function DirectoryPage(){const {status,own}=await directoryContext();return <><h1>Find your teammates</h1><p>Meet hackers joining MorganHacks.</p>{!status.eligible?<p className="notice">{status.reason}</p>:<><p className="notice">Your profile: {own?.state.replace(/([A-Z])/g," $1").toLowerCase()}. <Link href="/portal/directory/profile">Edit your profile</Link></p>{status.phase==="open"?<BrowseDirectory status={status}/>:<p className="notice">{status.phase==="archived"?"The directory has closed.":status.opensAt?`The directory opens ${new Date(status.opensAt).toLocaleDateString("en-US",{timeZone:"America/New_York"})}.`:"The directory opening date has not been announced."}</p>}</>}</>}
