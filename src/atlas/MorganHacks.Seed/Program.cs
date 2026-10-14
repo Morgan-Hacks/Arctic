@@ -6,11 +6,13 @@ try
     var count = 50;
     var apply = false;
     var staging = false;
+    var directory = false;
     string? systemId = null;
     for (var i = 0; i < args.Length; i++)
     {
         switch (args[i])
         {
+            case "--directory": directory = true; break;
             case "--staging": staging = true; break;
             case "--apply": apply = true; break;
             case "--count" when i + 1 < args.Length && int.TryParse(args[++i], out var n): count = n; break;
@@ -18,6 +20,7 @@ try
             default: throw new InvalidOperationException("Usage: deploy/local/seed-hackers.sh [--count 50] [--apply]");
         }
     }
+    if (directory && staging) throw new InvalidOperationException("Directory fixtures are local-only.");
     string connectionString;
     if (staging)
     {
@@ -30,6 +33,7 @@ try
         connectionString = "Host=127.0.0.1;Port=5432;Database=morganhacks;Username=arctic;Password=local-dev-only;Timeout=5;Pooling=false";
     }
     if (count is < 1 or > 1000) throw new InvalidOperationException("Count must be between 1 and 1000.");
+    if (directory) Console.WriteLine("Local directory fixtures: 41 hacker identities, 40 confirmed, 30 profiles, 10 generated photos.");
     Console.WriteLine($"{(staging ? "Staging" : "Local")} organizer simulation: {count} applicants in '{SeedRunner.EventName}'.");
     if (!apply)
     {
@@ -45,6 +49,12 @@ try
         await using var check = source.CreateCommand("SELECT system_identifier::text FROM pg_control_system()");
         if ((string?)await check.ExecuteScalarAsync() != systemId)
             throw new InvalidOperationException("The database does not match the verified local Docker container. Refusing writes.");
+    }
+    if (directory)
+    {
+        await new DirectorySeedRunner(source).RunAsync();
+        Console.WriteLine("Directory fixtures ready. Sign in as mock-directory-01@example.com through the local dev sign-in route.");
+        return 0;
     }
     var result = await new SeedRunner(source).RunAsync(count);
     Console.WriteLine($"Created {result.Created}; kept {result.Skipped} existing applicants unchanged.");

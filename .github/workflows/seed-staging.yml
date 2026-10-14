@@ -48,9 +48,14 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       - name: Build seed image
+        env:
+          SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
         run: |
-          az acr build --registry "$REGISTRY_NAME" --image "hacker-seed:$GITHUB_SHA" \
-            --file src/atlas/Dockerfile.seed --platform linux/amd64 . --no-logs
+          az acr login --name "$REGISTRY_NAME"
+          server="$(az acr show --name "$REGISTRY_NAME" --query loginServer --output tsv)"
+          docker build --secret id=sixlabors_license_key,env=SixLaborsLicenseKey \
+            --file src/atlas/Dockerfile.seed --platform linux/amd64 --tag "$server/hacker-seed:$GITHUB_SHA" .
+          docker push "$server/hacker-seed:$GITHUB_SHA"
       - name: Configure staging job
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
