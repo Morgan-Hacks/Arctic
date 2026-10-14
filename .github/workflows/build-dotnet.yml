@@ -12,8 +12,14 @@ on:
         required: true
         type: string
 
+    secrets:
+      SIXLABORS_LICENSE_KEY:
+        required: false
+
 jobs:
   build:
+    env:
+      SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ inputs.service }}-${{ github.ref }}
@@ -58,7 +64,7 @@ jobs:
       - name: Build image
         if: steps.image.outputs.exists == 'true'
         run: |
-          docker build \
+          docker build --secret id=sixlabors_license_key,env=SixLaborsLicenseKey \
             -f ${{ inputs.path }}/Dockerfile \
             -t ${{ inputs.service }}:${{ github.sha }} \
             .

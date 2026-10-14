@@ -37,7 +37,7 @@ build_and_push () {
     # linux/amd64 explicitly. Container Apps runs amd64, and a Mac builds
     # arm64 by default — an image that runs perfectly on the laptop that built
     # it and crash-loops in the cloud is a genuinely confusing hour.
-    docker build --platform linux/amd64 -f "$dockerfile" -t "$image" .
+    docker build --secret id=sixlabors_license_key,env=SixLaborsLicenseKey --platform linux/amd64 -f "$dockerfile" -t "$image" .
     docker push "$image"
     echo "  pushed $image"
 }

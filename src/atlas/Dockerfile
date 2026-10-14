@@ -32,7 +32,7 @@ RUN dotnet restore src/atlas/MorganHacks.Api/MorganHacks.Api.csproj
 COPY src/atlas/ src/atlas/
 COPY src/lark/MorganHacks.Lark.Data/ src/lark/MorganHacks.Lark.Data/
 COPY libs/ libs/
-RUN dotnet publish src/atlas/MorganHacks.Api/MorganHacks.Api.csproj \
+RUN --mount=type=secret,id=sixlabors_license_key,env=SixLaborsLicenseKey dotnet publish src/atlas/MorganHacks.Api/MorganHacks.Api.csproj \
     -c Release -o /app --no-restore
 
 ARG COUNTRY_DATABASE_RELEASE=2026-09

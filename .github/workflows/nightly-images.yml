@@ -57,8 +57,10 @@ jobs:
       # references lark's data library, so a context scoped to one service
       # cannot see what it needs.
       - name: Build image
+        env:
+          SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
         run: |
-          docker build \
+          docker build --secret id=sixlabors_license_key,env=SixLaborsLicenseKey \
             -f src/${{ matrix.service }}/Dockerfile \
             -t ${{ matrix.service }}:nightly \
             .
