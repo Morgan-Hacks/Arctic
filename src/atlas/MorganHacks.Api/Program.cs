@@ -188,6 +188,9 @@ builder.Services.AddSingleton<EmailAnalyticsStore>();
 // source, which is itself a singleton owning the connection pool.
 builder.Services.AddSingleton<IInventoryStore, PostgresInventoryStore>();
 
+// What sponsors have committed, and the money behind it.
+builder.Services.AddSingleton<ISponsorStore, PostgresSponsorStore>();
+
 // The assistant.
 //
 // Two registrations and one of them can be absent. Conversations are stored
@@ -485,6 +488,7 @@ app.MapFormResponses();
 app.MapApplicants();
 app.MapApplicantAnalytics();
 app.MapInventory();
+app.MapSponsors();
 app.MapEmailAnalytics();
 app.MapTemplates();
 app.MapEmailTracking();
