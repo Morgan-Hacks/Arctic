@@ -477,6 +477,7 @@ app.MapForms();
 app.MapPortal();
 app.MapAnnouncements();
 app.MapCheckIn();
+app.MapCheckInOverride();
 app.MapResumes();
 app.MapPeopleAdmin();
 app.MapAuditTrail();

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MorganHacks.Applications.Domain;
 using MorganHacks.Applications.Services;
 using Npgsql;
@@ -57,6 +58,38 @@ public sealed class PostgresApplicationStore(NpgsqlDataSource dataSource) : IApp
         await using var connection = await dataSource.OpenConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
 
+        var change = await TransitionAsync(
+            connection, transaction, applicationId, next, actorId, reason, batchId, ct);
+
+        // The trigger's insert is part of this transaction, so the status and
+        // its history row commit together or not at all. That was already true
+        // when this method wrote both; it is now true for every writer.
+        await transaction.CommitAsync(ct);
+
+        return change;
+    }
+
+    /// <summary>
+    /// The status change itself, on a transaction somebody else owns.
+    /// </summary>
+    /// <remarks>
+    /// Everything except opening and committing, so a caller that needs the
+    /// status and something else to land together can hold one transaction
+    /// around both without becoming a second implementation of the rules. The
+    /// validation, the row lock and the context the triggers read are all in
+    /// here exactly once — which is what "there is one writer for statuses"
+    /// means in practice.
+    /// </remarks>
+    private static async Task<StatusChange> TransitionAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid applicationId,
+        ApplicationStatus next,
+        Guid? actorId,
+        string? reason,
+        Guid? batchId,
+        CancellationToken ct)
+    {
         // FOR UPDATE, so the status is read and replaced under one row lock.
         //
         // Two reviewers reaching the same application at the same moment is
@@ -125,12 +158,149 @@ public sealed class PostgresApplicationStore(NpgsqlDataSource dataSource) : IApp
             at = reader.GetFieldValue<DateTimeOffset>(0);
         }
 
-        // The trigger's insert is part of this transaction, so the status and
-        // its history row commit together or not at all. That was already true
-        // when this method wrote both; it is now true for every writer.
+        return new StatusChange(applicationId, current, next, actorId, reason, batchId, at);
+    }
+
+    /// <inheritdoc />
+    public async Task<StatusChange> OverrideCheckInAsync(
+        Guid applicationId,
+        Guid? actorId = null,
+        string? reason = null,
+        CancellationToken ct = default)
+    {
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+
+        // Same call a scan makes, judged against the same table. An
+        // application that is not confirmed throws here before anything is
+        // written, which is how "the desk cannot mark an application accepted"
+        // is a fact about the code rather than a check somebody could forget.
+        var change = await TransitionAsync(
+            connection, transaction, applicationId, ApplicationStatus.CheckedIn,
+            actorId, reason, batchId: null, ct);
+
+        // The override row, in the transaction the transition just set the
+        // actor context on, so its trigger writes the audit entry with the
+        // same actor and the same transaction start time as the history row.
+        const string record = """
+            INSERT INTO applications.overrides (application_id, kind, reason)
+            VALUES (@id, 'check_in', @reason)
+            """;
+        await using (var cmd = new NpgsqlCommand(record, connection, transaction))
+        {
+            cmd.Parameters.AddWithValue("id", applicationId);
+            cmd.Parameters.AddWithValue("reason", reason ?? string.Empty);
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+
         await transaction.CommitAsync(ct);
 
-        return new StatusChange(applicationId, current, next, actorId, reason, batchId, at);
+        return change;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> CorrectNameAsync(
+        Guid applicationId,
+        string firstName,
+        string lastName,
+        Guid? actorId = null,
+        string? reason = null,
+        CancellationToken ct = default)
+    {
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+
+        // FOR UPDATE, so the before-values in the override row are the ones
+        // this write actually replaced. Two desks correcting the same person
+        // take turns on the lock; the second one re-reads and either sees the
+        // new name — and reports "nothing to correct" honestly — or writes a
+        // second override whose 'from' is the first override's 'to', which is
+        // a true sentence about what happened.
+        string? storedFirst;
+        string? storedLast;
+        const string read = """
+            SELECT first_name, last_name
+              FROM applications.applications
+             WHERE id = @id
+             FOR UPDATE
+            """;
+        await using (var cmd = new NpgsqlCommand(read, connection, transaction))
+        {
+            cmd.Parameters.AddWithValue("id", applicationId);
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            if (!await reader.ReadAsync(ct))
+            {
+                throw new InvalidOperationException($"No application {applicationId}.");
+            }
+
+            storedFirst = reader.IsDBNull(0) ? null : reader.GetString(0);
+            storedLast = reader.IsDBNull(1) ? null : reader.GetString(1);
+        }
+
+        if (storedFirst == firstName && storedLast == lastName)
+        {
+            // Nothing written, so nothing to record. The transaction rolls
+            // back on disposal; an override row for a no-op correction would
+            // read as a change in March that never happened.
+            return false;
+        }
+
+        // The context the triggers read. Transaction-local, like the
+        // transition's: the override's audit row and its actor column both
+        // come from here.
+        const string context = """
+            SELECT set_config('app.actor_id', @actorId, true),
+                   set_config('app.reason', @reason, true),
+                   set_config('app.batch_id', '', true)
+            """;
+        await using (var cmd = new NpgsqlCommand(context, connection, transaction))
+        {
+            cmd.Parameters.AddWithValue("actorId", actorId?.ToString() ?? string.Empty);
+            cmd.Parameters.AddWithValue("reason", reason ?? string.Empty);
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+
+        // Only what actually differs goes into `changes`, so a correction of
+        // one name does not claim the other one was rewritten too.
+        var changes = new Dictionary<string, Dictionary<string, string?>>();
+        if (storedFirst != firstName)
+        {
+            changes["firstName"] = new() { ["from"] = storedFirst, ["to"] = firstName };
+        }
+
+        if (storedLast != lastName)
+        {
+            changes["lastName"] = new() { ["from"] = storedLast, ["to"] = lastName };
+        }
+
+        const string update = """
+            UPDATE applications.applications
+               SET first_name = @firstName,
+                   last_name = @lastName
+             WHERE id = @id
+            """;
+        await using (var cmd = new NpgsqlCommand(update, connection, transaction))
+        {
+            cmd.Parameters.AddWithValue("id", applicationId);
+            cmd.Parameters.AddWithValue("firstName", firstName);
+            cmd.Parameters.AddWithValue("lastName", lastName);
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+
+        const string record = """
+            INSERT INTO applications.overrides (application_id, kind, reason, changes)
+            VALUES (@id, 'name_corrected', @reason, @changes::jsonb)
+            """;
+        await using (var cmd = new NpgsqlCommand(record, connection, transaction))
+        {
+            cmd.Parameters.AddWithValue("id", applicationId);
+            cmd.Parameters.AddWithValue("reason", reason ?? string.Empty);
+            cmd.Parameters.AddWithValue("changes", JsonSerializer.Serialize(changes));
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+
+        await transaction.CommitAsync(ct);
+        return true;
     }
 
     public async Task<IReadOnlyList<StatusChange>> HistoryOfAsync(

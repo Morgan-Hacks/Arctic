@@ -49,6 +49,54 @@ public interface IApplicationStore
         Guid? batchId = null,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// Checks somebody in at the desk without a code, recording the override.
+    /// </summary>
+    /// <remarks>
+    /// Not a second way to change a status: it ends at
+    /// <see cref="ApplicationStatus.CheckedIn"/> or throws, so the lifecycle
+    /// still judges the move exactly as a scan does and
+    /// <see cref="StatusTransition"/> remains the only table that says what
+    /// may happen. What it adds is the row in <c>applications.overrides</c>,
+    /// written in the same transaction as the transition, whose trigger is
+    /// what puts the override in <c>audit.entries</c>.
+    /// <para>
+    /// The reason is the caller's sentence and is required at the endpoint —
+    /// this method takes it as given because the column that receives it
+    /// already refuses an empty one.
+    /// </para>
+    /// </remarks>
+    Task<StatusChange> OverrideCheckInAsync(
+        Guid applicationId,
+        Guid? actorId = null,
+        string? reason = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Rewrites the name on an application, recording the override.
+    /// </summary>
+    /// <remarks>
+    /// The desk's half of a correction the applicant can no longer make
+    /// themselves: <see cref="ProfileEditing"/> locks the form at the
+    /// decision, and the lock's own sentence tells people to email us. This
+    /// is the place that sentence points at, for the case where they are
+    /// standing in front of you.
+    /// <para>
+    /// The only fields are the two the completeness constraint will not allow
+    /// to be empty, and there is no status move of any kind in here — the
+    /// method cannot express one. False means both values were already
+    /// stored, so nothing was written and no trail row exists; an override
+    /// that changed nothing must not look like one that did.
+    /// </para>
+    /// </remarks>
+    Task<bool> CorrectNameAsync(
+        Guid applicationId,
+        string firstName,
+        string lastName,
+        Guid? actorId = null,
+        string? reason = null,
+        CancellationToken ct = default);
+
     Task<IReadOnlyList<StatusChange>> HistoryOfAsync(
         Guid applicationId, CancellationToken ct = default);
 
