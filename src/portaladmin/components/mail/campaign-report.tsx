@@ -15,8 +15,11 @@ type Content = NonNullable<CampaignAnalytics["content"]>;
 type Breakdown = { name: string; count: number }[];
 type Point = { bucket: string; opens: number; clicks: number };
 
-function document(html: string) {
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}html,body{margin:0;background:#fff;color:#14161a}body{font-family:Arial,sans-serif}img{max-width:100%}*{scrollbar-width:none}*::-webkit-scrollbar{display:none;width:0;height:0}</style></head><body>${html}</body></html>`;
+// Hidden for the thumbnail, kept for the dialog, for the reason spelled out
+// over emailDocument in components/templates/email-preview.
+function document(html: string, { scrollbars = false }: { scrollbars?: boolean } = {}) {
+  const bars = scrollbars ? "" : "*{scrollbar-width:none}*::-webkit-scrollbar{display:none;width:0;height:0}";
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}html,body{margin:0;background:#fff;color:#14161a}body{font-family:Arial,sans-serif}img{max-width:100%}${bars}</style></head><body>${html}</body></html>`;
 }
 
 export function ReportRefresh() {
@@ -49,7 +52,7 @@ export function CampaignContent({ content, children }: { content: Content; child
     {expanded ? <dialog ref={dialog} className={styles.previewDialog} onClose={() => setExpanded(false)} aria-labelledby="campaign-email-preview-title">
       <header><div><h2 id="campaign-email-preview-title">Email preview</h2><p>{content.subject}</p></div>
         <button type="button" onClick={() => dialog.current?.close()} aria-label="Close email preview"><Icon icon={Cancel01Icon} size={20} /></button></header>
-      <iframe title="Campaign email preview" sandbox="" referrerPolicy="no-referrer" srcDoc={document(content.html)} />
+      <iframe title="Campaign email preview" sandbox="" referrerPolicy="no-referrer" srcDoc={document(content.html, { scrollbars: true })} />
     </dialog> : null}
   </>;
 }

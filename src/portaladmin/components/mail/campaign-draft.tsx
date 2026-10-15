@@ -30,8 +30,14 @@ function initialSettings(campaign: Campaign, content: Content): CampaignUpdate {
   };
 }
 
-function emailDocument(html: string) {
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html{color-scheme:light;background:#fff}body{margin:0;color:#17191c;font-family:Arial,sans-serif;overflow-wrap:anywhere}img{max-width:100%;height:auto}*{box-sizing:border-box;scrollbar-width:none}*::-webkit-scrollbar{display:none;width:0;height:0}</style></head><body>${html}</body></html>`;
+// Scrollbars stay unless a caller asks for them, for the reason spelled out
+// over emailDocument in components/templates/email-preview: this frame has a
+// fixed height and cannot measure its own content, so the scrollbar is the
+// only thing telling a reader the email continues below the fold.
+function emailDocument(html: string, { scrollbars = false }: { scrollbars?: boolean } = {}) {
+  const hidden = scrollbars ? "" : ";scrollbar-width:none";
+  const webkit = scrollbars ? "" : "*::-webkit-scrollbar{display:none;width:0;height:0}";
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html{color-scheme:light;background:#fff}body{margin:0;color:#17191c;font-family:Arial,sans-serif;overflow-wrap:anywhere}img{max-width:100%;height:auto}*{box-sizing:border-box${hidden}}${webkit}</style></head><body>${html}</body></html>`;
 }
 
 function CampaignInbox({ sender, subject, snippet }: { sender: string; subject: string; snippet: string }) {
@@ -77,7 +83,7 @@ function EmailPreview({ html, subject, sender, to, text, samples, selected = 0, 
             <strong>{subject || "Your email subject"}</strong>
             <span>{sender}{to ? <> <span className={styles.muted}>to</span> {to}</> : null}</span>
           </div>
-          {plain ? <pre className={styles.plain}>{text}</pre> : <iframe title={to ? `Email preview for ${to}` : "Selected template preview"} sandbox="" referrerPolicy="no-referrer" srcDoc={emailDocument(html)} className={styles.emailFrame} />}
+          {plain ? <pre className={styles.plain}>{text}</pre> : <iframe title={to ? `Email preview for ${to}` : "Selected template preview"} sandbox="" referrerPolicy="no-referrer" srcDoc={emailDocument(html, { scrollbars: true })} className={styles.emailFrame} />}
         </div>
       </div>
     </div>
