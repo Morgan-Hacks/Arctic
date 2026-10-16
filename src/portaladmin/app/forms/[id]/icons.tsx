@@ -68,6 +68,7 @@ export function Chart() {
 }
 
 const fieldIcons = {
+  contactLinks: InputShortTextIcon,
   shortText: InputShortTextIcon,
   paragraph: InputLongTextIcon,
   email: Mail01Icon,

@@ -402,7 +402,8 @@ public class FormBuilderTests(ApplicationsDatabase db)
             await Send(HttpMethod.Get, $"/admin/forms?eventId={eventId}", cookie)))
             ["forms"]!.AsArray().Single()!;
         Assert.False(listed["published"]!.GetValue<bool>());
-        Assert.Equal(fields.Count, listed["preview"]!["questions"]!.GetValue<int>());
+        Assert.Equal(fields.Count(field => field!["type"]!.GetValue<string>() != "section"),
+            listed["preview"]!["questions"]!.GetValue<int>());
         var preview = listed["preview"]!["fields"]!.AsArray();
         Assert.Equal(4, preview.Count);
         Assert.Equal("What would you like to build?", preview[0]!["label"]!.GetValue<string>());

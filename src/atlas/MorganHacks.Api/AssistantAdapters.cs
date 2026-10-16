@@ -9,11 +9,11 @@ namespace MorganHacks.Api;
 /// The reads the assistant needs that live outside its own assembly.
 /// </summary>
 /// <remarks>
-/// <c>MorganHacks.Applications</c> references no other project, which is what
-/// keeps the tool layer from quietly growing reach. These three adapters are
-/// the seam: each implements a port declared over there against a store that
-/// lives over here, so the dependency points inwards and the tool layer still
-/// cannot reach anything it was not handed.
+/// <c>MorganHacks.Applications</c> references only the shared directory contracts
+/// library, which has no stores or service dependencies. It does not reference
+/// the API or lark. These adapters implement its read ports against stores
+/// wired here, so the dependency points inwards and the tool layer cannot
+/// reach those stores without being handed an implementation.
 /// </remarks>
 public sealed class EmailReachAdapter(EmailAnalyticsStore analytics) : IEmailReachRead
 {

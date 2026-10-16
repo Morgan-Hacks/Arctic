@@ -96,6 +96,7 @@ public static class StartingQuestions
             Storage = AnswerStorage.Column,
             Column = "mlh_marketing_opt_in",
         },
+        .. DirectoryQuestions.All,
     ];
 
     private static FormField Column(

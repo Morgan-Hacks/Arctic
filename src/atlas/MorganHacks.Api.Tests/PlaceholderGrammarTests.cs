@@ -109,8 +109,8 @@ public class PlaceholderGrammarTests
 
         while (directory is not null)
         {
-            if (Directory.Exists(Path.Combine(directory.FullName, "src"))
-                && Directory.Exists(Path.Combine(directory.FullName, "libs")))
+            if (System.IO.Directory.Exists(Path.Combine(directory.FullName, "src"))
+                && System.IO.Directory.Exists(Path.Combine(directory.FullName, "libs")))
             {
                 return directory;
             }

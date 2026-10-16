@@ -7,4 +7,5 @@
   <Project Path="MorganHacks.Profiles/MorganHacks.Profiles.csproj" />
   <Project Path="MorganHacks.Seed/MorganHacks.Seed.csproj" />
   <Project Path="MorganHacks.Seed.Tests/MorganHacks.Seed.Tests.csproj" />
+  <Project Path="../../libs/directory/MorganHacks.Directory.Contracts/MorganHacks.Directory.Contracts.csproj" />
 </Solution>

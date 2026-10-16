@@ -193,6 +193,7 @@ public static class AdminFormEndpoints
         return Results.Ok(new
         {
             form = Describe(form),
+            directoryFields = form.IsApplication ? DirectoryQuestions.All : [],
             mlhSeason = MlhSeason.For(eventDetail?.StartsAt),
             draft = new
             {

@@ -73,6 +73,7 @@ public static class SubmissionValidation
             Inspect(field, given, problems);
         }
 
+        problems.AddRange(DirectoryQuestions.Check(fields, answers));
         return problems;
     }
 

@@ -62,6 +62,8 @@ public enum FieldType
     /// </para>
     /// </remarks>
     Section,
+
+    ContactLinks,
 }
 
 /// <summary>One option in a select, radio or checkbox question.</summary>

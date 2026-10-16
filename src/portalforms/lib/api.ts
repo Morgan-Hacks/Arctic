@@ -61,6 +61,7 @@ export type FieldType =
   | "select"
   | "radio"
   | "checkboxes"
+  | "contactLinks"
   | "consent"
   | "file"
   | "section";

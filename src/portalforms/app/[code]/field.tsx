@@ -3,6 +3,7 @@
 import { ErrorDescription } from "@/components/ui/error-toast";
 import type { Field } from "@/lib/api";
 import { shownCap, type Answer } from "./answers";
+import { ContactLinks } from "./contact-links";
 import { ResumeField } from "./resume";
 
 /**
@@ -261,6 +262,7 @@ function Control({
   const text = typeof answer === "string" ? answer : "";
 
   switch (field.type) {
+    case "contactLinks": return <ContactLinks id={id} value={Array.isArray(answer)?answer:[]} describedBy={describedBy} onChange={value=>onChange(field.key,value)} />;
     case "paragraph":
       return (
         <textarea
@@ -396,6 +398,7 @@ function Control({
                 name={field.key}
                 value={option.value}
                 checked={chosen.includes(option.value)}
+                disabled={(field.key==="directory_skills"||field.key==="directory_interests")&&!chosen.includes(option.value)&&chosen.length>=5}
                 aria-invalid={wrong || undefined}
                 onChange={(e) =>
                   onChange(

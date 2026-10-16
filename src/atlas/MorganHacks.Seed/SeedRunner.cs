@@ -177,7 +177,7 @@ public sealed class SeedRunner(NpgsqlDataSource source)
 
     public static readonly IReadOnlyList<FormField> Fields =
     [
-        ..StartingQuestions.All,
+        ..StartingQuestions.All.Where(f=>!f.Key.StartsWith("directory_", StringComparison.Ordinal)),
         Column("graduation_year", FieldType.Number, "Graduation year"),
         Column("first_time_hacker", FieldType.Consent, "Is this your first hackathon?"),
         Column("shirt_size", FieldType.ShortText, "Shirt size"),

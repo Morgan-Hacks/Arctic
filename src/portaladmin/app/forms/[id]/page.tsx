@@ -62,7 +62,7 @@ export default async function FormBuilder({
     );
   }
 
-  const { form, draft, published, statuses, responseCount, mlhSeason } =
+  const { form, draft, published, statuses, responseCount, mlhSeason, directoryFields } =
     (await draftResponse.json()) as DraftView;
 
   // History is nice to have rather than load-bearing: the builder works
@@ -85,6 +85,7 @@ export default async function FormBuilder({
           mlhSeason={mlhSeason}
           initialTheme={draft.theme}
           initialFields={draft.fields}
+          directoryFields={directoryFields}
           statuses={statuses}
           requiresSignIn={form.requiresSignIn}
           eligibleStatuses={form.eligibleStatuses}

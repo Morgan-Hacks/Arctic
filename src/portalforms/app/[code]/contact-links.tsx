@@ -1,0 +1,6 @@
+"use client";
+export function ContactLinks({id,value,onChange,describedBy}:{id:string;value:string[];onChange:(value:string[])=>void;describedBy?:string}) {
+ const rows=value.map(s=>{const split=s.indexOf("|");return {kind:split<0?"discord":s.slice(0,split),value:split<0?s:s.slice(split+1)}});
+ function update(index:number,kind:string,text:string){const next=[...rows];next[index]={kind,value:text};onChange(next.map(r=>r.kind+"|"+r.value))}
+ return <div id={id} aria-describedby={describedBy}>{rows.map((row,i)=><fieldset key={i}><legend>Contact {i+1}</legend><label>Kind<select value={row.kind} onChange={e=>update(i,e.target.value,row.value)}>{["discord","linkedin","github","website"].map(k=><option key={k} disabled={rows.some((r,n)=>n!==i&&r.kind===k)}>{k}</option>)}</select></label><label>Username or URL<input maxLength={200} value={row.value} onChange={e=>update(i,row.kind,e.target.value)} /></label><span>{row.value.length} / 200</span><button type="button" onClick={()=>onChange(value.filter((_,n)=>n!==i))}>Remove contact {i+1}</button></fieldset>)}<button type="button" disabled={rows.length>=3} onClick={()=>onChange([...value,(["discord","linkedin","github","website"].find(k=>!rows.some(r=>r.kind===k))??"discord")+"|"])}>Add contact</button></div>
+}

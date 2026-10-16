@@ -15,10 +15,10 @@ public sealed record EmailReach(
 /// </summary>
 /// <remarks>
 /// A port rather than a project reference. The store these come from lives in
-/// lark, which this assembly deliberately does not reference -- it references
-/// no other project at all, which is what keeps the tool layer from quietly
-/// growing reach. The API implements this over lark's own store and hands it
-/// down, so the dependency points the right way.
+/// lark, which this assembly deliberately does not reference. Its only project
+/// dependency is the shared directory contracts library, which has no stores
+/// or service dependencies. The API implements this port over lark's own store
+/// and hands it down, so the tool layer cannot reach that store directly.
 /// </remarks>
 public interface IEmailReachRead
 {
@@ -63,8 +63,9 @@ public sealed record FormSummary(
 /// <remarks>
 /// <para>
 /// A port rather than a project reference, for the reason the others are:
-/// this assembly references no other project, and the stores these read live
-/// in the layer above.
+/// this assembly references only shared directory contracts, not the API or
+/// external stores. The API supplies these reads through the port, keeping
+/// the tool layer's access explicit.
 /// </para>
 /// <para>
 /// Forms are listed as well as counted because an assistant that can read a

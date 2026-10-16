@@ -3,6 +3,8 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY global.json ./
 COPY src/atlas/Directory.Build.props src/atlas/
+COPY libs/Directory.Build.props libs/
+COPY libs/directory/MorganHacks.Directory.Contracts/ libs/directory/MorganHacks.Directory.Contracts/
 COPY src/atlas/MorganHacks.Seed/ src/atlas/MorganHacks.Seed/
 COPY src/atlas/MorganHacks.Applications/ src/atlas/MorganHacks.Applications/
 RUN dotnet publish src/atlas/MorganHacks.Seed/MorganHacks.Seed.csproj -c Release -o /app

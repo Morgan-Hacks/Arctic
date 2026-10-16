@@ -155,6 +155,7 @@ export type FieldType =
   | "select"
   | "radio"
   | "checkboxes"
+  | "contactLinks"
   | "consent"
   | "file"
   | "section";
@@ -249,6 +250,7 @@ export type FormsView = {
 
 /** Everything the builder needs to draw itself, in one response. */
 export type DraftView = {
+  directoryFields?: FormField[];
   form: FormSummary;
   mlhSeason: number | null;
   draft: { id: string; version: number; fields: FormField[]; theme?: import("../../../libs/ui/form-theme").FormTheme };

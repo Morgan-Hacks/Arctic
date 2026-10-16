@@ -16,4 +16,9 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.29.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Shared directory choices and validation, with no service or store
+         dependencies. External assistant reads still enter through ports. -->
+    <ProjectReference Include="../../../libs/directory/MorganHacks.Directory.Contracts/MorganHacks.Directory.Contracts.csproj" />
+  </ItemGroup>
 </Project>

@@ -47,6 +47,7 @@ export function Builder({
   mlhSeason,
   initialTheme,
   initialFields,
+  directoryFields = [],
   statuses,
   requiresSignIn,
   eligibleStatuses,
@@ -62,6 +63,7 @@ export function Builder({
   mlhSeason: number | null;
   initialTheme?: FormTheme;
   initialFields: FormField[];
+  directoryFields?: FormField[];
 
   /** Every application status, for the audience panel to offer. */
   statuses: string[];
@@ -541,6 +543,7 @@ export function Builder({
         </div>
       </div>
       {previewOnly && theme.linkCard ? <aside className={styles.previewLinkCard} aria-label="Featured link"><FormLinkCard card={theme.linkCard} /></aside> : null}
+      {!previewOnly && canManage && directoryFields.some(f=>!fields.some(p=>p.key===f.key)) ? <button type="button" disabled={!canEdit||publishing} onClick={()=>change(current=>[...current,...directoryFields.filter(f=>!current.some(p=>p.key===f.key))])}>Add hacker profile section</button>:null}
       {!previewOnly && canManage ? <QuestionToolbar onAdd={add} onAddSection={addSection} disabled={!canEdit || publishing} /> : null}
       {confirmUnpublish && canManage && published ? <Unpublish formId={formId} formName={formName}
         onClose={() => setConfirmUnpublish(false)} onDone={() => {

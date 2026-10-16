@@ -161,7 +161,8 @@ public sealed class PostgresSubmissionStore(NpgsqlDataSource dataSource) : ISubm
 
             if (answered)
             {
-                responses[field.Key] = ResponseValue(field, value);
+                responses[field.Key] = (field.Type == FieldType.ContactLinks || field.Key.StartsWith("directory_", StringComparison.Ordinal))
+                    ? DirectoryQuestions.Normalized(field, value) : ResponseValue(field, value);
             }
             else if (field.Type == FieldType.Consent)
             {
