@@ -22,7 +22,7 @@ export function ProfileEditor({status,initial}:{status:DirectoryStatus;initial:O
  {own.state==="hidden"?<p className="notice">Organizers have hidden your profile: {own.hiddenReason}. You can still edit it.</p>:null}
  {own.photoRemoved?<p className="notice">Organizers removed your photo. You can upload another.</p>:null}
  {own.missingFields.length>0?<p className="notice">To appear in the directory, complete: {own.missingFields.map(s=>({displayName:"display name",school:"school",skills:"skills",contactLinks:"contact links"}[s]??s)).join(", ")}.</p>:null}
- {error?<p role="alert" className="directory-error">{error}</p>:null}<p role="status">{message}</p>
+ {error?<p role="alert" className="directory-error">{error}</p>:null}<p role="status">{dirty?"Unsaved changes.":message}</p>
  {!profile?<button disabled={busy||archived} onClick={()=>action("/profile/opt-in")}>Join the hacker directory</button>:<>
  <label className="directory-optin"><input type="checkbox" checked={own.optedIn} disabled={busy||archived} onChange={e=>{if(!dirty||window.confirm("Discard unsaved edits and change visibility?"))void action(e.target.checked?"/profile/opt-in":"/profile/opt-out")}}/>Show me in the hacker directory</label><p className="quiet">Only RSVP’d hackers can see your complete profile. Opting out keeps your saved details.</p>
  <div className="directory-editor"><form onSubmit={e=>{e.preventDefault();void action("/profile",{method:"PUT",body:JSON.stringify(profile)})}}><fieldset disabled={busy||archived} className="directory-form">
