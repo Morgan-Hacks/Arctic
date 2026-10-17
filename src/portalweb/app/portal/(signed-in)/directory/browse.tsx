@@ -18,7 +18,17 @@ export function BrowseDirectory({status}:{status:DirectoryStatus}){
  useEffect(()=>{if(!selected){dialog.current?.close();opener.current?.focus();setDetail(null);return}const controller=new AbortController();setDetail(null);setDetailError("");setCopied("");dialog.current?.showModal();
  directoryRequest<DirectoryProfile>(`/${encodeURIComponent(selected)}`,{signal:controller.signal}).then(setDetail).catch(e=>{if(e.name!=="AbortError")setDetailError(e.message)});return()=>controller.abort()},[selected]);
  function close(){const p=new URLSearchParams(window.location.search);p.delete("h");router.replace(`/portal/directory${p.size?`?${p}`:""}`,{scroll:false})}
- async function loadMore(){if(!page.nextCursor)return;const key=filterKey;setMore(true);setError("");try{const result=await directoryRequest<Page>(`?${key}&cursor=${encodeURIComponent(page.nextCursor)}`);const current=new URLSearchParams(window.location.search);current.delete("h");if(current.toString()===key)setPage(p=>({items:[...p.items,...result.items.filter(i=>!p.items.some(old=>old.id===i.id))],nextCursor:result.nextCursor}))}catch(e){setError((e as Error).message)}finally{setMore(false)}}
+ async function loadMore(){
+  if(!page.nextCursor)return;
+  const key=filterKey;
+  const isCurrentFilter=()=>{const current=new URLSearchParams(window.location.search);current.delete("h");return current.toString()===key};
+  setMore(true);setError("");
+  try{
+   const result=await directoryRequest<Page>(`?${key}&cursor=${encodeURIComponent(page.nextCursor)}`);
+   if(isCurrentFilter())setPage(p=>({items:[...p.items,...result.items.filter(i=>!p.items.some(old=>old.id===i.id))],nextCursor:result.nextCursor}));
+  }catch(e){if(isCurrentFilter())setError((e as Error).message)}finally{setMore(false)}
+ }
+
  return <><div className="directory-filters"><label>Search hackers<input type="search" value={query} maxLength={100} onChange={e=>setQuery(e.target.value)}/></label>
  <label>Skills<select multiple value={(params.get("skills")??"").split(",")} onChange={e=>update("skills",Array.from(e.target.selectedOptions,o=>o.value).join(","))}>{status.catalogues.skills.map(v=><option key={v}>{v}</option>)}</select></label>
  <label>Team status<select value={params.get("status")??""} onChange={e=>update("status",e.target.value)}><option value="">All</option>{status.catalogues.teamStatuses.map(v=><option key={v} value={v}>{teamLabels[v]}</option>)}</select></label>
