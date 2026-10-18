@@ -12,6 +12,35 @@
   margin-bottom: 0;
 }
 
+/*
+ * Everything between main and .workspace, made transparent to layout.
+ *
+ * The rule above clamps main to the viewport and hands the scrolling to
+ * .scrollArea inside .workspace. That only works while every box in between
+ * passes the height down, and NeedsRoom wraps this composer in two plain
+ * divs: `flex: 1` on the child of a block does nothing, so .workspace grows
+ * to its content, .scrollArea is handed no bounded height and so has nothing
+ * to scroll, and main -- still matching, because :has() reaches descendants
+ * rather than children -- clips the overflow with no scrollbar anywhere on
+ * the page. The form builder is spelled `:has(> .builder)` and so simply
+ * stops matching when it is wrapped, which is why only this screen broke.
+ *
+ * `*:has(.workspace)` is exactly that chain and nothing else, at whatever
+ * depth a future wrapper puts it.
+ *
+ * Above the breakpoint only. Below it NeedsRoom hides .content, and a
+ * display declared here would outrank that and show the cramped composer
+ * the notice exists to stand in for.
+ */
+@media (min-width: 48.001rem) { /* --bp-lg, libs/ui/tokens.css */
+  :global(main#main-content):has(.workspace) *:has(.workspace) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+}
+
 .workspace {
   display: flex;
   flex: 1;
@@ -28,7 +57,38 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   overflow-anchor: none;
-  padding-bottom: 48px;
+  /* Room under the last control so it does not sit flush against the fold. */
+  padding-bottom: 64px;
+  /*
+   * A scrollbar, against the console's global hide in app/globals.css.
+   *
+   * That hide is right for the thumbnails and short panes it was written
+   * for. This pane is a four-step form whose content routinely runs past
+   * the fold, and it cannot grow -- main is clamped to the viewport. With
+   * no scrollbar the last control is simply cut off and nothing on screen
+   * says the form continues, which reads as a broken page rather than an
+   * unscrolled one.
+   */
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+}
+
+.scrollArea::-webkit-scrollbar {
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+
+.scrollArea::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--line);
+  background-clip: content-box;
+}
+
+.scrollArea::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+  background-clip: content-box;
 }
 
 .header, .steps {
