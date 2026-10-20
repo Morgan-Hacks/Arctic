@@ -249,6 +249,20 @@ public sealed class PostgresInventoryStore(NpgsqlDataSource dataSource) : IInven
             item = Read(reader);
         }
 
+        // The row lock covers both the crossing decision and this durable
+        // snapshot. Concurrent decrements cannot each observe the same crossing.
+        if (item.LowAt is { } threshold && current > threshold && balance <= threshold)
+        {
+            await using var alert = new NpgsqlCommand("""
+                INSERT INTO logistics.low_stock_alerts
+                    (item_id, event_id, item_name, location, balance, low_at)
+                SELECT id, event_id, name, location, count, low_at
+                  FROM logistics.items WHERE id = @id
+                """, connection, transaction);
+            alert.Parameters.AddWithValue("id", id);
+            await alert.ExecuteNonQueryAsync(ct);
+        }
+
         await transaction.CommitAsync(ct);
         return new InventoryMovementResult(InventoryMoveOutcome.Ok, item, null);
     }

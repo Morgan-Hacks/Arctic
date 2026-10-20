@@ -77,6 +77,7 @@ export async function recordMovement(
   }
 
   revalidatePath("/inventory");
+  revalidatePath("/");
   return {};
 }
 
@@ -141,6 +142,7 @@ export async function createItem(eventId: string, input: NewItem): Promise<ItemS
   }
 
   revalidatePath("/inventory");
+  revalidatePath("/");
   return {};
 }
 
@@ -182,6 +184,7 @@ export async function updateItem(id: string, input: ItemEdits): Promise<ItemStat
   }
 
   revalidatePath("/inventory");
+  revalidatePath("/");
   return {};
 }
 
@@ -203,6 +206,7 @@ export async function deleteItem(id: string): Promise<ItemState> {
   }
 
   revalidatePath("/inventory");
+  revalidatePath("/");
   return {};
 }
 

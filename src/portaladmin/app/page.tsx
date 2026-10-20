@@ -4,6 +4,7 @@ import { UserGroupIcon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/components/ui/icon";
 import { currentPerson } from "@/lib/api";
 import { displayName } from "@/lib/person-profile";
+import { HomeStockAlerts } from "./home-stock-alerts";
 import { HomeFooter } from "./home-footer";
 import { HomeGreeting } from "./home-greeting";
 import { HomeHeader } from "./home-header";
@@ -27,6 +28,9 @@ export default async function Home() {
     <Shell personId={person.personId}>
       <div className={styles.home}>
         <HomeHeader teams={person.teams} />
+        {person.permissions.has("inventory.manage") ? (
+          <Suspense fallback={null}><HomeStockAlerts /></Suspense>
+        ) : null}
         {person.permissions.has("applications.view") ? (
           <Suspense fallback={<HomeOverview email={email} bestEmails={bestEmails} greeting={greeting} />}>
             <HomeInsights email={email} bestEmails={bestEmails} greeting={greeting} />

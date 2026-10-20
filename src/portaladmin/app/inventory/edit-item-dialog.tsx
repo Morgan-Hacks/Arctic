@@ -175,7 +175,7 @@ function EditItemForm({ item, onClose }: { item: ItemView; onClose: () => void }
         </div>
         {/* COPY: needs sign-off */}
         <p id="edit-item-low-at-help" className={styles.hint}>
-          Flagged as low once the count falls to this or below. Leave blank to turn that off.
+          Shown on the dashboard at or below this count. Crossing from above emails organizers with inventory access. Leave blank to disable alerts.
         </p>
 
         <ErrorToast message={error} />
