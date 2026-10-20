@@ -23,7 +23,7 @@ import styles from "./inventory.module.css";
  */
 export function ItemCard({ item }: { item: ItemView }) {
   return (
-    <li className={styles.item} data-low={item.isLow || undefined}>
+    <li id={`item-${item.id}`} className={styles.item} data-low={item.isLow || undefined}>
       <div className={styles.itemMain}>
         {item.imageUrl ? (
           <img src={item.imageUrl} alt="" className={styles.thumb} />

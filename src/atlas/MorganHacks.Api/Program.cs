@@ -187,6 +187,8 @@ builder.Services.AddSingleton<EmailAnalyticsStore>();
 // for the same reason the stores above are: it holds nothing but the data
 // source, which is itself a singleton owning the connection pool.
 builder.Services.AddSingleton<IInventoryStore, PostgresInventoryStore>();
+builder.Services.AddSingleton<LowStockAlerts>();
+builder.Services.AddHostedService<LowStockAlertWorker>();
 
 // The assistant.
 //
