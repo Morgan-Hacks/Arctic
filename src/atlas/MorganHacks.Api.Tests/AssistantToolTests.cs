@@ -72,6 +72,22 @@ public class AssistantToolTests
                     40, 120, false, null, DateTimeOffset.UtcNow)]);
     }
 
+    /// <summary>
+    /// A shelf with nothing on it, which is how the question was asked.
+    /// </summary>
+    /// <remarks>
+    /// The reported case was an organizer asking how to add an item while
+    /// looking at an empty shelf, and getting nothing useful. An empty list is
+    /// a different thing from a refusal and from a shelf that was never read,
+    /// so it gets its own fake rather than being approximated by one of theirs.
+    /// </remarks>
+    private sealed class BareShelf : Untouchable
+    {
+        public override Task<IReadOnlyList<InventoryItemView>> ListAsync(
+            Guid eventId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<InventoryItemView>>([]);
+    }
+
     /// <summary>An inventory store that fails the test if it is touched.</summary>
     private class Untouchable : IInventoryStore
     {
@@ -115,7 +131,8 @@ public class AssistantToolTests
         IApplicantStore? applicants = null,
         IInventoryStore? shelf = null,
         bool answering = false,
-        EventDetail? chosen = null) =>
+        EventDetail? chosen = null,
+        IReadOnlySet<string>? held = null) =>
         new(
             Guid.NewGuid(),
             new Allowed(responses, inventory, emailStats),
@@ -128,6 +145,11 @@ public class AssistantToolTests
             Forms = answering ? new SomeForms() : new NeverAsked(),
             Burn = answering ? new SomeBurn() : new NeverCounted(),
             EmailReach = answering ? new SomeMail() : new NeverSent(),
+
+            // Left null by default on purpose, so that the tests which say
+            // nothing about permissions exercise the "nobody said" case rather
+            // than quietly asserting that the asker holds none.
+            Held = held,
         };
 
     /// <summary>
@@ -710,5 +732,255 @@ public class AssistantToolTests
             Assert.Null(result.Json);
             Assert.NotNull(result.Refusal);
         }
+    }
+
+    private static JsonObject Workflow(string name) => new() { ["workflow"] = name };
+
+    private static async Task<JsonNode> GuideTo(string workflow, ToolContext context)
+    {
+        var result = await AssistantTools.RunAsync(
+            "portal_guide", Workflow(workflow), context, CancellationToken.None);
+
+        Assert.Null(result.Refusal);
+
+        return JsonNode.Parse(result.Json!)!;
+    }
+
+    [Fact]
+    public async Task Help_with_the_shelf_quotes_the_labels_the_dialog_actually_uses()
+    {
+        // The labels are the whole value of the catalogue. An organizer told
+        // to look for a field called something it is not called has been given
+        // a wrong answer rather than a vague one, and the only way to catch
+        // that drifting is to pin the strings against the components they were
+        // read off -- add-item-dialog.tsx, and page.tsx for where the button
+        // sits.
+        var guide = await GuideTo(
+            "add-inventory-item", Context(new Watched(), inventory: true, shelf: new Shelf()));
+
+        var said = guide.ToJsonString();
+
+        foreach (var label in
+                 new[] { "Add item", "Name", "Starting count", "Category", "Location", "Note", "Low at" })
+        {
+            Assert.Contains(label, said, StringComparison.Ordinal);
+        }
+
+        Assert.Equal("/inventory", guide["screens"]![0]!["route"]!.GetValue<string>());
+        Assert.Equal("Inventory", guide["screens"]![0]!["label"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task Help_with_the_shelf_is_the_same_help_when_the_shelf_is_empty()
+    {
+        // The reported case. Somebody looking at a shelf with nothing on it
+        // asks how to put something on it, and the steps do not depend on
+        // there being anything there -- so the two answers are asserted to be
+        // the same answer, not merely both non-empty.
+        var stocked = new Watched();
+        var bare = new Watched();
+
+        var full = await GuideTo(
+            "add-inventory-item", Context(stocked, inventory: true, shelf: new Shelf()));
+        var empty = await GuideTo(
+            "add-inventory-item", Context(bare, inventory: true, shelf: new BareShelf()));
+
+        Assert.Equal(full.ToJsonString(), empty.ToJsonString());
+
+        // And neither one went looking. A how-to question that counts
+        // applicants on its way to an answer is slower, costs more, and fails
+        // for reasons that have nothing to do with the question.
+        Assert.Equal(0, stocked.Reads);
+        Assert.Equal(0, bare.Reads);
+    }
+
+    [Fact]
+    public async Task Help_answers_with_no_data_read_wired_up_at_all()
+    {
+        // Untouchable throws when the shelf is listed and the ports here
+        // refuse, so this passes only if guidance really is served out of the
+        // catalogue in this assembly. That is what makes it answerable from
+        // any screen and in any state of the data.
+        var alone = new ToolContext(
+            Guid.NewGuid(),
+            new Allowed(false, false, false),
+            new Watched(),
+            new Untouchable(),
+            new DateOnly(2027, 2, 2));
+
+        foreach (var workflow in Workflows.Keys)
+        {
+            var guide = await GuideTo(workflow, alone);
+
+            Assert.NotEmpty(guide["steps"]!.AsArray());
+        }
+    }
+
+    [Fact]
+    public async Task Help_names_the_permission_a_screen_is_behind_either_way()
+    {
+        // Guidance is given to somebody who cannot follow it, because knowing
+        // what the flow is and being able to finish it are different things.
+        // What changes is that the answer knows to say which permission is in
+        // the way.
+        var without = await GuideTo(
+            "add-inventory-item",
+            Context(new Watched(), held: new HashSet<string>(StringComparer.Ordinal)));
+
+        Assert.True(without["permissionsKnown"]!.GetValue<bool>());
+        Assert.NotEmpty(without["steps"]!.AsArray());
+
+        var missing = without["missing"]!.AsArray()
+            .Select(one => one!.GetValue<string>())
+            .ToArray();
+
+        Assert.Contains("inventory.manage", missing);
+
+        // The prerequisite counts as much as the permission on the screen, and
+        // it is what makes the difference between "create an event first" and
+        // "ask somebody who can to create an event".
+        Assert.Contains("events.manage", missing);
+        Assert.False(without["before"]![1]!["theirs"]!.GetValue<bool>());
+        Assert.False(without["screens"]![0]!["canOpen"]!.GetValue<bool>());
+
+        var holder = await GuideTo(
+            "add-inventory-item",
+            Context(
+                new Watched(),
+                inventory: true,
+                held: new HashSet<string>(StringComparer.Ordinal) { "inventory.manage" }));
+
+        Assert.DoesNotContain(
+            "inventory.manage",
+            holder["missing"]!.AsArray().Select(one => one!.GetValue<string>()));
+        Assert.True(holder["screens"]![0]!["canOpen"]!.GetValue<bool>());
+    }
+
+    [Fact]
+    public async Task Help_claims_nothing_about_permissions_it_was_not_told()
+    {
+        // Unknown said as unknown. An empty set would be a claim -- "you hold
+        // nothing" -- and a caller that simply never filled it in would have
+        // the assistant telling a super admin they lack every permission in
+        // the console.
+        var guide = await GuideTo("add-inventory-item", Context(new Watched()));
+
+        Assert.False(guide["permissionsKnown"]!.GetValue<bool>());
+
+        // A JSON null, which is what unknown looks like on the wire: the model
+        // is shown the field and shown that nothing is in it, rather than
+        // shown a false it would read as a refusal.
+        Assert.Null(guide["missing"]);
+        Assert.Null(guide["screens"]![0]!["canOpen"]);
+        Assert.Null(guide["before"]![1]!["theirs"]);
+
+        // The permission is still named. What the screen needs is a fact about
+        // the screen, and withholding it because nobody said who is asking
+        // would lose the useful half of the answer.
+        Assert.Contains("inventory.manage", guide.ToJsonString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task An_unknown_workflow_is_refused_rather_than_described()
+    {
+        // The behaviour this whole catalogue exists to get right. A model
+        // asked how to do something nobody wrote down will describe a
+        // plausible screen, and nobody reading the answer can tell that from a
+        // real one -- so there is nothing here to describe it out of, and the
+        // refusal says what there is instead.
+        var store = new Watched();
+
+        var result = await AssistantTools.RunAsync(
+            "portal_guide", Workflow("accept-every-applicant"),
+            Context(store, inventory: true, shelf: new Shelf()), CancellationToken.None);
+
+        Assert.Null(result.Json);
+        Assert.Contains("accept-every-applicant", result.Refusal);
+        Assert.Contains("add-inventory-item", result.Refusal);
+        Assert.Equal(0, store.Reads);
+    }
+
+    [Fact]
+    public async Task A_missing_workflow_argument_refuses_rather_than_throwing()
+    {
+        var result = await AssistantTools.RunAsync(
+            "portal_guide", null, Context(new Watched()), CancellationToken.None);
+
+        Assert.Null(result.Json);
+        Assert.NotNull(result.Refusal);
+    }
+
+    [Fact]
+    public async Task Help_says_it_is_instructions_and_not_something_done()
+    {
+        // The assistant reads and explains. The one way a how-to answer can do
+        // real harm is by reading as though the thing had been done, so the
+        // payload itself carries the sentence rather than relying on the brief
+        // to be remembered eight tool calls in.
+        var guide = await GuideTo("add-inventory-item", Context(new Watched(), inventory: true));
+
+        Assert.Contains(
+            "Nothing has been created, changed or saved",
+            guide["theseAreInstructions"]!.GetValue<string>(),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Every_destination_in_the_catalogue_is_the_console_s_own_path()
+    {
+        // The renderer deliberately does not make a path in an answer
+        // clickable, and this is the other half of that decision: a route in
+        // guidance came out of the catalogue, so even a route quoted into an
+        // answer is one of the console's own screens and never somewhere else.
+        Assert.All(Workflows.Sections, screen =>
+        {
+            Assert.StartsWith("/", screen.Route, StringComparison.Ordinal);
+            Assert.DoesNotContain("//", screen.Route, StringComparison.Ordinal);
+            Assert.False(string.IsNullOrWhiteSpace(screen.Label));
+        });
+
+        Assert.All(Workflows.All.Values, workflow =>
+            Assert.All(workflow.Screens, screen =>
+                Assert.Contains(screen, Workflows.Sections)));
+    }
+
+    [Fact]
+    public void Every_workflow_in_the_schema_is_one_the_catalogue_holds()
+    {
+        // The schema and the catalogue are the model's two halves of one
+        // agreement, the same as the readings and the dispatch: a workflow
+        // offered and not held is a tool call that always refuses, and a
+        // workflow held and never offered is help no question can reach.
+        var offered = AssistantTools.Schema(["Application"])
+            .Single(tool => tool!["function"]!["name"]!.GetValue<string>() == "portal_guide")!
+            ["function"]!["parameters"]!["properties"]!["workflow"]!["enum"]!
+            .AsArray()
+            .Select(name => name!.GetValue<string>())
+            .ToArray();
+
+        Assert.NotEmpty(offered);
+        Assert.All(offered, name => Assert.True(
+            Workflows.All.ContainsKey(name),
+            $"The schema offers \"{name}\" and the catalogue does not hold it."));
+        Assert.All(Workflows.Keys, name => Assert.Contains(name, offered));
+    }
+
+    [Fact]
+    public async Task The_shelf_still_answers_a_question_about_what_is_on_it()
+    {
+        // Guidance is an addition, not a replacement. A question about the
+        // data still goes to the data, still behind inventory.manage, and the
+        // figures it returns are unchanged.
+        var result = await AssistantTools.RunAsync(
+            "inventory", null, Context(new Watched(), inventory: true, shelf: new Shelf()),
+            CancellationToken.None);
+
+        Assert.Null(result.Refusal);
+
+        var shelf = JsonNode.Parse(result.Json!)!.AsArray();
+        Assert.Equal("T-shirts (M)", shelf[0]!["item"]!.GetValue<string>());
+        Assert.Equal(120, shelf[0]!["left"]!.GetValue<int>());
+        Assert.Equal(40, shelf[0]!["lowMark"]!.GetValue<int>());
+        Assert.False(shelf[0]!["low"]!.GetValue<bool>());
     }
 }

@@ -62,6 +62,34 @@ public sealed record ToolContext(
 
     /// <summary>Which screen the question was asked from, or null.</summary>
     public string? Screen { get; init; }
+
+    /// <summary>
+    /// Which permissions the asking person holds, by name, or null when
+    /// nobody has said.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Not a second <see cref="Allowed"/>, and emphatically not a gate. Every
+    /// read above is allowed or refused by the booleans in
+    /// <see cref="Allowed"/>, decided once by the layer that holds identity,
+    /// and nothing here is consulted by any of them. This is for one job:
+    /// <c>portal_guide</c> explains how to use a screen, the screens are
+    /// behind permissions, and guidance that cannot say "this needs
+    /// inventory.manage, which you do not hold" walks somebody into a refusal
+    /// and calls it help. Naming a permission is description; the booleans
+    /// remain the decision.
+    /// </para>
+    /// <para>
+    /// Null rather than an empty set when the caller did not supply it, for
+    /// the reason <see cref="Screens.Describe"/> returns null rather than a
+    /// guess. An empty set is a claim -- "you hold nothing" -- and a caller
+    /// that simply never filled this in would have the assistant telling a
+    /// super admin they lack every permission in the console. Unknown is said
+    /// as unknown, and the guidance then names the permission a workflow needs
+    /// without asserting anything about who is asking.
+    /// </para>
+    /// </remarks>
+    public IReadOnlySet<string>? Held { get; init; }
 }
 
 /// <summary>What a tool answered, and whether it would say.</summary>
@@ -94,6 +122,13 @@ public sealed record ToolResult(string? Json, string? Refusal)
 /// runs SQL. That is the line: the model chooses which read to make, never
 /// what the read says. Adding a tool that took a WHERE clause would undo
 /// every guarantee above it, however convenient it looked.
+/// </para>
+/// <para>
+/// One entry, <c>portal_guide</c>, reaches no store at all: it hands back a
+/// page of <see cref="Workflows"/>, which is how to use a screen rather than
+/// anything that is on one. It is listed here because the line above is the
+/// same line -- a name chosen from a closed list, answered out of something
+/// written down, with nothing the model composed in it.
 /// </para>
 /// </remarks>
 public static class AssistantTools
@@ -176,6 +211,27 @@ public static class AssistantTools
             "How the event's mail has performed: sent, opened, clicked.",
             null),
 
+        Tool("portal_guide",
+            "How to use the console itself: where a screen is, what a dialog's "
+            + "fields are called, what has to be true before a flow will work, "
+            + "and which permission each screen is behind. This is the read for "
+            + "\"how do I ...\" and \"where is ...\". It needs no other read and "
+            + "returns nothing about this event's data, so an empty shelf "
+            + "answers the same as a full one. It explains; it does not do "
+            + "anything. If no workflow here covers what was asked, say the "
+            + "steps are not written down rather than describing a screen you "
+            + "have not been shown.",
+            new JsonObject
+            {
+                ["workflow"] = new JsonObject
+                {
+                    ["type"] = "string",
+                    ["enum"] = Guides(),
+                    ["description"] = "Which workflow to explain.",
+                },
+            },
+            "workflow"),
+
         Tool("applicants",
             "Actual applicants, by name, with their status and school. Ask "
             + "for a status when the question is about one -- who has not "
@@ -240,6 +296,28 @@ public static class AssistantTools
     {
         var names = new JsonArray();
         foreach (var name in Metrics.Keys)
+        {
+            names.Add(name);
+        }
+
+        return names;
+    }
+
+    /// <summary>
+    /// The workflows the model may ask to have explained.
+    /// </summary>
+    /// <remarks>
+    /// Built from <see cref="Workflows.Keys"/> for the reason the readings are
+    /// built from <see cref="Metrics"/>: the names offered and the names
+    /// answered come from one place, so a workflow cannot be advertised and
+    /// then refused. A closed list is also what keeps this tool on the right
+    /// side of the line every other tool here is on -- the model chooses which
+    /// written-down page to be handed, never what the page says.
+    /// </remarks>
+    private static JsonArray Guides()
+    {
+        var names = new JsonArray();
+        foreach (var name in Workflows.Keys)
         {
             names.Add(name);
         }
@@ -320,6 +398,13 @@ public static class AssistantTools
             "form_questions" => await FormQuestionsAsync(arguments, context, ct),
             "email_reach" => await EmailAsync(context, ct),
             "applicants" => await ApplicantsAsync(arguments, context, ct),
+
+            // The one entry here with nothing to await, because it is the one
+            // that reads nothing. The catalogue lives in this assembly, which
+            // is the whole point of it: a question about how to use a screen
+            // does not touch the event's data, and so cannot be made to fail
+            // by an empty shelf, a missing port or a slow table.
+            "portal_guide" => Guide(arguments, context),
 
             // A name nothing answers. Said plainly rather than thrown: the
             // loop shows this to the model, which picks a real tool next turn.
@@ -638,6 +723,116 @@ public static class AssistantTools
             // quietly subtracting them here would hide a figure somebody
             // needs when an open rate looks too good.
             automatedEvents = reach.AutomatedEvents,
+        });
+    }
+
+    /// <summary>
+    /// What is written down about one workflow, and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// No permission check, deliberately, and no read either. There is nothing
+    /// here to gate: the catalogue describes screens somebody has already been
+    /// given or already been refused, and withholding the description would
+    /// not withhold the screen. What it would do is turn "you need
+    /// inventory.manage for this" -- the useful answer -- into silence, which
+    /// is how somebody ends up asking three more questions to find out they
+    /// were never going to be able to do it.
+    /// </para>
+    /// <para>
+    /// The permissions go out in three parts rather than one annotated list,
+    /// because the model has to be able to tell "they do not hold this" from
+    /// "nobody told me what they hold", and a field that is sometimes false
+    /// and sometimes null is a distinction it will flatten. <c>missing</c> is
+    /// absent rather than empty when nothing is known, and
+    /// <c>permissionsKnown</c> says which case this is.
+    /// </para>
+    /// </remarks>
+    private static ToolResult Guide(JsonObject? arguments, ToolContext context)
+    {
+        var asked = arguments?["workflow"]?.GetValue<string>() ?? "";
+
+        if (Workflows.Of(asked) is not { } workflow)
+        {
+            // The honest limitation, which is the behaviour this tool exists
+            // to get right. The known names go back with it so the model can
+            // offer what there is instead of only saying no -- but the
+            // instruction not to invent the rest has to be here as well as in
+            // the brief, because this is the moment it would be tempted.
+            // COPY: needs sign-off.
+            return ToolResult.No(
+                $"There is no written-down workflow called \"{asked}\". The ones "
+                + $"there are: {string.Join(", ", Workflows.Keys)}. Tell them this "
+                + "one is not written down and offer what is. Do not describe the "
+                + "buttons, fields or paths of a screen you have not been shown -- "
+                + "a plausible answer here is the one answer nobody can check.");
+        }
+
+        // Everything the workflow names, in one list, so that "what is in the
+        // way" is answered once rather than in three places the model has to
+        // reconcile. The prerequisites count: not holding events.manage is
+        // exactly as much of an obstacle as not holding inventory.manage, and
+        // it is the one somebody would otherwise discover two screens later.
+        var needs = workflow.Needs
+            .Concat(workflow.Before.SelectMany(before => before.Needs))
+            .Concat(workflow.Screens.SelectMany(screen => screen.Needs))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        return ToolResult.Of(new
+        {
+            workflow = asked,
+            title = workflow.Title,
+            about = workflow.About,
+            needs = workflow.Needs,
+            before = workflow.Before.Select(before => new
+            {
+                says = before.Says,
+                needs = before.Needs,
+
+                // Whether they could clear it themselves, which is the
+                // difference between a step and a message to pass on. Null
+                // when nobody said what they hold; true when nothing gates it.
+                theirs = context.Held is null
+                    ? (bool?)null
+                    : before.Needs.Count == 0
+                      || before.Needs.Any(context.Held.Contains),
+            }),
+            steps = workflow.Steps,
+            notes = workflow.Notes,
+
+            // Routes and labels as the catalogue holds them, so an answer that
+            // names a screen names one that exists. The renderer does not make
+            // a path in an answer clickable, and that is unchanged here: these
+            // are text for the model to quote, not links it has composed.
+            screens = workflow.Screens.Select(screen => new
+            {
+                route = screen.Route,
+                label = screen.Label,
+                shows = screen.Does,
+                needs = screen.Needs,
+
+                // Any-of, as the nav table reads it, and null when nobody said
+                // what this person holds.
+                canOpen = context.Held is null
+                    ? (bool?)null
+                    : screen.Needs.Count == 0
+                      || screen.Needs.Any(context.Held.Contains),
+            }),
+
+            permissionsKnown = context.Held is not null,
+            missing = context.Held is null
+                ? null
+                : needs.Where(one => !context.Held.Contains(one)).ToArray(),
+
+            // Said in the payload as well as the brief. The one way this tool
+            // can do harm is by reading as though the thing had been done, and
+            // the sentence that prevents that is cheaper here than a paragraph
+            // of prompt nobody can point at.
+            // COPY: needs sign-off.
+            theseAreInstructions =
+                "Steps for the person to follow themselves. Nothing has been "
+                + "created, changed or saved by reading this.",
         });
     }
 

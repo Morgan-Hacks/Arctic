@@ -31,6 +31,14 @@ public interface IChatAgent
 /// talked-into model can do is fetch a figure its asker could already read.
 /// </para>
 /// <para>
+/// One of those reads is not a read of the data at all. <c>portal_guide</c>
+/// hands back a page of <see cref="Workflows"/> -- how to use a screen, in the
+/// words the screen uses -- which is how a question about the console gets an
+/// answer that can be checked against the console. It changes nothing about
+/// the paragraph above: it is still a named entry chosen from a closed list,
+/// and it still only tells somebody what they could have found by looking.
+/// </para>
+/// <para>
 /// There is no word-table fallback here, and that is deliberate. The single-
 /// shot box needed one because a filter box must always do something, and that
 /// silent degradation is exactly what hid a dead key for an afternoon. A
@@ -325,6 +333,38 @@ public sealed class ChatAgent(
         Answer only out of what a read actually returned. If no read covers
         what was asked, say what you cannot see and what you can -- that is a
         useful answer. Guessing from a neighbouring read is not.
+
+        Some questions are about the console rather than about the data: how
+        to add an item, where a screen is, what a dialog asks for. Those are
+        answered from "portal_guide", which returns steps written down beside
+        the code that draws those screens. Call it on its own -- it needs no
+        figure, and a question about how to do something should not go and
+        count applicants on the way to answering it. A shelf with nothing on
+        it answers the same as a full one.
+
+        Guidance is written down or it does not exist. When no workflow
+        covers what was asked, say that its steps are not written down, say
+        which ones are, and stop there. Never name a button, a field or a
+        path that did not come back from that read. A screen you half
+        remember and a screen that exists read identically in a sentence, and
+        only one of them is there when somebody goes looking.
+
+        Explaining is not doing. "Choose Add item" is an instruction to
+        somebody with a mouse, and saying it changes nothing: you have
+        created nothing, saved nothing and added nothing to any shelf. Write
+        the steps as theirs to follow, and never in the past tense.
+
+        When a guide names a permission they do not hold, say so and name it.
+        Give the steps they asked for anyway -- knowing what a flow is and
+        being able to finish it are different things -- but do not write as
+        though they will get to the end of it. When the guide says nothing is
+        known about their permissions, name what the screen needs without
+        telling them whether they have it.
+
+        When a how-to question could mean more than one thing -- "how do I
+        add one?" with nothing but the screen to say what one is -- ask
+        which, and name the choices. A clarification that does not say what
+        the options were is another question, not a useful one.
 
         How to answer:
         - Lead with the figure and the number it came out of. "90% finished --

@@ -222,6 +222,18 @@ public static class AssistantEndpoints
             // sent. What arrives goes into a prompt, and the browser is on the
             // other side of a boundary.
             Screen = Screens.Describe(body?.Screen) is null ? null : body?.Screen,
+
+            // The same resolved permissions the booleans above came from, as
+            // names, for the guidance read alone. Guidance explains screens
+            // that are themselves behind permissions, and an explanation that
+            // cannot say "this needs inventory.manage, which you do not hold"
+            // walks somebody into a refusal and calls it help. It decides
+            // nothing: every read is still allowed or refused by Allowed, and
+            // sending the names in addition to the booleans tells the tool
+            // layer no more than it is already told in the sentences it hands
+            // back, which name these permissions outright.
+            Held = mine.Granted.Select(permission => permission.Value)
+                               .ToHashSet(StringComparer.Ordinal),
         };
 
         var reply = await agent.AnswerAsync(history, question, context, ct);
