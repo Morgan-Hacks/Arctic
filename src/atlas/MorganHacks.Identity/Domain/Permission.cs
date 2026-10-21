@@ -151,6 +151,31 @@ public readonly record struct Permission(string Value)
     public static readonly Permission SwagScan = new("swag.scan");
     public static readonly Permission CheckinViewStats = new("checkin.view_stats");
 
+    /// <summary>
+    /// Letting somebody in without a code, and correcting a name the desk
+    /// cannot verify against, when the normal path refuses.
+    /// </summary>
+    /// <remarks>
+    /// Its own permission rather than a widening of <see cref="CheckinScan"/>,
+    /// and that is the whole point of it. The volunteer scanning badges and
+    /// the person authorised to override are not always the same person: one
+    /// is a role you hand to anybody rostered on the door, the other is the
+    /// trust you extend to somebody whose mistake is a person walked in who
+    /// should not have been, or a name rewritten without a reason behind it.
+    /// Folding the two into one string would make every volunteer an
+    /// override-holder, because permissions are granted by the sentence an
+    /// admin reads on a grant screen and "they can scan badges" is not that
+    /// sentence.
+    /// <para>
+    /// Not on the sensitive list. It moves no PII out of the system and
+    /// changes nobody's access — it changes one application's state, with a
+    /// reason attached, into a trail that outlives the day. The sensitive
+    /// list exists for the four that make a copy leave or open the door to
+    /// every door; this one opens one door, once, and says who opened it.
+    /// </para>
+    /// </remarks>
+    public static readonly Permission CheckinOverride = new("checkin.override");
+
     // Judging — phase two
     public static readonly Permission JudgingScoreAssigned = new("judging.score_assigned");
     public static readonly Permission JudgingViewAll = new("judging.view_all");
@@ -184,7 +209,7 @@ public readonly record struct Permission(string Value)
         AnnouncementsPost,
         EmailSendTemplated, EmailSendBroadcast, EmailManageTemplates, EmailDeleteTemplates, EmailViewStats,
         SponsorsView, SponsorsEdit, SponsorsViewFinancials,
-        CheckinScan, SwagScan, CheckinViewStats,
+        CheckinScan, SwagScan, CheckinViewStats, CheckinOverride,
         JudgingScoreAssigned, JudgingViewAll, JudgingAssign,
         InventoryManage,
         PeopleView, PeopleManageTeams, PeopleGrantPermissions, AuditView,
