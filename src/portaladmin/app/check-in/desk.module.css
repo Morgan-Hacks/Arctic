@@ -378,13 +378,19 @@
   border-top: 1px solid var(--line-soft);
 }
 
+/*
+ * Every row carries the marker's space whether or not it has a marker, so a
+ * list of names lines up down the left edge. Rows that shifted sideways
+ * depending on somebody's status would be a column nobody can read down.
+ */
 .row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 18rem);
   align-items: center;
   gap: 12px;
-  padding: 10px 2px;
+  padding: 10px 2px 10px 10px;
   border-bottom: 1px solid var(--line-soft);
+  border-left: 3px solid transparent;
 }
 
 @media (max-width: 48rem) {
@@ -404,13 +410,11 @@
  * gets read aloud and colour on it would say something about the person.
  */
 .row[data-code="none"] {
-  border-left: 3px solid var(--warn);
-  padding-left: 10px;
+  border-left-color: var(--warn);
 }
 
 .row[data-code="used"] {
-  border-left: 3px solid var(--ok);
-  padding-left: 10px;
+  border-left-color: var(--ok);
 }
 
 .rowWho {
