@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadCheckInCounts } from "../actions";
+import { usePoll } from "../poll";
 import { loadApplicantAnalytics } from "../../home-actions";
 import {
   dateLabel, numbers, statusLabels,
@@ -59,46 +60,6 @@ const FRESH_MS = 2 * POLL_MS;
 
 /** Past this, the banner stops being a note and starts being a warning. */
 const STALE_MS = 3 * POLL_MS;
-
-/**
- * Ask on a clock, but only while somebody could be looking.
- *
- * Two clocks here rather than one, which is the whole reason this is a hook
- * and not a pair of intervals written out twice: the rule -- asleep while the
- * tab is hidden, caught up on the way back -- has to hold for both feeds, and
- * the second copy of it is the one that would eventually be edited without
- * the first.
- *
- * Both feeds are server actions, and Next dispatches those **one at a time
- * per client**, so the fast feed can queue behind an in-flight slow poll once
- * a minute. That costs a number on this board at most the length of one
- * analytics read, and the tile's own age is what decides whether it says
- * anything -- so the coupling shows up as a slightly older `As of` line, never
- * as a fresh-looking figure nobody has checked. Worth knowing rather than
- * working around: the fix would be a route handler, and trading this
- * convention for a delay nobody can see is not a trade.
- *
- * `enabled` exists because the fast feed exists for one tile. While there is
- * no analytics payload there is no tile to feed, and a board left open on a
- * refusal should not be spending ten-second queries to say nothing to nobody.
- */
-function usePoll(ask: () => void, every: number, enabled = true) {
-  useEffect(() => {
-    if (!enabled) return;
-
-    const askIfVisible = () => {
-      if (document.visibilityState === "visible") void ask();
-    };
-
-    const id = setInterval(askIfVisible, every);
-    document.addEventListener("visibilitychange", askIfVisible);
-
-    return () => {
-      clearInterval(id);
-      document.removeEventListener("visibilitychange", askIfVisible);
-    };
-  }, [ask, every, enabled]);
-}
 
 export function LiveBoard({ initial, eventId }: { initial: AnalyticsResult; eventId?: string }) {
   // What is on screen, and when it was true. Held separately from the last
@@ -186,6 +147,19 @@ export function LiveBoard({ initial, eventId }: { initial: AnalyticsResult; even
     return () => clearInterval(tick);
   }, []);
 
+  // Two clocks, one rule, which is why the rule is in ../poll rather than
+  // written out twice here. Both feeds are server actions and Next dispatches
+  // those one at a time per client, so the fast feed can queue behind an
+  // in-flight analytics read once a minute. That costs the tile at most the
+  // length of one slow read, and its own age is what decides whether it says
+  // anything -- so the coupling shows up as a slightly older `As of` line,
+  // never as a fresh-looking figure nobody has checked. Worth knowing rather
+  // than working around: the fix would be a route handler, and trading this
+  // convention for a delay nobody can see is not a trade.
+  //
+  // The fast feed is switched off while there is no analytics payload: it
+  // exists for one tile, and a board left open on a refusal should not spend
+  // ten-second queries to say nothing to nobody.
   usePoll(refresh, POLL_MS);
   usePoll(refreshCheckIn, CHECK_IN_POLL_MS, Boolean(good?.view.analytics));
 

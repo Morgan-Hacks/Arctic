@@ -1,0 +1,447 @@
+/*
+ * The desk, as a surface somebody works at standing up.
+ *
+ * Nearer the dashboard than the rest of the console: bigger type, fewer
+ * things, and the two figures that matter -- the name off a scan and the
+ * count -- large enough to read without leaning in. It is not the dashboard,
+ * though. That screen is read from across a room by whoever looks up; this
+ * one is read at arm's length by somebody holding a queue, which is why the
+ * answer to a scan is the largest thing here and the count is a note beside
+ * it rather than the headline.
+ *
+ * Everything that was an inline style on the scan form now lives here, which
+ * is the house rule and also what made the offline state possible: a state
+ * with two levels and a dark-mode answer is not something to express in a
+ * style attribute.
+ *
+ * Tokens only. The one colour decision worth stating: the offline panel wears
+ * --stop and the refusals wear --warn, which is the inverse of what a reader
+ * might expect. A refusal is the system working -- somebody is not confirmed,
+ * and the desk says so -- while an unreachable API is the desk failing, and
+ * the only one of the two that must never be mistaken for ordinary traffic.
+ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lede {
+  max-width: 48ch;
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.event {
+  margin: 2px 0 0;
+  color: var(--faint);
+  font-size: 13px;
+}
+
+/*
+ * Two panels, the scanner first.
+ *
+ * The scanner is wide enough for an answer to be read at a glance and no
+ * wider; the roster takes what is left, because a list of names is the thing
+ * that benefits from room. Below --bp-md (48rem, which cannot be written as a
+ * custom property in a media query -- see tokens.css) they stack, scanner on
+ * top: a volunteer on a phone is scanning, and should not scroll past a
+ * search box to reach the box they are typing codes into.
+ */
+.panels {
+  display: grid;
+  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 48rem) {
+  .panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------- count ---
+ *
+ * The room's figure. Smaller than the dashboard's tile on purpose: this
+ * screen's job is one person at a time, and a count that dominated it would
+ * be the wrong thing to look at while somebody is waiting.
+ */
+.count {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--raised);
+}
+
+.countLabel {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.countValue {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 650;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Same rule as the dashboard's tile note, and the same wording comes out of
+   checked-in.ts: ordinary has to be visible for "not live" to mean anything. */
+.countNote {
+  color: var(--faint);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.countNote[data-not-live] {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.countEmpty {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ----------------------------------------------------------- scanner ---*/
+.scanner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--raised);
+}
+
+/*
+ * The code box, sized for the thing that goes in it.
+ *
+ * Twelve characters in three groups, in a monospace so that a volunteer
+ * comparing what they typed against a phone screen is comparing two things
+ * of the same shape. Letter-spacing rather than a nicety: 0 and O are not
+ * both in the alphabet, but 8 and B are, and a loose track is what makes
+ * them tell apart at a glance.
+ */
+.code {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 20px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.submit {
+  margin-top: 2px;
+}
+
+/*
+ * The answer to the last scan.
+ *
+ * One box, two tones, and nothing else on the screen moves when it changes
+ * -- the volunteer's eyes are already here, and a layout that reflows under
+ * them costs a second per person.
+ */
+.answer {
+  padding: 12px 14px;
+  border: 1px solid var(--ok);
+  border-radius: 10px;
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.answer[data-tone="refused"] {
+  border-color: var(--warn);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.answerSentence {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* The name, which is what gets checked against the person standing there. */
+.answerName {
+  margin: 8px 0 0;
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.answerMore {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+.answerPlain {
+  margin: 0;
+  color: var(--stop);
+  font-size: 13px;
+}
+
+/*
+ * The network, and the one panel here allowed to shout.
+ *
+ * --stop, a left bar and a weight the rest of the screen does not use. This
+ * is the state a volunteer must not read past: everything else on the desk
+ * is somebody's status, and this is the desk not working.
+ */
+.alarm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid var(--stop);
+  border-left-width: 6px;
+  border-radius: 10px;
+  background: var(--stop-soft);
+  color: var(--stop);
+  font-size: 13px;
+}
+
+.alarm strong {
+  font-size: 15px;
+}
+
+.fallback {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------ camera ---*/
+.camera {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+}
+
+/* A live camera is not a dashed outline. */
+.camera[data-live] {
+  border-style: solid;
+  border-color: var(--accent);
+}
+
+.cameraHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.cameraOn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* The dot. Not animated: a pulsing light beside a queue is a distraction,
+   and the video feed underneath is already proof the camera is on. */
+.cameraOn::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+/*
+ * The viewfinder, deliberately small.
+ *
+ * It exists so the volunteer can see that the phone is in frame, not so
+ * anybody can watch the room. Capped in height for the same reason: a
+ * full-width video would push the answer below the fold on a laptop, and the
+ * answer is the part that matters.
+ */
+.cameraView {
+  width: 100%;
+  max-height: 14rem;
+  border-radius: 8px;
+  background: var(--sunken);
+  object-fit: cover;
+}
+
+.cameraNote {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cameraProblem {
+  margin: 0;
+  color: var(--stop);
+  font-size: 12px;
+}
+
+/* ------------------------------------------------------------ roster ---*/
+.roster {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--raised);
+}
+
+.rosterHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rosterCounts {
+  margin: 0;
+  color: var(--faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rosterSearch input {
+  width: 100%;
+}
+
+.rosterSearch label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/*
+ * Reserved whether or not it says anything.
+ *
+ * "Searching…" appearing and disappearing in a line of its own would move
+ * every row under it, and the rows are what somebody is reading.
+ */
+.rosterHint {
+  min-height: 1.2em;
+  margin: 0;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.rosterProblem {
+  margin: 0;
+  color: var(--stop);
+  font-size: 13px;
+}
+
+.rosterEmpty {
+  margin: 0;
+  max-width: 56ch;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line-soft);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 18rem);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+@media (max-width: 48rem) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+}
+
+/*
+ * Somebody with no code at all, marked on the row.
+ *
+ * The one distinction the issue asked for: an accepted applicant has a spot
+ * and nothing to scan, and a volunteer looking down a list needs to see that
+ * before they ask the person to hold up a phone that has nothing on it. A
+ * bar on the row rather than a colour on the name, because the name is what
+ * gets read aloud and colour on it would say something about the person.
+ */
+.row[data-code="none"] {
+  border-left: 3px solid var(--warn);
+  padding-left: 10px;
+}
+
+.row[data-code="used"] {
+  border-left: 3px solid var(--ok);
+  padding-left: 10px;
+}
+
+.rowWho {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rowName {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rowMeta {
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowState {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.rowNote {
+  color: var(--muted);
+  font-size: 12px;
+}
