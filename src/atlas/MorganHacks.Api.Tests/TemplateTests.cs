@@ -927,8 +927,7 @@ public class TemplateTests(ApplicationsDatabase db)
         var cookie = await SignIn(person);
         Assert.Equal(HttpStatusCode.OK, (await Client().SendAsync(Request(HttpMethod.Get, "/admin/templates", cookie))).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await Client().SendAsync(Request(HttpMethod.Get, $"/admin/templates/{key}", cookie))).StatusCode);
-        if (team == "registration")
-            Assert.Equal(HttpStatusCode.Forbidden, (await Post(cookie, Draft(Key()))).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await Post(cookie, Draft(Key()))).StatusCode);
 
         var removed = await Client().SendAsync(Request(HttpMethod.Delete, $"/admin/templates/{key}?version=1", cookie));
         Assert.Equal(HttpStatusCode.NoContent, removed.StatusCode);
