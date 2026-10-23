@@ -49,8 +49,13 @@ a {
   color: inherit;
 }
 
+/* The keyboard's place on the page. This was `outline: none`, which left
+   every link and button on the marketing site focusable and invisible to
+   anyone navigating by Tab. --glow is the palette's brightest blue and the
+   only one that holds up against the deep blue ground. */
 :focus-visible {
-  outline: none;
+  outline: 2px solid var(--glow);
+  outline-offset: 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {

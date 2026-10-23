@@ -63,7 +63,8 @@
 }
 
 .actions a:hover { background: color-mix(in srgb, var(--form-ink) 9%, var(--form-background)); }
-.actions a:focus-visible { outline: none; }
+/* Links keep the ring; this is the only way off the page. */
+.actions a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 @keyframes arrive {
   from { opacity: 0; transform: translateY(8px); }

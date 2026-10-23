@@ -21,7 +21,9 @@
 .actions { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-top: 14px; font-size: 0.75rem; color: var(--muted); }
 .actions button { border: 0; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font: inherit; font-size: 0.875rem; font-weight: 600; padding: 10px 20px; cursor: pointer; }
 .actions button:disabled { background: var(--line); color: var(--muted); cursor: default; }
-.actions button:focus-visible { outline: none; }
+/* The ring stays: this is a real button, and it is the one thing on the card
+   a keyboard has to be able to find. */
+.actions button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .feedback { color: var(--ink); font-weight: 600; }
 .hint, .explanation { color: var(--muted); font-size: 0.75rem; margin: 12px 0 0; line-height: 1.6; }
 .explanation { color: var(--ink); }

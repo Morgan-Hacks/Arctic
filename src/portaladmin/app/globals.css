@@ -48,6 +48,60 @@
   --cell-x: 0.75rem;
 
   /*
+   * The rail every block in the content column indents its text to.
+   *
+   * It is --cell-x, deliberately, rather than a number of its own: the table
+   * is the densest and by far the most repeated thing on these screens, so
+   * whatever a table cell does is what the eye already reads as the edge of
+   * the content. Everything stacked around one — the panel, the two banners,
+   * the stat tiles, the recess, the table's own footer — matches it, and the
+   * column gets a single left edge instead of a staircase.
+   *
+   * There was no such token before, and no two of those blocks agreed: a
+   * measurement of one ordinary queue screen found the first character of
+   * seven consecutive full-width blocks starting at 240, 252, 253, 254.6,
+   * 255.6, 258.6 and 265 pixels. None of the differences were decisions —
+   * they were 1.1rem, 0.7rem, 0.75rem, 0.85rem and 1.5rem written on five
+   * different days — but the ragged edge they add up to is the first thing
+   * that reads as unfinished, because the eye tracks a vertical edge whether
+   * or not anybody meant to draw one.
+   *
+   * Vertical padding is not in here. How much air a block has above and below
+   * its text is a density decision and differs honestly between a table row
+   * and a card; only the left edge has to agree.
+   */
+  --pad-x: var(--cell-x);
+
+  /*
+   * The gap between two stacked blocks, named once.
+   *
+   * 1.25rem, which was already the most common value — but 1rem and 0.5rem
+   * were each doing the same job elsewhere in this file, so the space between
+   * a panel and the next panel depended on which of the three the author had
+   * reached for. A console's vertical rhythm is the other half of looking
+   * deliberate, and it is worth exactly one number.
+   */
+  --stack: 1.25rem;
+
+  /*
+   * The smallest a control is allowed to be.
+   *
+   * The same 2rem the fields below carry as a minimum, with the reason already
+   * written out there: a control twenty-six pixels tall is one somebody misses
+   * on a trackpad.
+   *
+   * It is deliberately not applied to `button` as a blanket floor. A button
+   * already settles at the height of the field beside it through its padding
+   * and the inherited line-height, so the floor would be buying nothing — and
+   * seven buttons across the screen stylesheets set an explicit height below
+   * it (a drag handle, two 28px close buttons, the date picker's arrows) that
+   * a min-height would silently stretch, min-height outranking height whatever
+   * the specificity. It is used where a control has no text to give it a size:
+   * the icon button.
+   */
+  --control-h: 2rem;
+
+  /*
    * Motion.
    *
    * Three durations and one curve, so movement is a property of the console
@@ -218,7 +272,7 @@ h2 {
 
 .lede {
   color: var(--muted);
-  margin: 0 0 1.25rem;
+  margin: 0 0 var(--stack);
 }
 
 .meta {
@@ -234,9 +288,12 @@ code,
 }
 
 .count {
-  color: var(--faint);
+  /* --muted, not --faint: this is a figure somebody is meant to read,
+     and --faint lands at 2.9:1 on the recessed surface. The faint ink stays
+     where it belongs, on placeholders and disabled controls. */
+  color: var(--muted);
   font-size: var(--step-2);
-  margin: 0.75rem 0 0;
+  margin: 0;
 }
 
 .back {
@@ -265,7 +322,7 @@ code,
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--stack);
 }
 
 .page-head > :first-child {
@@ -301,8 +358,8 @@ code,
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--raised);
-  padding: 1rem 1.1rem;
-  margin-bottom: 1.25rem;
+  padding: 1rem var(--pad-x);
+  margin-bottom: var(--stack);
 }
 
 /* A panel's own title row, with room for a status pill beside the heading. */
@@ -326,7 +383,7 @@ code,
   background: var(--sunken);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
-  padding: 0.6rem 0.75rem;
+  padding: 0.6rem var(--pad-x);
 }
 
 /*
@@ -343,14 +400,14 @@ code,
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
   gap: 0.5rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--stack);
 }
 
 .stat {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--raised);
-  padding: 0.5rem 0.7rem;
+  padding: 0.5rem var(--pad-x);
 }
 
 .stat dt,
@@ -429,11 +486,11 @@ code,
   background: var(--sunken);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 0.7rem 0.85rem;
+  padding: 0.7rem var(--pad-x);
   color: var(--muted);
   font-size: var(--step-2);
   line-height: 1.6;
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--stack);
 }
 
 .refusal code,
@@ -454,8 +511,12 @@ code,
   border-left-width: 2px;
   border-radius: var(--radius);
   background: var(--sunken);
-  padding: 0.7rem 0.85rem;
-  margin-bottom: 1.25rem;
+  /* The left rule is 2px where every other block's is 1px, and that pixel
+     comes out of the padding rather than off the rail: a notice sits directly
+     above or below a refusal, which is the one place a single pixel of
+     disagreement is visible as a wobble rather than read as a margin. */
+  padding: 0.7rem var(--pad-x) 0.7rem calc(var(--pad-x) - 1px);
+  margin-bottom: var(--stack);
 }
 
 .notice.ok {
@@ -480,9 +541,9 @@ code,
    the field it is about, and a red box there is louder than the mistake. */
 .error {
   border-left: 2px solid var(--stop);
-  padding-left: 0.75rem;
+  padding-left: calc(var(--pad-x) - 1px);
   color: var(--muted);
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--stack);
 }
 
 /* Tables ---------------------------------------------------------------- */
@@ -501,7 +562,7 @@ code,
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--raised);
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--stack);
 }
 
 /*
@@ -604,7 +665,7 @@ th.numeric {
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
-  padding: 0.5rem var(--cell-x);
+  padding: 0.5rem var(--pad-x);
   border-top: 1px solid var(--line);
   background: var(--sunken);
   color: var(--muted);
@@ -833,9 +894,23 @@ button.link:hover {
   color: var(--stop);
 }
 
+/*
+ * An icon button is square, and the same height as everything beside it.
+ *
+ * It used to be 0.15rem of vertical padding against a 1.2 line-height, which
+ * measured 23.6px in a filter row where the field, the select and the text
+ * button were all 34.2px — so it floated, visibly, in the middle of its own
+ * toolbar. It was also the smallest pointer target in the console, which is
+ * the opposite of what a control reduced to a single glyph can afford.
+ */
 button.icon {
-  padding: 0.15rem 0.45rem;
-  line-height: 1.2;
+  /* The same vertical padding and the same inherited line-height as a text
+     button, rather than a tighter pair of its own, so it computes to exactly
+     the height of whatever it is standing next to instead of to a floor that
+     is merely close to it. Square, because the only thing distinguishing it
+     from a text button is that its label is one glyph wide. */
+  padding: 0.35rem;
+  min-width: var(--control-h);
   color: var(--muted);
 }
 
@@ -881,11 +956,30 @@ textarea {
   transition: border-color var(--dur-fast) var(--ease);
 }
 
-/* Fields keep their resting border when focused, without the shared blue ring. */
+/*
+ * A field keeps its resting border when focused, and takes the ring.
+ *
+ * This rule used to be `outline: none` on :focus, written when nothing in
+ * either app drew a focus ring and so had nothing to suppress. It outlives
+ * that: `input:focus` is more specific than the shared `*:focus-visible` and
+ * is declared after it, so left alone it would quietly take the ring back off
+ * the three controls a form is almost entirely made of.
+ *
+ * :focus rather than :focus-visible on purpose, and only to say the border
+ * does not move — a text field shows a caret to a mouse user, which is the
+ * focus indicator the keyboard ring would be duplicating.
+ */
 input:focus,
 select:focus,
 textarea:focus {
   outline: none;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 input::placeholder,
@@ -1648,7 +1742,7 @@ label {
   border-radius: var(--radius-lg);
   background: var(--raised);
   color: var(--ink);
-  padding: 0.6rem 0.85rem;
+  padding: 0.6rem var(--pad-x);
   max-width: 22rem;
   animation: slide-in var(--dur-slow) var(--ease) both;
 }
@@ -1679,7 +1773,7 @@ label {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: var(--stack);
 }
 
 .tabs {

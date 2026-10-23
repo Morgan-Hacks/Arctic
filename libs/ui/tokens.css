@@ -161,8 +161,35 @@
   --focus: #8db9e6;
 }
 
+/*
+ * Where the keyboard is.
+ *
+ * This rule used to be `outline: none`, which is the one declaration in these
+ * files that took something away and put nothing back. Nothing else drew a
+ * focus ring — not the buttons, not the fields, not the links, in either app —
+ * so every control in both portals was focusable and none of them looked it.
+ * A person who reaches for Tab got a cursor they cannot see, which on the
+ * review queue means tabbing blind through a screen that decides whether
+ * somebody is coming to the event.
+ *
+ * :focus-visible and not :focus, so the ring belongs to the keyboard. A mouse
+ * click does not raise one — which is what the old rule was really reaching
+ * for, and is already this selector's own behaviour, without the cost.
+ *
+ * An outline rather than a box-shadow or a border. An outline is drawn outside
+ * the box and is not in the layout, so it cannot move a control by a pixel the
+ * way a border swap does, and it cannot be clipped off by a parent's
+ * overflow the way a shadow is — which matters here, because these controls
+ * sit in scroll containers, sticky toolbars and tables. The offset is what
+ * keeps the ring legible on the filled accent button, where a ring drawn flush
+ * against the edge would read as part of the fill.
+ *
+ * --focus is the accent in both themes, so the ring turns with the palette and
+ * lands at better than 3:1 against every surface in this file.
+ */
 *:focus-visible {
-  outline: none;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
