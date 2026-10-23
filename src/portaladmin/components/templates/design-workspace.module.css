@@ -120,7 +120,6 @@
 .spawn-resizer:focus-visible .spawn-resizer-handle,
 .spawn-resizer.active .spawn-resizer-handle { background: var(--faint); }
 
-.spawn-resizer:focus-visible { outline: none; }
 .split[data-dragging] { user-select: none; cursor: col-resize; }
 .split[data-dragging] iframe { pointer-events: none; }
 

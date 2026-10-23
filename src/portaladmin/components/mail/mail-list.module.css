@@ -18,7 +18,10 @@
 .selectControl > select:not([multiple]):not([size]) { width: auto; min-width: 0; height: 100%; padding: 0 21px 0 0; margin-right: -21px; border: 0; background: transparent; background-image: none; color: var(--ink); font-size: 12px; font-weight: 500; box-shadow: none; outline: none; cursor: pointer; align-items: center; }
 .selectControl > select::picker-icon { display: none; }
 .selectControl:hover { background: var(--field); }
-.search:has(input:focus-visible), .selectControl:has(select:focus-visible) { outline: none; }
+/* The ring goes on the pill, not the bare input inside it: the input has no
+   border of its own, so a ring drawn on it would float inside the control
+   the person is actually looking at. */
+.search:has(input:focus-visible), .selectControl:has(select:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .tableWrap { width: 100%; min-width: 0; }
 .table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .table thead { background: transparent; }
@@ -71,7 +74,6 @@
 .clearButton { padding: 9px 14px; border: 0; border-radius: 999px; background: var(--field); color: var(--ink); font-size: 12px; }
 .error { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; color: var(--stop); font-size: 13px; }
 .error button { border: 0; background: transparent; padding: 8px; text-decoration: underline; color: inherit; }
-.page button:focus-visible, .page a:focus-visible { outline: none; }
 @media (max-width: 1100px) {
   .table thead th, .table tbody td { padding-left: 16px; padding-right: 16px; }
   .table thead th:first-child { width: 42%; }

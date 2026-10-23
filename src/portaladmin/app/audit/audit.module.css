@@ -189,7 +189,6 @@
   .selectField option:checked,
   .selectField option:hover,
   .selectField option:focus {
-    outline: none;
     background: var(--members-field);
   }
 

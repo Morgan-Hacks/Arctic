@@ -9,7 +9,7 @@
 .choice { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); background: var(--raised); border-radius: 12px; padding: 14px; cursor: pointer; }
 .choice[data-selected="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .choice[data-correct="true"] { border-color: var(--ok); background: var(--ok-soft); }
-.choice:focus-within { outline: none; }
+.choice:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .choice input { width: auto; margin: 0; accent-color: var(--accent); }
 .choice > img { height: 64px; width: 64px; border-radius: 8px; object-fit: cover; }
 .answer { flex: 1; min-width: 0; }

@@ -39,10 +39,6 @@
   transform: scale(1.06);
 }
 
-.trigger:focus-visible {
-  outline: none;
-}
-
 .fieldsTrigger {
   height: 32px;
   min-height: 0;
@@ -65,10 +61,6 @@
 
 .fieldsTrigger:disabled {
   background: transparent;
-}
-
-.fieldsTrigger:focus-visible {
-  outline: none;
 }
 
 .popover {
@@ -125,7 +117,6 @@
   padding: 0 10px 0 34px;
   border: 0;
   border-radius: 9px;
-  outline: none;
   background: var(--field);
   box-shadow: none;
   color: var(--ink);
@@ -240,7 +231,6 @@
   padding: 0 12px 0 35px;
   border: 0;
   border-radius: 12px;
-  outline: none;
   background: var(--field);
   box-shadow: none;
   color: var(--ink);

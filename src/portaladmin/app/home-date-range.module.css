@@ -30,7 +30,6 @@
 .actions .apply { background: var(--accent); color: var(--accent-ink); }
 .actions .apply:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 90%, var(--ink)); }
 .actions button:disabled { opacity: .45; cursor: default; }
-.panel input:focus-visible, .panel button:focus-visible { outline: none; }
 
 @media (pointer: coarse) {
   .fields input, .actions button { min-height: 44px; }

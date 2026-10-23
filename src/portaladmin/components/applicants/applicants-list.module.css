@@ -10,13 +10,17 @@
 .eventPicker > span:not(:has(select)) { padding: 11px 14px 11px 0; font-size: 13px; line-height: 20px; }
 .eventPicker select { align-items: center; width: 100%; height: 42px; padding-block: 11px; padding-left: 0; border: 0; border-radius: 12px; background: transparent; font-size: 13px; line-height: 20px; text-overflow: ellipsis; }
 .eventPicker:focus-within { background: var(--field-active); }
-.eventPicker select:focus { outline: none; box-shadow: none; }
+.eventPicker select:focus { box-shadow: none; }
 .searchActions { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .search { display: flex; align-items: center; gap: 10px; width: 350px; max-width: 100%; height: 42px; padding: 0 14px; border-radius: 999px; background: var(--field); color: var(--muted); }
+/* The ring goes on the pill, not the bare input inside it: the input has no
+   border of its own, so a ring drawn on it would float inside the control
+   the person is actually looking at. */
+.search:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .search > svg { flex: none; }
 .search input { flex: 1; width: 0; min-width: 0; height: 32px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; outline: none; box-shadow: none; font-size: 13px; line-height: 20px; }
 .search:focus-within { background: var(--field-active); }
-.search input:focus { outline: none; box-shadow: none; }
+.search input:focus { box-shadow: none; }
 .clear { color: var(--muted); font-size: 12px; text-decoration: none; white-space: nowrap; }
 .clear:hover { color: var(--ink); }
 .tallies { display: flex; flex: none; flex-wrap: wrap; gap: 5px; margin: 24px 0 20px; padding: 0; list-style: none; }
@@ -28,7 +32,6 @@
 .on .tallyCount { background: var(--ink); color: var(--raised); }
 .tableFrame { display: flex; flex: 1; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; background: var(--raised); }
 .scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scroll-padding-top: 44px; }
-.scroll:focus-visible { outline: none; }
 .table { width: 100%; min-width: 930px; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 13px; }
 .personColumn { width: 31%; }
 .schoolColumn { width: 28%; }
@@ -70,7 +73,6 @@
 .more:hover { background: var(--field-active); }
 .pending td { pointer-events: none; }
 .empty { flex: 1; min-height: 0; overflow-y: auto; }
-.page a:focus-visible, .page button:focus-visible { outline: none; }
 /* 53.125rem, 5.125rem past --bp-lg (48rem); moving it would change where
    this reflows. */
 @media (max-width: 850px) {

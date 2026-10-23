@@ -31,7 +31,6 @@
 .empty strong { font-size: 14px; font-weight: 500; color: var(--ink); }
 .empty p { margin: 6px 0 0; font-size: 14px; line-height: 1.6; }
 .noCampaigns { border-top: 1px solid color-mix(in srgb, var(--ink) 6%, transparent); }
-.card a:focus-visible, .card button:focus-visible { outline: none; }
 @container (max-width: 1080px) {
   .header { padding: 20px; }
   .rows { padding-inline: 20px; }

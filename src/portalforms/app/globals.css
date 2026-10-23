@@ -900,8 +900,11 @@ textarea.wrong:focus {
 .choices .choice:has(input:checked) {
   background: var(--accent-soft);
 }
+/* The radio inside is drawn, not hidden, but the card is what the eye reads
+ * as the control, so the ring goes on the card. */
 .choice:has(input:focus-visible) {
-  outline: none;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 /*

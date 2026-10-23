@@ -277,7 +277,6 @@
   background: var(--field);
   font: inherit;
   font-size: 14px;
-  outline: none;
   box-shadow: none;
   transition: background .15s;
 }
@@ -293,7 +292,6 @@
 
 .workspace :where(input:not([type="checkbox"]):not([type="radio"]):not([popover] *)):focus, .workspace textarea:focus, .workspace select:focus {
   background: var(--field-active);
-  outline: none;
   box-shadow: none;
 }
 
@@ -340,7 +338,6 @@
 }
 
 .senderDomain:focus-visible {
-  outline: none;
   text-decoration: underline dotted;
   text-underline-offset: 4px;
 }
@@ -378,10 +375,6 @@
 .senderDomain:not([data-dismissed="true"]):is(:hover, :focus-visible) .senderDomainTooltip {
   visibility: visible;
   pointer-events: auto;
-}
-
-.workspace button:focus-visible {
-  outline: none;
 }
 
 .hint {
@@ -506,8 +499,12 @@
   transform: translateX(16px);
 }
 
+/* The input is opacity:0 and the switch beside it is what a person sees, so
+   the ring is drawn on the switch. On the input it would be a ring around
+   something invisible. */
 .tracking input:focus-visible + .switch {
-  outline: none;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .settingsAside {
@@ -1153,8 +1150,12 @@
   background: var(--accent-ink);
 }
 
+/* The input is opacity:0 and the switch beside it is what a person sees, so
+   the ring is drawn on the switch. On the input it would be a ring around
+   something invisible. */
 .audienceOptions input:focus-visible + .audienceOptionContent {
-  outline: none;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .recipientPreview .panelHeading {

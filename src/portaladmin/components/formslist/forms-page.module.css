@@ -16,8 +16,12 @@
 .eventPicker > span:not(:has(select)) { padding: 10px 14px 10px 0; font-size: 13px; }
 .eventPicker select { align-items: center; height: 42px; padding-block: 0; padding-left: 0; border: 0; border-radius: 12px; background: transparent; font-size: 13px; text-overflow: ellipsis; }
 .eventPicker:focus-within { background: var(--field-active); }
-.eventPicker select:focus { outline: none; box-shadow: none; }
+.eventPicker select:focus { box-shadow: none; }
 .search { display: flex; align-items: center; gap: 10px; width: min(100%, 320px); min-height: 42px; padding: 0 14px; border-radius: 999px; background: var(--field); color: var(--muted); }
+/* The ring goes on the pill, not the bare input inside it: the input has no
+   border of its own, so a ring drawn on it would float inside the control
+   the person is actually looking at. */
+.search:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .search input { width: 100%; min-width: 0; padding: 10px 0; border: 0; border-radius: 0; background: transparent; outline: none; box-shadow: none; font-size: 13px; }
 .search input::-webkit-search-cancel-button { display: none; }
 .search:focus-within { background: var(--field-active); }
@@ -73,7 +77,7 @@
 .cardMenu { position: fixed; inset: auto; width: 196px; max-width: calc(100vw - 24px); margin: 0; padding: 6px; border: 1px solid var(--line-soft); border-radius: 14px; background: var(--raised); color: var(--ink); box-shadow: 0 8px 28px rgb(0 0 0 / 9%); }
 .cardMenu > button { display: flex; align-items: center; justify-content: flex-start; gap: 11px; width: 100%; min-height: 39px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-size: 13px; font-weight: 450; text-align: left; }
 .cardMenu > button > svg { flex-shrink: 0; color: var(--muted); }
-.cardMenu > button:hover:not(:disabled), .cardMenu > button[role="menuitem"]:focus-visible { background: var(--field); outline: none; }
+.cardMenu > button:hover:not(:disabled), .cardMenu > button[role="menuitem"]:focus-visible { background: var(--field); }
 .cardMenu > button:disabled { color: var(--faint); cursor: default; opacity: 0.55; }
 .cardMenu > .menuDanger, .cardMenu > .menuDanger > svg { color: var(--stop); }
 .menuDivider { height: 1px; margin: 5px 6px; background: var(--line-soft); }
@@ -138,7 +142,7 @@
 .dialogDescription strong { font-weight: 500; color: var(--ink); }
 .field label, .formTypes legend { display: block; margin-bottom: 9px; color: var(--ink); font-size: 12px; font-weight: 500; }
 .field input { width: 100%; height: 44px; padding: 0 13px; border: 0; border-radius: 10px; background: var(--field); font-size: 14px; }
-.field input:focus { outline: none; box-shadow: none; background: var(--field-active); }
+.field input:focus { box-shadow: none; background: var(--field-active); }
 .formTypes { display: grid; gap: 10px; margin: 22px 0 0; padding: 0; border: 0; }
 .typeChoice { display: flex; align-items: center; gap: 12px; margin: 0; padding: 14px; border: 0; border-radius: 12px; background: var(--field); cursor: pointer; }
 .typeChoice > svg { color: var(--kind-ink); flex-shrink: 0; }
@@ -153,7 +157,6 @@
 .formHint { margin: 12px 0 0; color: var(--faint); font-size: 11px; }
 .error { margin: 18px 0 0; color: var(--stop); font-size: 13px; }
 .dialogActions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 26px; }
-.page button:focus-visible, .page a:focus-visible, .dialog button:focus-visible { outline: none; }
 @container (max-width: 1120px) {
   .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

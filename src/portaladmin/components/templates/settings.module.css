@@ -69,7 +69,6 @@
   padding: 0 14px;
   border: 1px solid transparent;
   border-radius: 14px;
-  outline: none;
   box-shadow: none;
   background: var(--field);
   color: var(--ink);
@@ -240,10 +239,6 @@
 .trackingSwitch:checked::before {
   transform: translateX(16px);
   background: var(--accent-ink);
-}
-
-.trackingSwitch:focus-visible {
-  outline: none;
 }
 
 .tracking:has(.trackingSwitch:disabled),
@@ -432,10 +427,6 @@
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 5%, var(--raised));
   color: var(--ink);
-}
-
-.formatOption:focus-visible {
-  outline: none;
 }
 
 .formatPreview {

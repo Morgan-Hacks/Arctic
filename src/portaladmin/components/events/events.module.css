@@ -226,10 +226,6 @@
   display: none;
 }
 
-.panel:focus-visible {
-  outline: none;
-}
-
 .settings {
   width: 100%;
   min-width: 0;
@@ -353,7 +349,6 @@
   border-color: transparent;
   background: var(--field-active);
   box-shadow: none;
-  outline: none;
 }
 
 .field input:disabled {

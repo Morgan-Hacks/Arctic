@@ -112,6 +112,10 @@
   background: var(--field);
   color: var(--muted);
 }
+/* The ring goes on the pill, not the bare input inside it: the input has no
+   border of its own, so a ring drawn on it would float inside the control
+   the person is actually looking at. */
+.search:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .search > svg {
   flex-shrink: 0;
@@ -431,7 +435,6 @@
 .field input:focus {
   background: var(--field-active);
   border-color: transparent;
-  outline: none;
   box-shadow: none;
 }
 
@@ -458,12 +461,6 @@
   color: var(--stop);
   font-size: 13px;
   line-height: 1.5;
-}
-
-.page button:focus-visible,
-.page a:focus-visible,
-.dialog button:focus-visible {
-  outline: none;
 }
 
 /* 100rem, 36rem past --bp-xl (64rem); a deliberate ultra-wide threshold, not

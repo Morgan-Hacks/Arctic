@@ -77,6 +77,10 @@
   background: var(--members-field);
   color: var(--members-muted);
 }
+/* The ring goes on the pill, not the bare input inside it: the input has no
+   border of its own, so a ring drawn on it would float inside the control
+   the person is actually looking at. */
+.search:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .search svg {
   flex-shrink: 0;
@@ -113,7 +117,6 @@
   overscroll-behavior: contain;
   scroll-padding-top: 47px;
 }
-.tableScroll:focus-visible { outline: none; }
 
 .pagination {
   display: flex;
@@ -144,7 +147,6 @@
 }
 .paginationActions button:hover:not(:disabled) { background: var(--members-field); }
 .paginationActions button:disabled { opacity: .3; cursor: default; }
-.paginationActions button:focus-visible { outline: none; }
 
 .table {
   width: 100%;

@@ -79,10 +79,6 @@
   background: var(--surface-hover);
 }
 
-.googleButton:focus-visible {
-  outline: none;
-}
-
 .googleButton img {
   flex-shrink: 0;
 }

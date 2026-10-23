@@ -229,7 +229,7 @@
   background: var(--control-fill);
   border-color: var(--control-border);
 }
-.surface :global(.choice:has(input:focus-visible)) { outline: none; }
+.surface :global(.choice:has(input:focus-visible)) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .surface :global(.choice input) { width: 18px; height: 18px; margin: 2px 0 0; border: 1.5px solid #8a94a3; border-radius: 4px; background: var(--paper); }
 .surface :global(.choices .choice input[type="checkbox"]) { border-radius: 4px; }
 .surface :global(.choice input[type="radio"]) { border-radius: 50%; }

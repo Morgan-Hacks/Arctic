@@ -180,11 +180,6 @@
   text-transform: capitalize;
 }
 
-.workspace:focus-visible,
-.currentWorkspace:focus-visible {
-  outline: none;
-}
-
 @media (max-width: 48rem) {
   .header { top: 56px; }
   .breadcrumb li:not([aria-current]) { display: none; }

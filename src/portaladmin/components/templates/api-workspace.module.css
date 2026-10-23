@@ -281,10 +281,6 @@
   line-height: 20px;
 }
 
-.testForm input:focus {
-  outline: none;
-}
-
 .testForm input::placeholder {
   color: var(--muted);
 }

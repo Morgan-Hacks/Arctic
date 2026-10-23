@@ -13,7 +13,7 @@
 .field label { display: block; margin: 0 0 10px; color: var(--ink); font-size: 13px; font-weight: 500; line-height: 1.5; }
 .field input, .field select { width: 100%; min-width: 0; min-height: 46px; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--field); color: var(--ink); font: inherit; font-size: 13px; line-height: 1.6; box-shadow: none; }
 .field select { padding-right: 36px; }
-.field input:focus, .field select:focus { outline: none; box-shadow: none; background: var(--field-active); }
+.field input:focus, .field select:focus { box-shadow: none; background: var(--field-active); }
 .field input::placeholder { color: var(--faint); }
 .hint { margin: 9px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
 .templateLink { display: inline-flex; align-items: center; gap: 7px; margin-top: 13px; color: var(--muted); font-size: 11px; text-decoration: none; }
@@ -46,7 +46,6 @@
 .continue, .continue:hover:not(:disabled) { background: var(--accent); color: var(--accent-ink); }
 .continue:hover:not(:disabled) { filter: brightness(1.1); }
 .dialog button:disabled { opacity: .5; cursor: default; }
-.dialog button:focus-visible, .dialog a:focus-visible { outline: none; }
 /* 42.5rem, 2.5rem past --bp-md (40rem); moving it would change where this
    reflows. */
 @media (max-width: 680px) {

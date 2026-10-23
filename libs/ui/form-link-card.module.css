@@ -28,8 +28,6 @@
 .title { display: -webkit-box; min-width: 0; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font: inherit; letter-spacing: inherit; }
 .arrow { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 14px; height: 14px; border-radius: 50%; background: #4a514e; color: #080d0b; text-decoration: none; }
 .dock { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(8px, env(safe-area-inset-bottom)); z-index: 20; width: 240px; max-width: calc(100vw - 32px); }
-.copy:focus-visible { outline: none; }
-.arrow:focus-visible { outline: none; }
 .card .mark { position: relative; display: block; min-width: 0; min-height: 0; padding: 0; border: 0; overflow: hidden; isolation: isolate; border-radius: 9px; background: #252a29; cursor: pointer; line-height: 0; }
 .mark video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; clip-path: inset(0 round 9px); }
 .playback { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(0 0 0 / 30%); color: #ffffff; opacity: 0; transition: opacity var(--dur-fast, 150ms) var(--ease, ease); }
@@ -37,7 +35,6 @@
 .mark:focus-visible .playback,
 .mark[data-paused="true"] .playback { opacity: 1; }
 .card .mark:focus:not(:focus-visible) { outline: 0; box-shadow: none; }
-.card .mark:focus-visible { outline: none; }
 @media (forced-colors: active) {
   .card { border: 1px solid LinkText; }
   .label, .title, .arrow { color: LinkText; }

@@ -46,7 +46,10 @@
 .search input { width: 100%; min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--ink); font-size: 12px; outline: none; box-shadow: none; }
 .search input::-webkit-search-cancel-button { appearance: none; }
 .search button { display: grid; place-items: center; flex: none; width: 22px; height: 22px; min-height: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); }
-.search:has(input:focus-visible) { outline: none; }
+/* The ring goes on the pill, not the bare input inside it: the input has no
+   border of its own, so a ring drawn on it would float inside the control
+   the person is actually looking at. */
+.search:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .filterButton { min-height: 35px; padding: 8px 12px; border: 1px solid var(--line-soft); border-radius: 999px; color: var(--muted); background: transparent; font-size: 11px; font-weight: 500; }
 .filterButton[aria-pressed="true"] { color: var(--ink); background: var(--field); }
 .effective { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -152,16 +155,14 @@
 .addForm > button { grid-column: 1 / -1; justify-self: start; }
 .addForm label { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin-bottom: 9px; color: var(--ink); font-size: 12px; font-weight: 500; }
 .addForm label span { color: var(--muted); font-size: 10px; font-weight: 400; }
-.addForm input:not([type="hidden"]), .addForm select:not([multiple]):not([size]) { width: 100%; min-width: 0; min-height: 42px; padding: 11px 13px; border: 0; border-radius: 12px; background: var(--field); color: var(--ink); font-size: 12px; box-shadow: none; outline: none; }
+.addForm input:not([type="hidden"]), .addForm select:not([multiple]):not([size]) { width: 100%; min-width: 0; min-height: 42px; padding: 11px 13px; border: 0; border-radius: 12px; background: var(--field); color: var(--ink); font-size: 12px; box-shadow: none; }
 .addForm select:not([multiple]):not([size]) { padding-right: 32px; }
-.addForm input:focus-visible, .addForm select:focus-visible { outline: none; }
 .addForm input::-webkit-date-and-time-value { text-align: left; }
 .notice { margin: 0 0 18px; padding: 12px 15px; border-radius: 10px; background: var(--stop-soft); color: var(--stop); font-size: 12px; line-height: 1.7; }
 .stop { border-color: var(--line-soft); }
 .stop > h2 { color: var(--stop); }
 .confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 16px; border: 1px solid var(--line-soft); border-radius: 12px; background: var(--field); }
 .asking { width: 100%; margin: 0 0 4px; color: var(--ink); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
-.page button:focus-visible, .page a:focus-visible, .page summary:focus-visible { outline: none; }
 @media (max-width: 1100px) {
   .profileHeader { flex-wrap: wrap; }
   .permissionsLayout { grid-template-columns: 170px minmax(0, 1fr); gap: 24px; }

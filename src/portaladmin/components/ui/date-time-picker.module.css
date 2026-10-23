@@ -4,10 +4,9 @@
 .trigger [data-placeholder="true"] { color: var(--muted); }
 .trigger:hover:not(:disabled), .trigger[aria-expanded="true"] { background: var(--field-active); }
 .trigger:disabled { cursor: default; opacity: 0.6; }
-.trigger:focus-visible { background: var(--field-active); outline: none; }
+.trigger:focus-visible { background: var(--field-active); }
 .picker { position: fixed; inset: auto; margin: 0; padding: 14px; width: 296px; max-width: calc(100vw - 24px); overflow: auto; border: 1px solid var(--line-soft); border-radius: 14px; background: var(--raised); color: var(--ink); box-shadow: 0 8px 24px #0000000c, 0 1px 3px #00000005; overscroll-behavior: contain; font-family: var(--body); }
 .picker button { font-family: inherit; cursor: pointer; }
-.picker button:focus-visible { outline: none; }
 .picker button:disabled { opacity: 0.35; cursor: default; }
 .heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
 .monthTitle { display: inline-flex; align-items: center; gap: 5px; border: 0; border-radius: 6px; padding: 6px 2px; background: transparent; color: var(--ink); font-size: 13px; font-weight: 600; }
@@ -43,7 +42,7 @@
 .picker .timeSegment input { appearance: textfield; -moz-appearance: textfield; width: 32px; min-width: 0; height: 28px; margin: 0; padding: 0; border: 0; border-radius: 5px; background: transparent; box-shadow: none; font: inherit; font-size: 14px; font-weight: 500; text-align: center; color: var(--ink); font-variant-numeric: tabular-nums; }
 .timeSegment input::-webkit-inner-spin-button, .timeSegment input::-webkit-outer-spin-button { appearance: none; margin: 0; }
 .picker .timeSegment:focus-within { background: var(--field-active); }
-.picker .timeSegment input:focus { background: transparent; outline: none; box-shadow: none; }
+.picker .timeSegment input:focus { background: transparent; box-shadow: none; }
 .period { display: flex; align-items: center; justify-content: center; padding: 3px; height: 38px; background: var(--field); border-radius: 8px; }
 .period button { height: 30px; padding: 0 6px; border: 0; border-radius: 6px; color: var(--muted); background: transparent; font-size: 10px; font-weight: 500; }
 .period button[aria-pressed="true"] { background: var(--raised); color: var(--ink); box-shadow: 0 1px 2px #00000008; }

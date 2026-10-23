@@ -54,7 +54,6 @@ button.cancel { background: var(--field); color: var(--ink); }
 button.save { background: var(--ink); color: var(--paper); }
 button.remove { margin-right: auto; padding-inline: 0; background: transparent; color: var(--muted); }
 button.remove:hover { color: var(--stop); }
-.modal button:focus-visible, .add:focus-visible { outline: none; }
 .modal button:disabled { opacity: .5; }
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 30rem) {

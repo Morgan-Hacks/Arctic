@@ -257,7 +257,6 @@
 .recipientPagination button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 34px; min-height: 34px; padding: 7px 10px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .recipientPagination button:hover:not(:disabled), .recipientPagination button[aria-current="page"] { background: var(--field); color: var(--ink); }
 .recipientPagination button:disabled { opacity: .4; cursor: default; }
-.recipientPagination button:focus-visible, .recipientTableWrap:focus-visible { outline: none; }
 .recipientPageNumbers > span { padding: 0 4px; color: var(--faint); }
 .recipientMobilePage { display: none; color: var(--muted); font-size: 12px; }
 .recipientError { margin: 14px 0 0; color: var(--stop); font-size: 12px; }

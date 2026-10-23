@@ -59,7 +59,6 @@
 .decide select, .decide textarea, .composer textarea { width: 100%; padding: 11px 12px; border: 0; border-radius: 10px; background: var(--field); color: var(--ink); font: inherit; font-size: 13px; line-height: 1.6; }
 .decide select { min-height: 42px; padding-right: 34px; }
 .decide textarea, .composer textarea { display: block; min-height: 104px; resize: vertical; }
-.decide select:focus-visible, .decide textarea:focus-visible, .composer textarea:focus-visible { outline: none; }
 .decide select:user-invalid, .composer textarea:user-invalid { outline: 2px solid var(--stop); outline-offset: 2px; }
 .decisionButton { min-height: 40px; padding: 9px 18px; border: 0; border-radius: 9px; font-size: 13px; }
 .decisionButton:disabled { opacity: .65; }
@@ -99,7 +98,6 @@
 .activityTime { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.7; }
 .actor { margin-top: 4px; color: var(--faint); font-size: 10px; }
 .reason { margin: 10px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--field); color: var(--muted); font-size: 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
-.page a:focus-visible, .page button:focus-visible { outline: none; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 /* 100rem, 36rem past --bp-xl (64rem); a deliberate ultra-wide threshold, not
    close enough to any canon value to be the same breakpoint. */

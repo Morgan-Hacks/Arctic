@@ -8,7 +8,6 @@
 .toolbar button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; padding: 6px 11px; border: 0; border-radius: 999px; background: transparent; color: inherit; font-size: 12px; line-height: 1.4; white-space: nowrap; }
 .toolbar button:hover:not(:disabled), .toolbar button[aria-expanded="true"] { background: rgb(255 255 255 / 12%); }
 .toolbar button:disabled { opacity: .45; cursor: default; }
-.toolbar button:focus-visible { outline: none; }
 .divider { width: 1px; height: 19px; background: rgb(255 255 255 / 24%); }
 .picker { position: fixed; inset: auto; margin: 0; width: 408px; max-width: calc(100vw - 24px); padding: 16px 12px 12px; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--line); border-radius: 20px; background: var(--paper); color: var(--ink); transform: translateX(-50%); box-shadow: 0 18px 56px color-mix(in srgb, var(--ink) 12%, transparent), 0 3px 10px color-mix(in srgb, var(--ink) 4%, transparent); }
 .heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 2px 6px 16px; margin-bottom: 12px; border-bottom: 1px solid var(--line-soft); }
@@ -40,7 +39,6 @@
 .types button:hover:not(:disabled) { border-color: var(--line-soft); }
 .types button:hover:not(:disabled) .typeIcon, .types button:focus-visible .typeIcon { background: color-mix(in srgb, var(--type-color) 9%, var(--paper)); color: var(--type-color); border-color: color-mix(in srgb, var(--type-color) 20%, var(--line-soft)); }
 .types button:disabled { opacity: .45; cursor: default; }
-.picker button:focus-visible { outline: none; }
 @keyframes appear { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
 /* 37.5rem, 2.5rem short of --bp-md (40rem); moving it would change where the
    toolbar reflows. */

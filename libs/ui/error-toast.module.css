@@ -49,7 +49,6 @@
   cursor: pointer;
 }
 .toast .dismiss:hover { background: var(--sunken); color: var(--ink); }
-.toast .dismiss:focus-visible { outline: none; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 @keyframes appear { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 480px) { .region { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); width: calc(100vw - 24px); } }

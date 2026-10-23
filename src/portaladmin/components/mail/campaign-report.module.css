@@ -81,7 +81,7 @@
 .gridLine { stroke: var(--line-soft); stroke-width: 1; }
 .openSeries { stroke: var(--metric-violet); fill: var(--metric-violet); }
 .clickSeries { stroke: var(--metric-amber); fill: var(--metric-amber); }
-.chart circle:focus { outline: none; r: 5; }
+.chart circle:focus { r: 5; }
 .legend { display: flex; justify-content: center; gap: 18px; color: var(--muted); font-size: 11px; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .legend span::before { content: ""; width: 6px; height: 6px; border-radius: 50%; }

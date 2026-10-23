@@ -68,12 +68,6 @@
   border-color: color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
-.device:focus-visible,
-.iconButton:focus-visible,
-.testButton:focus-visible {
-  outline: none;
-}
-
 .iconButton:disabled,
 .testButton:disabled {
   opacity: 0.45;

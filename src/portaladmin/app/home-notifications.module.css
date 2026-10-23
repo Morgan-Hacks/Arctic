@@ -118,12 +118,6 @@
   overscroll-behavior: contain;
 }
 
-.trigger:focus-visible,
-.close:focus-visible,
-.filter:focus-visible {
-  outline: none;
-}
-
 @media (pointer: coarse) {
   .trigger,
   .close {
