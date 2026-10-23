@@ -59,6 +59,18 @@ const nextConfig: NextConfig = {
    *
    * Deploying this app therefore needs libs/ present, not just src/portalweb.
    */
+  /**
+   * Which upgrades `next upgrade` may take on its own.
+   *
+   * "security" is the narrowest setting: it offers the patch that clears a
+   * published advisory and nothing else, so the portals never drift a major
+   * behind without somebody deciding to. Set when this app was taken from
+   * 16.4.0 to 16.4.3 for the advisory of 2026-10-23.
+   */
+  experimental: {
+    agentUpgrade: "security",
+  },
+
   turbopack: {
     root: path.join(import.meta.dirname, "..", ".."),
   },

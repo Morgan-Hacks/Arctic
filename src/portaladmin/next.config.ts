@@ -50,6 +50,10 @@ const apiOrigin =
 const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["@hugeicons/core-free-icons"],
+    /* Only the patch that clears a published advisory, never a major. Set when
+       this app was taken from 16.4.0 to 16.4.3 for the advisory of
+       2026-10-23. */
+    agentUpgrade: "security",
   },
   /**
    * The bundler's filesystem root is the repository, not this app.
