@@ -195,7 +195,7 @@ function AddItemForm({ eventId, onClose }: { eventId: string; onClose: () => voi
         </div>
         {/* COPY: needs sign-off */}
         <p id="item-low-at-help" className={styles.hint}>
-          Flagged as low once the count falls to this or below.
+          Shown on the dashboard at or below this count. Crossing from above emails organizers with inventory access. Leave blank to disable alerts.
         </p>
 
         <ErrorToast message={error} />

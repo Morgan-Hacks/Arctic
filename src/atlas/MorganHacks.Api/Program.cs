@@ -17,7 +17,6 @@ using MorganHacks.Identity.Services;
 using MorganHacks.Api.Webhooks;
 using MorganHacks.Observability;
 using MorganHacks.Lark.Data.Data;
-using Npgsql;
 using MorganHacks.Features;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -78,7 +77,8 @@ builder.Services.AddIdentityModule(connectionString);
 // Magic links are queued, not sent here. Sending inline would put SES's
 // availability in the path of somebody clicking "sign in", and would skip the
 // suppression list that stops us mailing an address that already bounced.
-builder.Services.AddSingleton(NpgsqlDataSource.Create(connectionString));
+// AddIdentityModule already registers the shared data source with a factory,
+// so the host owns and disposes its pool, including background worker connections.
 // Only the read side. The trail is written by triggers whether or not this
 // line is here, which is the point — recording a permission change is not
 // something a service can be configured out of.
@@ -187,6 +187,8 @@ builder.Services.AddSingleton<EmailAnalyticsStore>();
 // for the same reason the stores above are: it holds nothing but the data
 // source, which is itself a singleton owning the connection pool.
 builder.Services.AddSingleton<IInventoryStore, PostgresInventoryStore>();
+builder.Services.AddSingleton<LowStockAlerts>();
+builder.Services.AddHostedService<LowStockAlertWorker>();
 
 // The assistant.
 //
