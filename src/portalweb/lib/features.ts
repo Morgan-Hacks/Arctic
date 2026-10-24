@@ -28,6 +28,23 @@ export const HACKER_PORTAL = "enable_hacker_portal_feature";
  */
 export const READING_MODE = "enable_reading_mode_feature";
 
+/**
+ * Dark mode, and the control that chooses it.
+ *
+ * Off pins `data-theme="light"` exactly as the three layouts did before this
+ * existed and renders no control, so a console with the flag off is
+ * indistinguishable from one that never had the feature -- see
+ * docs/feature-flags.md for why that is the bar.
+ *
+ * On lets the cookie decide, and `prefers-color-scheme` decide for anybody who
+ * has not chosen. It is a flag rather than a straight change because the two
+ * apps are one product to the people using them: the layouts used to say that
+ * an applicant on a dark laptop and an organizer on a light console were
+ * seeing two different things, and turning this on for one app and not the
+ * other brings that back. Flip all three together.
+ */
+export const DARK_MODE = "enable_dark_mode_feature";
+
 export function isOn(flag: string): boolean {
   // Explicitly compared to "true" rather than treated as truthy. An unset
   // variable is undefined, but a variable set to "false" is a non-empty string

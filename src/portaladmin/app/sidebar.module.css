@@ -64,6 +64,13 @@
   max-width: 100%;
   height: auto;
   transform: translateY(3px);
+  /* The plate the mark needs on a dark sidebar, drawn as a spread shadow
+     rather than padding. Padding would come out of the 104px under
+     `box-sizing: border-box` and shrink the mark in dark mode; a shadow is not
+     in the layout, so the brand row is the same height in both themes. Both
+     values are 0/transparent in light, so this draws nothing there. */
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 var(--brand-plate-inset) var(--brand-plate-ground);
 }
 .iconButton {
   display: inline-flex;
@@ -333,6 +340,18 @@
   display: flex;
   justify-content: flex-start;
   padding: 0 12px 14px;
+}
+/* The theme control fills the column rather than sitting at its start: three
+   segments reading Auto / Light / Dark only make sense as one object, and a
+   segmented control that stops short of the edge reads as a fourth, empty
+   position. Same 12px rail as the slot above it. */
+.themeSlot {
+  display: flex;
+  padding: 0 12px 14px;
+}
+.themeSlot > * {
+  flex: 1;
+  min-width: 0;
 }
 .account {
   position: relative;

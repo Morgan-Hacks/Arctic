@@ -7,9 +7,11 @@ import { formShareMetadata, formShareOrigin } from "@/lib/form-sharing";
 import { formMlhBadgeColor, formThemeStyle, resolveFormTheme } from "../../../../libs/ui/form-theme";
 import { NoForm } from "../no-form";
 import { Questions } from "./questions";
-import { READING_MODE, isOn } from "@/lib/features";
+import { DARK_MODE, READING_MODE, isOn } from "@/lib/features";
 import { READING_MODE_COOKIE, initialReadingMode } from "../../../../libs/ui/reading-mode";
 import { ReadingToggle } from "../../components/reading-toggle";
+import { ThemeToggle } from "../../components/theme-toggle";
+import { THEME_COOKIE, parseTheme } from "../../../../libs/ui/theme";
 import { cookies } from "next/headers";
 import { SignIn } from "./sign-in";
 import { MlhBadge } from "./mlh-badge";
@@ -157,6 +159,21 @@ async function FormContent({ form, expired }: { form: PublicForm; expired: boole
               (await cookies()).get(READING_MODE_COOKIE)?.value,
             )}
           />
+        </div>
+      ) : null}
+
+      {/*
+        The theme control, behind enable_dark_mode_feature, in the same slot and
+        for the same reason: a form is the longest stretch of reading anybody
+        does in this system, and somebody who wants the lights off wants them
+        off here most of all. Off means it is not rendered at all.
+
+        Only the control's selected position comes from here. The palette was
+        decided in app/layout.tsx and is already on the page.
+      */}
+      {isOn(DARK_MODE) ? (
+        <div className={styles.readingSlot}>
+          <ThemeToggle initial={parseTheme((await cookies()).get(THEME_COOKIE)?.value)} />
         </div>
       ) : null}
 

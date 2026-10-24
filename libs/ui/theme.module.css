@@ -1,0 +1,192 @@
+/*
+ * The theme control: three positions, one of them selected.
+ *
+ * A segmented control rather than a switch, because the choice has three
+ * answers and one of them is "whatever my machine says". A two-position switch
+ * cannot hold that, and the usual workaround — a switch plus a separate
+ * "follow system" checkbox — asks somebody to understand the implementation to
+ * use it.
+ *
+ * Every colour is a token from libs/ui/tokens.css and no hex is written here,
+ * the same rule the rest of the shared components follow. Which means this
+ * control is itself the first thing that proves the theme works: it is drawn
+ * entirely in the palette it switches.
+ */
+
+/*
+ * The fieldset is for grouping, not for layout.
+ *
+ * It carries a browser border, padding and an asymmetric margin, all reset
+ * here, and the track below does the laying out.
+ *
+ * Splitting them is defensive rather than a fix for anything observed: Chrome
+ * lays a `display: flex` fieldset out correctly today, and this was checked
+ * before the split rather than assumed. A fieldset renders its contents
+ * through an anonymous box, which is the part browsers have historically
+ * disagreed about, and a control whose three segments collapse to their text
+ * width is a conspicuous way to find that out. A plain <div> has no such
+ * history, and costs one element.
+ */
+.group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/*
+ * The track: the border, the ground, and the three equal columns.
+ *
+ * Each face is free of a border of its own, so the selected position reads as
+ * a filled block on the track rather than a box inside a box.
+ */
+.track {
+  display: flex;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--sunken);
+}
+
+.option {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+/*
+ * The real radio, present and invisible.
+ *
+ * `opacity: 0` over `display: none` or `visibility: hidden`, both of which
+ * take the input out of the tab order and hand back a control a keyboard
+ * cannot reach. Kept the full size of its face and laid over it, so the hit
+ * target is the whole segment and a click lands on the input itself.
+ *
+ * Real radios rather than buttons with `role="radio"`, because a radio group
+ * already has arrow-key navigation, roving focus and a group label in every
+ * browser and screen reader, and a hand-rolled one has whichever of those
+ * somebody remembered.
+ */
+/*
+ * `.input[type="radio"]`, not `.input`, and the attribute is load-bearing.
+ *
+ * portaladmin's globals.css styles radios as visible controls:
+ * `input[type="radio"] { position: relative; width: 1.125rem; min-width:
+ * 1.125rem; ... }`. That selector is (0,1,1) and a lone class is (0,1,0), so a
+ * plain `.input` loses `position`, `width` and both minimums to it — the
+ * `inset: 0` below silently does nothing and three 18px circles render on top
+ * of the segments. Measured in Chrome before this attribute was added, not
+ * guessed. Adding `[type="radio"]` makes this (0,2,1), which wins on every one
+ * of them regardless of which stylesheet the bundler emits first.
+ *
+ * This is the same trap the console's focus rings fell into: a global layer
+ * that reaches for element-plus-attribute selectors quietly outranks the
+ * classes written against it.
+ */
+.input[type="radio"] {
+  position: absolute;
+  /* `inset: 0` rather than width/height 100%, so the hit area is the whole
+     segment however the track is sized. The .option above is the positioned
+     ancestor this resolves against; without its `position: relative` the input
+     escapes to the page and the clickable area is nowhere near the label. */
+  inset: 0;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  /* The console draws its radios with an inset ring. Invisible here, but left
+     in place it would paint through at any opacity other than zero. */
+  box-shadow: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.face {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Pinned rather than derived from the text, so the sidebar's bottom does not
+     move when somebody changes theme — the same reason the reading toggle pins
+     its height. */
+  height: 28px;
+  border-radius: 6px;
+  color: var(--muted);
+  font: 500 12px/1 var(--body);
+  white-space: nowrap;
+  cursor: pointer;
+  /* Written out rather than reaching for --dur and --ease, which look like
+     shared tokens and are not: they are declared in portaladmin's globals.css
+     and nowhere else. An undefined custom property inside a shorthand drops
+     the whole declaration without erroring, so this control would transition
+     in the console and sit there inert in the portal and the forms app — the
+     same silent failure the type-scale tokens had before they were defined.
+     150ms ease, matching reading-mode.module.css, which hardcodes it for this
+     exact reason. */
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.option:hover .face {
+  color: var(--ink);
+}
+
+/*
+ * The selected position: a filled block and a weight change, never colour
+ * alone.
+ *
+ * docs/design-brief.md 2.4 — colour is never the only signal. Somebody who
+ * cannot separate the accent from the track still sees which third of the
+ * control is filled, and the radio's own checked state carries it to a screen
+ * reader regardless of any of this.
+ */
+.input[type="radio"]:checked + .face {
+  background: var(--raised);
+  color: var(--ink);
+  font-weight: 600;
+  /* An inset edge rather than a drop shadow. The obvious shadow here is
+     `color-mix(in srgb, var(--ink) 8%, transparent)`, and it inverts: --ink is
+     near-black in light and near-white in dark, so the same declaration draws a
+     soft shadow under the chip in one theme and a white glow under it in the
+     other. An inset line in --line is the same idea in both — the selected
+     segment has a defined edge — and the token already flips correctly.
+
+     It earns its keep most in dark, where --raised (#242424) sits only four
+     values above --sunken (#202020): the fill alone is nearly invisible there,
+     and the edge is what makes the chip a chip. The weight and colour changes
+     above carry the state regardless, per docs/design-brief.md 2.4. */
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/*
+ * The focus ring, on the face rather than on the input.
+ *
+ * The input is at `opacity: 0`, so a ring drawn on it is a ring around
+ * something nobody can see. This is the same mistake the console's own
+ * stylesheets made in about nine places before the focus sweep, and it is
+ * worth not repeating in a brand-new file.
+ */
+.input[type="radio"]:focus-visible + .face {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/*
+ * The accessible name for the group and for each position.
+ *
+ * Visually hidden and always present. The visible text is the short form
+ * ("Auto"), which is not a sentence a screen reader can do much with on its
+ * own — "Follow my system setting" is.
+ */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

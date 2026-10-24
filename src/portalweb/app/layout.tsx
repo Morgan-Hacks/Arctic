@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, Instrument_Serif } from "next/font/google";
 import localFont from "next/font/local";
+import { cookies } from "next/headers";
+import { DARK_MODE, isOn } from "@/lib/features";
+import { THEME_COOKIE, initialTheme } from "../../../libs/ui/theme";
 import { siteConfig } from "@/site.config";
 
 // No stylesheet here on purpose. This app serves two things with nothing in
@@ -92,20 +95,41 @@ export default async function RootLayout({
   // `data-reading` to the portal frame — reading-mode.css keys off any
   // ancestor carrying the attribute, so the treatment reaches everything under
   // that frame and `/` keeps its prerender and never sees the attribute.
+
+  // The theme cannot dodge that the same way, and this is the one real cost in
+  // the feature, so it is written down rather than discovered.
+  //
+  // Reading mode gets to live on the portal frame because reading-mode.css
+  // keys off any ancestor carrying `data-reading`. The palette cannot: every
+  // dark rule in tokens.css is written against `:root`, and `:root` is <html>,
+  // which only this layout renders. Moving those selectors off `:root` so a
+  // <div> could carry the theme would change which declarations win in all
+  // three apps — a much larger change than a theme switch, and not one to make
+  // by the way.
+  //
+  // So the cookie is read here, and only when the flag is on. With the flag off
+  // — which is how this merges — cookies() is never called and `/` keeps its
+  // prerender exactly as before. Turning the flag on makes `/` dynamic. That is
+  // the trade, and it is worth knowing before flipping it: the public page has
+  // no light and no dark of its own (it is a fixed night scene with its own
+  // palette and does not import tokens.css), so it pays the render cost for a
+  // feature it cannot use. Giving `portal` its own root layout would buy the
+  // prerender back, and that is the follow-up if the cost ever matters.
+  const theme = isOn(DARK_MODE)
+    ? initialTheme((await cookies()).get(THEME_COOKIE)?.value)
+    : "light";
   return (
     <html
       lang="en"
-      // Pinned, the same way the console pins it, and for the same reason: the
-      // MorganHacks mark is drawn for a light ground. Following the reader's
-      // system preference meant an applicant on a dark laptop and an organizer
-      // looking at the console were seeing two different products, which is
-      // not a thing either of them should have to work out.
+      // Both palettes live in libs/ui/tokens.css, so this chooses between them
+      // rather than overriding anything. `undefined` writes no attribute at
+      // all, which is how a reader who has chosen nothing gets
+      // `prefers-color-scheme` to answer for them.
       //
-      // libs/ui/tokens.css carries both palettes, so this chooses between them
-      // rather than overriding anything. Supporting dark properly is a real
-      // option and a bigger piece of work -- the mark needs a treatment that
-      // holds on a dark ground before the preference can be honoured again.
-      data-theme="light"
+      // This was pinned to "light" until the mark had a treatment that holds on
+      // a dark ground, which was the honest blocker and is now dealt with: it
+      // sits on its own plate in dark, see --brand-plate in tokens.css.
+      data-theme={theme}
       className={`${inter.variable} ${display.variable} ${openDyslexic.variable}`}
     >
       <body>{children}</body>

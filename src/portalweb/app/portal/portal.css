@@ -20,6 +20,36 @@
   box-sizing: border-box;
 }
 
+/*
+ * Which way the page is, for the parts the browser draws itself: the list a
+ * <select> drops down, the calendar a date field opens, the scrollbars, the
+ * caret. Nothing here declared it before, which means the browser assumed a
+ * light page and painted all of them for one — invisible while this app was
+ * pinned to light, and a white dropdown falling out of a dark control the
+ * moment it was not.
+ *
+ * Three blocks rather than one `light dark`, mirroring tokens.css and the
+ * console: an explicit [data-theme] has to beat the media query in both
+ * directions, or the palette and the popup disagree about which theme this is.
+ *
+ * On `:root` and not on `body`, because `color-scheme` inherits and a
+ * declaration on `body` would beat what `body` inherits from `html` — the
+ * overrides would then reach the page and miss the controls sitting on it.
+ */
+:root {
+  color-scheme: light;
+}
+
+:root:not([data-theme="light"]) {
+  @media (prefers-color-scheme: dark) {
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
 html {
   /* The public page locks the body to one screen. This one is a document. */
   height: auto;
@@ -71,6 +101,12 @@ body {
 .portal__mark {
   width: auto;
   height: 34px;
+  /* The plate the mark needs on a dark header. A spread shadow rather than
+     padding, so the 34px stays 34px and the brand row does not change height
+     between themes. Both values are 0/transparent in light, so nothing is
+     drawn there. See --brand-plate in libs/ui/tokens.css. */
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 var(--brand-plate-inset) var(--brand-plate-ground);
 }
 
 .portal__brand span {

@@ -15,6 +15,8 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { Avatar } from "@/components/ui/avatar";
 import { ReadingToggle } from "@/components/reading-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
+import type { Theme } from "../../../libs/ui/theme";
 import logo from "@/public/brands/morganhacks.png";
 import { Nav } from "./nav";
 import { useSidebarState } from "./sidebar-state";
@@ -44,6 +46,7 @@ function SidebarContents({
   onToggle,
   onNavigate,
   reading,
+  theme,
 }: SidebarProps & {
   collapsed?: boolean;
   mobile?: boolean;
@@ -51,6 +54,8 @@ function SidebarContents({
   onNavigate?: () => void;
   /** Reading mode, already resolved on the server. Absent means the flag is off. */
   reading?: { enabled: true; initial?: boolean };
+  /** The theme choice, resolved on the server. Absent means the flag is off. */
+  theme?: { enabled: true; initial?: Theme };
 }) {
   const pathname = usePathname();
   const [accountOpen, setAccountOpen] = useState(false);
@@ -259,6 +264,24 @@ function SidebarContents({
             <ReadingToggle initial={reading.initial} />
           </div>
         ) : null}
+
+        {/*
+          The theme control, behind enable_dark_mode_feature.
+
+          Below reading mode and above nothing, because the two are the same
+          kind of thing — how this console looks to the person reading it,
+          rather than anything it can do — and somebody looking for one will
+          look for the other in the same place.
+
+          Suppressed in the collapsed rail for the same reason reading mode is:
+          three labelled segments do not fit a 64px column, and an organizer who
+          has collapsed the sidebar keeps the setting in their cookie either way.
+        */}
+        {!collapsed && theme?.enabled ? (
+          <div className={styles.themeSlot}>
+            <ThemeToggle initial={theme.initial} />
+          </div>
+        ) : null}
       </div>
     </>
   );
@@ -269,11 +292,14 @@ export function SidebarLayout({
   sections,
   identity,
   reading,
+  theme,
   children,
 }: SidebarProps & {
   children: React.ReactNode;
   /** Reading mode, resolved on the server. Absent means the flag is off. */
   reading?: { enabled: true; initial?: boolean };
+  /** The theme choice, resolved on the server. Absent means the flag is off. */
+  theme?: { enabled: true; initial?: Theme };
 }) {
   const pathname = usePathname();
   const [pageSidebar, setPageSidebar] = useState<SidebarProps | null>(null);
@@ -372,6 +398,7 @@ export function SidebarLayout({
             collapsed={collapsed}
             onToggle={toggleCollapsed}
             reading={reading}
+              theme={theme}
           />
         </aside>
         <div className={styles.content}>
@@ -414,6 +441,7 @@ export function SidebarLayout({
               onToggle={closeMobile}
               onNavigate={closeMobile}
               reading={reading}
+              theme={theme}
             />
           </div>
         </dialog>

@@ -24,6 +24,11 @@
   max-width: 100%;
   height: auto;
   margin: 0 auto 40px;
+  /* See sidebar.module.css: a spread shadow rather than padding, so the mark
+     is the same 192px in both themes and the 40px below it still measures from
+     the same place. Draws nothing in light. */
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 var(--brand-plate-inset) var(--brand-plate-ground);
 }
 
 .title {

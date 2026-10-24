@@ -1,10 +1,11 @@
 import { currentPerson } from "@/lib/api";
-import { CHECK_IN_DESK, READING_MODE, isOn } from "@/lib/features";
+import { CHECK_IN_DESK, DARK_MODE, READING_MODE, isOn } from "@/lib/features";
 import { sectionsFor } from "./sections";
 import { SidebarLayout, SidebarPage } from "./sidebar";
 import { ChatPanel } from "@/components/assistant/chat-panel";
 import { displayName } from "@/lib/person-profile";
 import { READING_MODE_COOKIE, initialReadingMode } from "../../../libs/ui/reading-mode";
+import { THEME_COOKIE, parseTheme } from "../../../libs/ui/theme";
 import { cookies } from "next/headers";
 
 type SidebarOptions = {
@@ -28,6 +29,22 @@ async function readingMode() {
   return { enabled: true as const, initial: initialReadingMode((await cookies()).get(READING_MODE_COOKIE)?.value) };
 }
 
+/**
+ * The theme choice, resolved here for the same reason reading mode is: `isOn`
+ * reads process.env by a computed name and so cannot run in a "use client"
+ * component.
+ *
+ * This is the choice, not the palette. The palette was already decided in
+ * app/layout.tsx and painted on the first byte; all the sidebar needs is which
+ * of the control's three positions to draw as selected. `undefined` means no
+ * cookie, which the control shows as "Auto" -- the honest answer for somebody
+ * who has never chosen.
+ */
+async function theme() {
+  if (!isOn(DARK_MODE)) return undefined;
+  return { enabled: true as const, initial: parseTheme((await cookies()).get(THEME_COOKIE)?.value) };
+}
+
 async function sidebarProps({ fullName, email, templateCount }: SidebarOptions = {}) {
   const person = await currentPerson();
   const address = email ?? person?.email ?? null;
@@ -48,7 +65,7 @@ async function sidebarProps({ fullName, email, templateCount }: SidebarOptions =
 
 export async function ConsoleShell({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarLayout {...await sidebarProps()} reading={await readingMode()}>
+    <SidebarLayout {...await sidebarProps()} reading={await readingMode()} theme={await theme()}>
       {children}
       {/* One mount for the whole console, so a thread survives moving between
           screens. It fetches nothing until somebody opens it. */}

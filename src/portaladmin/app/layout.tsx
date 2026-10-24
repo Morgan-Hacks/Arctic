@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import localFont from "next/font/local";
-import { READING_MODE, isOn } from "@/lib/features";
+import { DARK_MODE, READING_MODE, isOn } from "@/lib/features";
 import { READING_MODE_COOKIE, initialReadingMode } from "../../../libs/ui/reading-mode";
+import { THEME_COOKIE, initialTheme } from "../../../libs/ui/theme";
 import { SidebarStateProvider } from "./sidebar-state";
 import { ConsoleShell } from "./shell";
 import "../../../libs/ui/reading-mode.css";
@@ -80,10 +81,26 @@ export default async function RootLayout({
     ? initialReadingMode((await cookies()).get(READING_MODE_COOKIE)?.value)
     : undefined;
 
+  // The theme, resolved on the server so the first byte already carries it. A
+  // flash of a white console before a dark one is the most visible bug this
+  // feature can have, and waiting for hydration is how you get one.
+  //
+  // With the flag off this is the literal "light" the three layouts pinned
+  // before any of this existed, so nothing about the console changes until
+  // somebody turns it on.
+  //
+  // With the flag on, `undefined` is not a missing answer, it is the answer: it
+  // means write no attribute, which lets `prefers-color-scheme` in
+  // libs/ui/tokens.css decide. That covers both a reader who chose "Auto" and
+  // one who has never been asked, and it needs no JavaScript at all.
+  const theme = isOn(DARK_MODE)
+    ? initialTheme((await cookies()).get(THEME_COOKIE)?.value)
+    : "light";
+
   return (
     <html
       lang="en"
-      data-theme="light"
+      data-theme={theme}
       data-reading={reading ? "on" : undefined}
       className={`${geist.variable} ${geistMono.variable} ${inter.variable} ${openDyslexic.variable}`}
     >

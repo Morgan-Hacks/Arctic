@@ -167,9 +167,42 @@
   --paper: #ffffff;
 }
 
+/*
+ * The console's dark palette, written twice on purpose.
+ *
+ * Once for the reader who asked for dark, and once for the reader who asked
+ * for nothing and whose machine is dark. Those are two different conditions —
+ * an attribute and a media query — and CSS has no way to hang one declaration
+ * block off both. tokens.css already resolved this the same way for the same
+ * reason; this file mirrors it rather than inventing a second answer.
+ *
+ * This block used to be missing, and its absence was the whole of the bug.
+ * `color-scheme: dark` was set for the system case and nothing else was, so a
+ * machine set to dark got tokens.css's dark ground with this file's *light*
+ * `--field`, `--sidebar-surface` and `--preview-surface` still sitting on top
+ * of it: a dark console with a white sidebar and near-white inputs. Pinning
+ * `data-theme="light"` in the layout was what kept anybody from seeing it.
+ *
+ * The two lists must stay in step. If you add a token here, add it there.
+ */
 :root:not([data-theme="light"]) {
   @media (prefers-color-scheme: dark) {
     color-scheme: dark;
+    --paper: #191919;
+    --raised: #242424;
+    --sunken: #202020;
+    --ink: #f1f1f1;
+    --muted: #a8a8a8;
+    --faint: #898989;
+    --line: #2f2f2f;
+    --line-soft: #282828;
+    --field: #262626;
+    --surface-hover: #2b2b2b;
+    --surface-selected: #343434;
+    --sidebar-surface: #202020;
+    --sidebar-hover: #292929;
+    --preview-surface: #202020;
+    --accent-ink: #1e1e1e;
   }
 }
 

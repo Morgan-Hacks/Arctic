@@ -51,15 +51,43 @@ body {
   line-height: 1.55;
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
+}
 
-  /*
-   * The parts of the page the browser still draws: the dropdown's own list,
-   * the date picker, scrollbars, the file picker's dialog. Told which way the
-   * page is, they come up matching it. Left unsaid they come up white on a
-   * dark page, which is a flash of the wrong colour in the middle of an
-   * otherwise finished form.
-   */
+/*
+ * Which way the page is, for the parts the browser still draws: the dropdown's
+ * own list, the date picker, scrollbars, the file picker's dialog. Told which
+ * way the page is, they come up matching it. Left unsaid they come up white on
+ * a dark page, which is a flash of the wrong colour in the middle of an
+ * otherwise finished form.
+ *
+ * Three blocks rather than one `light dark`, mirroring tokens.css and the
+ * console, because an explicit [data-theme] has to beat the media query in
+ * both directions — otherwise somebody who asked for light on a dark machine
+ * gets a light form with a dark date picker falling out of it.
+ *
+ * On `:root` and not on `body`, which is why it moved out of the rule above.
+ * `color-scheme` inherits, so telling the element that owns the page is enough
+ * and telling `body` as well is actively wrong: a declaration on `body` beats
+ * what `body` would otherwise inherit from `html`, so the overrides below
+ * would reach the page and not the controls sitting on it.
+ *
+ * Only `color-scheme` needs saying here. This stylesheet holds no colour of
+ * its own — every value in it is a token from libs/ui/tokens.css, which
+ * already carries both palettes. The form needed nothing else to support dark;
+ * it was never a light page, it was only ever told that it was.
+ */
+:root {
   color-scheme: light;
+}
+
+:root:not([data-theme="light"]) {
+  @media (prefers-color-scheme: dark) {
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 /*

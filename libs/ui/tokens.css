@@ -81,6 +81,41 @@
   --scan-plate: #ffffff;
   --scan-ink:   #14161a;
 
+  /* The ground the MorganHacks mark is drawn for, for the same reason and with
+   * the same exemption from the theme.
+   *
+   * brands/morganhacks.png is a navy wordmark and a navy-and-gold bear on an
+   * opaque white ground — RGB with no alpha channel, so there is no
+   * transparency to let a dark page show through, and nothing to recolour.
+   * Dropped onto the dark console it is a white rectangle, which is what kept
+   * all three apps pinned to light: the layout comments called the mark out by
+   * name as the thing blocking dark mode.
+   *
+   * A plate is the answer print has used for this for decades. The rectangle
+   * is already there whatever we do; giving it padding and a radius is the
+   * difference between a mark sitting on its own ground on purpose and one
+   * that looks clipped. The alternative is recolouring somebody else's
+   * trademark, which is not ours to do.
+   *
+   * Deliberately absent from both dark blocks below. A plate that went dark
+   * would be a navy mark on a dark ground, which is the problem it exists to
+   * solve. */
+  --brand-plate: #ffffff;
+
+  /* Whether the plate is showing, as two values the mark's own rule can read
+   * without repeating the theme condition.
+   *
+   * The condition is an attribute in one case and a media query in the other,
+   * so expressing it at each of the three places the mark renders would mean
+   * six blocks in three stylesheets. These two carry it instead: the mark's
+   * rule is one line, and the switch lives here with the rest of the palette.
+   *
+   * `transparent` and `0px` rather than unset, so the light rule draws nothing
+   * at all rather than drawing a plate the colour of the page — which would
+   * come out wrong the moment the mark sat on anything but --paper. */
+  --brand-plate-ground: transparent;
+  --brand-plate-inset:  0px;
+
   --display: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
   --body:    system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono:    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
@@ -134,6 +169,10 @@
     --stop-soft: #2d1519;
 
     --focus: #8db9e6;
+
+    /* The mark gets its plate. See --brand-plate above. */
+    --brand-plate-ground: var(--brand-plate);
+    --brand-plate-inset:  6px;
   }
 }
 
@@ -159,6 +198,10 @@
   --stop-soft: #2d1519;
 
   --focus: #8db9e6;
+
+  /* The mark gets its plate. See --brand-plate above. */
+  --brand-plate-ground: var(--brand-plate);
+  --brand-plate-inset:  6px;
 }
 
 /*

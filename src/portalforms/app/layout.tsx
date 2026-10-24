@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { Geist, Inter } from "next/font/google";
 import localFont from "next/font/local";
-import { READING_MODE, isOn } from "@/lib/features";
+import { DARK_MODE, READING_MODE, isOn } from "@/lib/features";
 import { READING_MODE_COOKIE, initialReadingMode } from "../../../libs/ui/reading-mode";
+import { THEME_COOKIE, initialTheme } from "../../../libs/ui/theme";
 import "../../../libs/ui/reading-mode.css";
 import "./globals.css";
 
@@ -74,11 +75,27 @@ export default async function RootLayout({
     ? initialReadingMode((await cookies()).get(READING_MODE_COOKIE)?.value)
     : undefined;
 
+  // The theme, resolved on the server so the first byte already carries it. A
+  // form that flashes white before going dark looks broken in a way a form
+  // cannot afford, since the thing it is asking for is somebody's trust.
+  //
+  // `undefined` writes no attribute, which hands the question to
+  // `prefers-color-scheme` in libs/ui/tokens.css — the right answer both for a
+  // reader who chose "Auto" and for one who has never been asked. With the flag
+  // off this is the literal "light" that was pinned here before.
+  //
+  // This app needed nothing else to support dark. It holds no colour of its
+  // own: every value in globals.css is a token, and tokens.css has carried both
+  // palettes all along.
+  const theme = isOn(DARK_MODE)
+    ? initialTheme((await cookies()).get(THEME_COOKIE)?.value)
+    : "light";
+
   return (
     <html
       lang="en"
       className={`${inter.variable} ${geist.variable} ${openDyslexic.variable}`}
-      data-theme="light"
+      data-theme={theme}
       data-reading={reading ? "on" : undefined}
     >
       <body>{children}<ErrorToasts /></body>
