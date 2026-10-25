@@ -16,7 +16,26 @@
 .tabs button:hover, .ranges > button:hover { color: var(--ink); background: var(--home-card-hover); }
 .scopeNote { margin-left: auto; padding-left: 20px; font-size: 13px; color: var(--muted); white-space: nowrap; }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; margin: 8px 0 30px; }
-.stat { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; padding: 0; }
+/*
+ * Centred, because this strip has no card to hold it.
+ *
+ * The three tiles are thirds of the full content width -- 392px each at
+ * 1280px, wider on a wider monitor, since .home sets no max-width. Left-aligned,
+ * a 38px figure one or two glyphs long sat 184px left of its own tile's centre
+ * and 38-53px left of its own label's centre, and that second number varied per
+ * tile because the labels are different lengths. So the figures lined up with
+ * nothing: not each other, not their labels, not the columns they belong to.
+ * Measured, not eyeballed.
+ *
+ * Centring gives each tile one axis for all three lines, which is what makes a
+ * figure read as belonging to the words above and below it when there is no
+ * border doing that job.
+ *
+ * Deliberately not applied to the tiles on the D-Day dashboard, which are
+ * bordered cards capped near 13rem: there the card is the container, the
+ * figure is never far from its label, and left alignment is right.
+ */
+.stat { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0; }
 .stat p { position: relative; z-index: 1; margin: 0; color: var(--muted); font-size: 14px; }
 .stat > strong { position: relative; z-index: 1; margin: 14px 0; color: var(--ink); font-size: 38px; font-weight: 600; line-height: 1; letter-spacing: -1.2px; font-variant-numeric: tabular-nums; }
 .stat > span { position: relative; z-index: 1; color: var(--muted); font-size: 14px; line-height: 1.5; }
@@ -118,7 +137,14 @@
 .emailSection { padding: 24px; border: 1px solid color-mix(in srgb, var(--ink) 6%, transparent); border-radius: 16px; background: var(--paper); }
 .emailGrid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 40px; margin-top: 28px; }
 .emailStats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.emailStats > div { display: grid; align-content: start; gap: 13px; }
+/* Centred to match .stat above. The same three-up strip on the same dashboard,
+   so it reads as the same kind of thing: a 206px tile had its figure 59-73px
+   left of the tile's centre and anywhere from 4px right to 44px left of its own
+   label, because the labels are different lengths and the figure was pinned to
+   the edge. `text-align` rather than `justify-items`, because these are
+   stretched grid items -- their boxes already span the tile and it is the text
+   inside them that was off. */
+.emailStats > div { display: grid; align-content: start; gap: 13px; text-align: center; }
 .emailStats span { color: var(--muted); font-size: 14px; line-height: 1.5; }
 .emailStats strong { font-size: 32px; font-weight: 600; letter-spacing: -.6px; font-variant-numeric: tabular-nums; }
 .emailStats > div:nth-child(1) strong { color: var(--metric-sky); }
