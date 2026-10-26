@@ -1,0 +1,15 @@
+{
+  // What is different about staging. Only the flags that differ from
+  // features.json beside it -- a key left out here keeps the base value rather
+  // than becoming false, so this file reads as "and in staging, also this".
+  //
+  // The directory needs the portal: it lives under /portal/*, which 404s while
+  // enable_hacker_portal_feature is off, so turning the directory on by itself
+  // would leave nothing reachable to look at.
+  //
+  // Not in features.json, because main is mirrored onto staging and also drives
+  // the production deploy -- the base file cannot hold a different answer for
+  // the two, and the directory is not ready for applicants.
+  "enable_hacker_portal_feature": true,
+  "enable_directory_feature": true
+}

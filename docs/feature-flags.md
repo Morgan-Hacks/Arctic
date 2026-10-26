@@ -9,12 +9,12 @@ One file per service, at the root of that service:
 
 | Service | File | Reads |
 |---|---|---|
-| atlas | `src/atlas/MorganHacks.Api/features.json` | `enable_hacker_portal_feature` |
+| atlas | `src/atlas/MorganHacks.Api/features.json` | `enable_hacker_portal_feature`, `enable_directory_feature` |
 | lark | `src/lark/MorganHacks.Lark/features.json` | nothing yet |
 | harbor | `src/harbor/MorganHacks.Harbor/features.json` | nothing yet |
-| portalweb | `src/portalweb/features.json` | `enable_hacker_portal_feature`, `enable_reading_mode_feature`, `enable_directory_feature`, `enable_heist_theme_feature` |
-| portaladmin | `src/portaladmin/features.json` | `enable_reading_mode_feature` |
-| portalforms | `src/portalforms/features.json` | `enable_reading_mode_feature` |
+| portalweb | `src/portalweb/features.json` | `enable_hacker_portal_feature`, `enable_reading_mode_feature`, `enable_directory_feature`, `enable_heist_theme_feature`, `enable_dark_mode_feature` |
+| portaladmin | `src/portaladmin/features.json` | `enable_reading_mode_feature`, `enable_check_in_desk`, `enable_directory_feature`, `enable_dark_mode_feature` |
+| portalforms | `src/portalforms/features.json` | `enable_reading_mode_feature`, `enable_dark_mode_feature` |
 
 A service's file lists only the flags that service reads. A flag named in a
 service that never asks for it is worse than no flag at all: somebody turns it
@@ -25,7 +25,7 @@ flag can be found across the repository by searching for it.
 
 ## Turning one off
 
-Two ways, and the second beats the first.
+Three ways, each beating the one above it.
 
 **The file**, for a decision you are keeping:
 
@@ -56,6 +56,57 @@ inserting it first -- the variable would be read and then silently overruled by
 the file baked into the image beside it, which is the failure the ordering in
 `AddFeatures` exists to prevent.
 
+## One environment, not the others
+
+`features.json` is committed, so it holds one value per *branch*. main is
+mirrored onto staging by `mirror-staging.yml` and also drives the production
+deploy, so the base file cannot say "on in staging, off in production" -- both
+are built from the same tree.
+
+An **overlay file** says what is different about one environment:
+
+```
+src/portalweb/features.json           what the flags are, normally
+src/portalweb/features.staging.json   and in staging, also this
+```
+
+```json
+{ "enable_directory_feature": true }
+```
+
+It is a shallow merge, and shallow is the design: an overlay names only the
+flags that differ, so reading one tells you what is special about that
+environment instead of restating everything. A flag the overlay leaves out
+keeps its base value -- it does not become false.
+
+The three layers, lowest to highest: `features.json`, then
+`features.<environment>.json`, then the environment variable. The variable stays
+on top because it is the lever somebody throws during an incident, and it has to
+beat a file baked into an image.
+
+**Which environment this is.** The API already knows: `ASPNETCORE_ENVIRONMENT`
+is set per container app, and `AddFeatures` lower-cases it to pick the file. The
+front ends work it out in `libs/features/flags.ts`, from `APP_ENV` when somebody
+has said so explicitly, and otherwise from `VERCEL_GIT_COMMIT_REF` -- staging
+*is* a branch here, so Vercel's own variable already names it and nothing has to
+be configured by hand.
+
+Every other branch resolves to no environment at all, which means the base file
+and nothing else. An overlay is opted into by name, so a branch cut from staging
+cannot inherit staging's flags, and production -- built from main -- never reads
+one.
+
+The filename is lower-cased in every service on purpose. .NET would hand over
+`Staging` and Vercel hands over `staging`, and a repository holding both
+`features.Staging.json` and `features.staging.json` is one where somebody edits
+the wrong file.
+
+**Why not two flags.** `enable_thing_feature_staging` beside
+`enable_thing_feature` was the other option and it is worse: every call site
+then has to know which environment it is in to choose between them, the flag
+count doubles forever, and the rule that one flag is one searchable string stops
+being true.
+
 ## What off looks like
 
 **404, not 403.** A feature that is off is indistinguishable from a feature
@@ -78,6 +129,8 @@ something they were not meant to see.
    in a server component.
 4. Test both positions. A test that only checks the off case passes just as
    well when the route is broken.
+5. If it should be on somewhere before it is on everywhere, add it to that
+   environment's overlay rather than to the base file.
 
 ## A flag on the client
 

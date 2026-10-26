@@ -13,7 +13,25 @@
  * the same key names, so a flag can be found by searching for one string across
  * the whole repository.
  */
-import defaults from "@/features.json";
+import base from "@/features.json";
+import staging from "@/features.staging.json";
+import { environmentName, flagValue, resolveDefaults } from "../../../libs/features/flags";
+
+/**
+ * The flag files for this app, with the environment's overlay laid over the base.
+ *
+ * Resolved once at module load rather than per call: the answer cannot change
+ * within a process, since it depends only on which environment this is.
+ *
+ * The overlay is imported by name rather than looked up by filename, because a
+ * static import is the only kind Next can follow -- a computed
+ * `import(`features.${env}.json`)` is not statically analysable and would not be
+ * bundled. One import per environment that has an overlay, which today is
+ * staging alone. Adding another means adding a line here, and that visibility
+ * is worth more than the cleverness it costs.
+ */
+const OVERLAYS: Record<string, Record<string, boolean | undefined>> = { staging };
+const defaults = resolveDefaults(base, OVERLAYS[environmentName(process.env) ?? ""]);
 
 /** The applicant portal. Off means /portal sends people to the public site. */
 export const HACKER_PORTAL = "enable_hacker_portal_feature";
@@ -55,17 +73,9 @@ export const HEIST_THEME = "enable_heist_theme_feature";
 export const DARK_MODE = "enable_dark_mode_feature";
 
 export function isOn(flag: string): boolean {
-  // Explicitly compared to "true" rather than treated as truthy. An unset
-  // variable is undefined, but a variable set to "false" is a non-empty string
-  // and would otherwise turn the feature on while appearing to turn it off.
-  const override = process.env[flag.toUpperCase()];
-  if (override !== undefined) {
-    return override === "true";
-  }
-
-  const fallback = (defaults as Record<string, boolean | undefined>)[flag];
-
-  // An unknown flag is off. A typo in a flag name should hide a feature rather
-  // than expose one, since the first is noticed and the second is not.
-  return fallback ?? false;
+  // The variable sits above both files, which is what makes it the lever
+  // somebody can throw during an incident without rebuilding an image. The
+  // comparison to the literal "true", and the treatment of an unknown flag as
+  // off, both live in libs/features/flags.ts so the rule is written once.
+  return flagValue(process.env[flag.toUpperCase()], defaults[flag]);
 }

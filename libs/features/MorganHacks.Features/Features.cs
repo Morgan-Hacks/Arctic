@@ -62,12 +62,14 @@ public static class FeatureExtensions
     /// </remarks>
     public static IHostApplicationBuilder AddFeatures(this IHostApplicationBuilder builder)
     {
+        var files = new PhysicalFileProvider(builder.Environment.ContentRootPath);
+
         var source = new JsonConfigurationSource
         {
             Path = "features.json",
             Optional = false,
             ReloadOnChange = true,
-            FileProvider = new PhysicalFileProvider(builder.Environment.ContentRootPath),
+            FileProvider = files,
         };
 
         // First, so it is the lowest priority source rather than the highest.
@@ -79,6 +81,40 @@ public static class FeatureExtensions
         // container would be read and then silently overruled by the file baked
         // into the image beside it.
         builder.Configuration.Sources.Insert(0, source);
+
+        // Then the overlay, at 1: above the base file and still below the
+        // environment variables the host added before this call.
+        //
+        // features.json is committed, so it holds one value per *branch*. main is
+        // mirrored onto staging and also drives the production deploy, which means
+        // the base file cannot say "on in staging, off in production" -- both are
+        // built from the same tree. The only per-environment lever used to be a
+        // variable set in a portal somewhere, which works and is invisible:
+        // nothing in the repository tells you what is on in production, and a flag
+        // left on is precisely the thing nobody notices.
+        //
+        // The overlay puts that answer back in git as a reviewable diff, and it is
+        // a shallow merge: it names only the flags that differ, so a key it leaves
+        // out keeps the base value rather than becoming false.
+        //
+        // Optional, because most environments will not have one, and an absent
+        // overlay means "nothing differs here" rather than a misconfiguration. The
+        // base file stays non-optional for the opposite reason -- a service with no
+        // flag file at all would read every flag as off and quietly serve a
+        // stripped-down version of itself.
+        //
+        // Lower-cased, so the filename is the same string in every service.
+        // EnvironmentName is `Staging` here and the frontends are handed `staging`
+        // by Vercel; a repository holding both features.Staging.json and
+        // features.staging.json is one where somebody edits the wrong file.
+        var environment = builder.Environment.EnvironmentName.ToLowerInvariant();
+        builder.Configuration.Sources.Insert(1, new JsonConfigurationSource
+        {
+            Path = $"features.{environment}.json",
+            Optional = true,
+            ReloadOnChange = true,
+            FileProvider = files,
+        });
 
         builder.Services.AddSingleton<IFeatures, ConfigurationFeatures>();
         return builder;
