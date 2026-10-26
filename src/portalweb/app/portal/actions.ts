@@ -57,14 +57,13 @@ const sent =
  * "your link is coming" when nothing was queued sends them to wait on an email
  * that will never arrive.
  *
- * KNOWN LIMITATION, and it belongs to the gateway rather than to this file.
- * This request is made by the server, so harbor sees this app's address as the
- * client and its per-IP limiter on /api/auth/* — ten in a quarter of an hour —
- * puts every applicant in one bucket. Atlas's per-address limit still holds,
- * so nobody can be mailed repeatedly, but the eleventh person to sign in
- * during registration week would be throttled for somebody else's requests.
- * The fix is harbor trusting a forwarded client address, which is the TODO
- * already sitting in its Program.cs, not a change here.
+ * This request is made by the server, so Harbor sees the app's address unless
+ * it can verify the forwarded client address. `apiFetch` sends that proof when
+ * `PROXY_SHARED_SECRET` is configured; Harbor then partitions its per-IP
+ * limiter using the forwarded address. Without the matching configuration,
+ * Harbor safely falls back to the connection address, which can put applicants
+ * behind the same proxy in one bucket. Atlas also limits by email address, so
+ * that fallback does not allow repeated sign-in emails to one address.
  */
 export async function requestLink(
   _previous: FormState,
