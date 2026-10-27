@@ -1,11 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import {
-  admitWithoutCode,
-  correctName,
-  findOverride,
-} from "./actions";
+import { admitWithoutCode, correctName } from "./actions";
 import type { AdmitState, CorrectState, FindState, OverrideMatch } from "./actions";
 
 /**
@@ -22,8 +18,13 @@ import type { AdmitState, CorrectState, FindState, OverrideMatch } from "./actio
  * API. An override with no reason attached is indistinguishable from
  * a mistake when somebody reads it back in March.
  */
-export function OverridePanel() {
-  const [found, findAction, findPending] = useActionState(findOverride, {});
+export function OverridePanel({
+  find,
+}: {
+  /** findOverride, bound to this desk's event by the page. */
+  find: (previous: FindState, form: FormData) => Promise<FindState>;
+}) {
+  const [found, findAction, findPending] = useActionState(find, {});
   const [admitted, admitAction, admitPending] = useActionState(admitWithoutCode, {});
   const [corrected, correctAction, correctPending] = useActionState(correctName, {});
 

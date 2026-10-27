@@ -269,7 +269,13 @@ export type CorrectState = {
   applicationId?: string;
 };
 
+/**
+ * The event is bound on the server by the page, as the roster's is: a name
+ * that recurs across events must not turn up somebody else's application
+ * at this event's door.
+ */
 export async function findOverride(
+  event: string | undefined,
   _previous: FindState,
   form: FormData,
 ): Promise<FindState> {
@@ -278,11 +284,14 @@ export async function findOverride(
     return { error: "Type a name or an email." };
   }
 
+  const query = new URLSearchParams({ q });
+  if (event) {
+    query.set("eventId", event);
+  }
+
   let response: Response;
   try {
-    response = await apiFetch(
-      `/admin/check-in/override/find?q=${encodeURIComponent(q)}`,
-    );
+    response = await apiFetch(`/admin/check-in/override/find?${query}`);
   } catch {
     return { error: "The API could not be reached. Try again." };
   }

@@ -3,7 +3,7 @@ import { currentPerson } from "@/lib/api";
 import { CHECK_IN_DESK, isOn } from "@/lib/features";
 import { Shell } from "../shell";
 import { loadCheckInCounts } from "../d-day/actions";
-import { searchRoster } from "./actions";
+import { findOverride, searchRoster } from "./actions";
 import { CheckedInCount } from "./count";
 import { ScanForm } from "./form";
 import { OverridePanel } from "./override-form";
@@ -142,7 +142,7 @@ export default async function CheckIn({
               For the code that will not scan and the name that will not change. Both take a
               reason, and both go into the audit log with your name against them.
             </p>
-            <OverridePanel />
+            <OverridePanel find={findOverride.bind(null, event?.id ?? eventId)} />
           </section>
         ) : null}
       </div>

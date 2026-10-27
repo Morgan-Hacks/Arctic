@@ -267,6 +267,26 @@ public class CheckInOverrideTests(IdentityDatabase db)
     }
 
     [Fact]
+    public async Task The_find_stays_inside_the_desk_s_event()
+    {
+        // Every fixture applicant is an Ada Lovelace at an event of their own:
+        // the name recurs, and the desk at one door must not be offered the
+        // application somebody made to another.
+        var here = await Hacker(ApplicationStatus.Confirmed);
+        var elsewhere = await Hacker(ApplicationStatus.Confirmed);
+        var cookie = await Overrider();
+
+        var (status, body) = await Find("lovelace", cookie, here.EventId);
+        Assert.Equal(HttpStatusCode.OK, status);
+
+        var ids = body.GetProperty("matches").EnumerateArray()
+            .Select(m => m.GetProperty("applicationId").GetGuid())
+            .ToList();
+        Assert.Equal([here.ApplicationId], ids);
+        Assert.DoesNotContain(elsewhere.ApplicationId, ids);
+    }
+
+    [Fact]
     public async Task Finding_needs_the_override_permission_too()
     {
         // The lookup is the same information the admit would act on: a
@@ -455,10 +475,13 @@ public class CheckInOverrideTests(IdentityDatabase db)
         return await Send(request);
     }
 
-    private async Task<(HttpStatusCode Status, JsonElement Body)> Find(string q, string cookie)
+    private async Task<(HttpStatusCode Status, JsonElement Body)> Find(
+        string q, string cookie, Guid? eventId = null)
     {
         var request = new HttpRequestMessage(
-            HttpMethod.Get, $"/admin/check-in/override/find?q={Uri.EscapeDataString(q)}");
+            HttpMethod.Get,
+            $"/admin/check-in/override/find?q={Uri.EscapeDataString(q)}"
+                + (eventId is { } id ? $"&eventId={id}" : ""));
         request.Headers.Add("Cookie", cookie);
         return await Send(request);
     }
