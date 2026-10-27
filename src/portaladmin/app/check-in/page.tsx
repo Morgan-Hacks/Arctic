@@ -136,8 +136,8 @@ export default async function CheckIn({
         ) : null}
 
         {mayOverride ? (
-          <section>
-            <h2 style={{ marginTop: 32 }}>Override</h2>
+          <section className={styles.override}>
+            <h2>Override</h2>
             <p>
               For the code that will not scan and the name that will not change. Both take a
               reason, and both go into the audit log with your name against them.

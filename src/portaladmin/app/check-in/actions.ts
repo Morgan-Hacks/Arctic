@@ -245,7 +245,6 @@ export type OverrideMatch = {
   checkedInAt: string | null;
   eventId?: string | null;
   eventName?: string | null;
-  event?: string | null;
 };
 
 export type FindState = {

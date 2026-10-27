@@ -86,9 +86,9 @@ export function OverridePanel() {
               <span>
                 <strong style={{ fontSize: 18 }}>{match.name ?? "No name on file"}</strong>
                 <span style={{ marginLeft: 8 }}>{statusLabel(match)}</span>
-                {match.eventName || match.event ? (
+                {match.eventName ? (
                   <span style={{ marginLeft: 8, opacity: 0.7 }}>
-                    {match.eventName ?? match.event}
+                    {match.eventName}
                   </span>
                 ) : null}
                 {match.checkedInAt ? (

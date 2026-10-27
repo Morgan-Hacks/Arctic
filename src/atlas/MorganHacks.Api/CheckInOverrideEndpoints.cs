@@ -117,13 +117,12 @@ public static class CheckInOverrideEndpoints
                 name = Name(subject),
                 checkedInAt = subject.CheckedInAt,
                 eventId = subject.EventId,
+                // The event they applied to, as readable text, so a search
+                // result is never ambiguous about which event a match belongs
+                // to — an override acts on exactly one application, and a name
+                // that recurs across events is not a person the desk can
+                // safely guess at.
                 eventName = subject.EventName,
-                // The event they applied to, as readable text. Returned under
-                // two common names so a search result is never ambiguous
-                // about which event a match belongs to — an override acts on
-                // exactly one application, and a name that recurs across
-                // events is not a person the desk can safely guess at.
-                @event = subject.EventName,
             }),
         });
     }
