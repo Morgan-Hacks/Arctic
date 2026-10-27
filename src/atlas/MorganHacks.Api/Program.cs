@@ -485,6 +485,7 @@ app.MapPortal();
 app.MapDirectory();
 app.MapAnnouncements();
 app.MapCheckIn();
+app.MapCheckInOverride();
 app.MapResumes();
 app.MapPeopleAdmin();
 app.MapAuditTrail();
