@@ -40,6 +40,11 @@
  *   the rows above, there is no separate read permission for this one --
  *   every route under it needs `inventory.manage`, so reaching the screen at
  *   all already means its buttons work.
+ * - Sponsors is `GET /admin/sponsors`, behind `sponsors.view`, with the
+ *   report on the same read and the money on `GET /admin/sponsors/financials`
+ *   behind `sponsors.view_financials`. Either half is worth opening on its
+ *   own -- finance reads money without managing rows -- so the row carries
+ *   both and the panels inside gate the rest.
  * - People is `GET /admin/people`, behind `people.view`.
  * - Mail is `GET /admin/campaigns`, behind `email.view_stats`.
  * - Audit is `GET /admin/audit`, behind `audit.view`.
@@ -52,12 +57,11 @@
  * remove. The panels and buttons inside each screen are gated on them
  * separately, where they mean something.
  *
- * `needs` is a list, read as any-of, even though every row holds one string
- * today. The unions are coming: a screen whose content has two independent
- * sources — sponsors, or check-in, where viewing stats and scanning are
- * separate permissions on the same page — is useful to the holder of either,
- * and a shape that only fits one permission would be rewritten on the day that
- * lands.
+ * `needs` is a list, read as any-of. Sponsors is the first row that uses it
+ * as more than one string: money without rows is still worth opening for
+ * finance, and rows without money are the sponsorship team's whole screen.
+ * Check-in is the next one coming, where viewing stats and scanning are
+ * separate permissions on the same page.
  *
  * ## Why the strings are spelled out here
  *
@@ -88,6 +92,7 @@ const SECTIONS: readonly GatedSection[] = [
   { href: "/forms", label: "Forms", needs: ["applications.view"] },
   { href: "/applicants", label: "Applicants", needs: ["applications.view"] },
   { href: "/inventory", label: "Inventory", needs: ["inventory.manage"] },
+  { href: "/sponsors", label: "Sponsors", needs: ["sponsors.view", "sponsors.view_financials"] },
   { href: "/mail", label: "Email Campaign", needs: ["email.view_stats"] },
   { href: "/templates", label: "Templates", needs: ["email.manage_templates", "email.delete_templates"] },
   { href: "/audit", label: "Audit", needs: ["audit.view"] },

@@ -9,6 +9,7 @@ using MorganHacks.Applications.Forms;
 using MorganHacks.Applications.Data;
 using MorganHacks.Applications.Logistics;
 using MorganHacks.Applications.Services;
+using MorganHacks.Applications.Sponsors;
 using MorganHacks.Applications.Storage;
 using MorganHacks.Applications.Segments;
 using MorganHacks.Audit;
@@ -194,6 +195,10 @@ builder.Services.AddSingleton<EmailAnalyticsStore>();
 builder.Services.AddSingleton<IInventoryStore, PostgresInventoryStore>();
 builder.Services.AddSingleton<LowStockAlerts>();
 builder.Services.AddHostedService<LowStockAlertWorker>();
+
+// Who is backing the event, and the two aggregates built on top of them. A
+// singleton for the same reason: stateless over the shared data source.
+builder.Services.AddSingleton<ISponsorStore, PostgresSponsorStore>();
 
 // The assistant.
 //
@@ -493,6 +498,7 @@ app.MapFormResponses();
 app.MapApplicants();
 app.MapApplicantAnalytics();
 app.MapInventory();
+app.MapSponsors();
 app.MapEmailAnalytics();
 app.MapTemplates();
 app.MapEmailTracking();

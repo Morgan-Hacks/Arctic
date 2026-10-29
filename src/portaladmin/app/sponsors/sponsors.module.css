@@ -1,0 +1,168 @@
+/*
+ * The sponsors screen.
+ *
+ * A module of its own, not more rules in globals.css -- nothing here is used
+ * anywhere else, and the shared stylesheet is edited by everybody at once.
+ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.eventPicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 360px;
+  min-height: 42px;
+  margin-bottom: 20px;
+  padding-left: 14px;
+  border-radius: 12px;
+  background: var(--field);
+}
+
+.eventPicker > svg {
+  flex: none;
+  color: var(--muted);
+}
+
+.eventPicker > span:not(:has(select)) {
+  padding: 11px 14px 11px 0;
+  font-size: 13px;
+}
+
+.eventPicker select {
+  width: 100%;
+  height: 42px;
+  padding-block: 11px;
+  padding-left: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 13px;
+}
+
+.eventPicker:focus-within {
+  background: var(--field-active);
+}
+
+.eventPicker select:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 960px) {
+  .grid {
+    grid-template-columns: 3fr 2fr;
+    align-items: start;
+  }
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--surface);
+}
+
+.card h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.card p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.tier {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--field);
+  font-size: 12px;
+}
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.stat:last-child {
+  border-bottom: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.form input,
+.form select {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--field);
+  font-size: 13px;
+}
+
+.form button {
+  align-self: flex-start;
+}
+
+.error {
+  font-size: 13px;
+  color: var(--danger, #b42318);
+}
+
+.note {
+  font-size: 12px;
+  color: var(--muted);
+}

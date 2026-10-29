@@ -444,4 +444,43 @@ public static class Events
     /// in the same stream as everything else that happened that afternoon.
     /// </remarks>
     public const string AnnouncementRetracted = "announcement.retracted";
+
+    /// <summary>
+    /// A sponsor row was added, edited, or removed.
+    /// </summary>
+    /// <remarks>
+    /// Three names rather than one, because the question asked afterwards is
+    /// usually which of the three happened: a sponsor appearing, a tier
+    /// changing, or a row disappearing before the report went out. Each
+    /// carries the actor, the sponsor id and the event, and never the contact
+    /// details -- those live on the row, behind a permission, where a log
+    /// line is not.
+    /// </remarks>
+    public const string SponsorCreated = "sponsor.created";
+    public const string SponsorUpdated = "sponsor.updated";
+    public const string SponsorRemoved = "sponsor.removed";
+
+    /// <summary>
+    /// Somebody took the sponsor-facing numbers out of the system.
+    /// </summary>
+    /// <remarks>
+    /// The aggregate half of the <c>responses.exported</c> rule: this file
+    /// leaves the system too, so taking one has to leave a mark. Who, which
+    /// event, and never what was in it -- the report holds counts, and a log
+    /// copy of the counts is a second place somebody would have to correct.
+    /// </remarks>
+    public const string SponsorReportExported = "sponsor.report_exported";
+
+    /// <summary>
+    /// Somebody took the money half out of the system.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="SponsorReportExported"/> on purpose. The
+    /// sponsor wants the numbers and finance wants the money, and one event
+    /// for both would make a money export indistinguishable from a numbers
+    /// one. <c>sponsors.view_financials</c> is on the sensitive list
+    /// precisely because taking a copy of it has to leave a mark, and this
+    /// is that mark: who, which event, never how much.
+    /// </remarks>
+    public const string SponsorFinancialsExported = "sponsor.financials_exported";
 }
