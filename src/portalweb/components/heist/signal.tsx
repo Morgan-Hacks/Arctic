@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { transmission } from "./store";
+import { EFFECTS_EVENT, effects, setEffect, transmission } from "./store";
 
 const BADGE_KEY = "mh-heist-badge";
 // shortcut: the code and the badge live in the browser, so the badge does not
@@ -23,12 +23,18 @@ export function SignalPanel() {
   const [code, setCode] = useState("");
   const [feedback, setFeedback] = useState<{ text: string; ok: boolean } | null>(null);
   const [badge, setBadge] = useState(false);
+  // The messages only exist in the rain, so with it off there is nothing to catch.
+  const [rain, setRain] = useState(false);
   const field = useId();
 
   useEffect(() => {
     try {
       setBadge(localStorage.getItem(BADGE_KEY) === "1");
     } catch {}
+    const follow = () => setRain(effects.rain);
+    follow();
+    window.addEventListener(EFFECTS_EVENT, follow);
+    return () => window.removeEventListener(EFFECTS_EVENT, follow);
   }, []);
 
   function toggle() {
@@ -79,10 +85,31 @@ export function SignalPanel() {
 
       {open ? (
         <section className="heist-signal__panel" aria-label="Intercepted transmission">
-          <span className="heist-signal__label">■ Rain paused · intercepted</span>
-          <p className="heist-signal__message" aria-live="polite">
-            {message}
-          </p>
+          {rain ? (
+            <>
+              <span className="heist-signal__label">■ Rain paused · intercepted</span>
+              <p className="heist-signal__message" aria-live="polite">
+                {message}
+              </p>
+            </>
+          ) : (
+            <>
+              <span className="heist-signal__label">■ No signal</span>
+              <p className="heist-signal__quiet">The code rain is off, so there is nothing to intercept. Hidden messages fall with it.</p>
+              <button
+                type="button"
+                className="heist-signal__enable"
+                onClick={() => {
+                  setEffect("rain", true);
+                  // Close so the rain runs; opening the signal again catches a message.
+                  transmission.paused = false;
+                  setOpen(false);
+                }}
+              >
+                Turn on code rain
+              </button>
+            </>
+          )}
           <form onSubmit={submit} className="heist-signal__form">
             <label htmlFor={field}>Clearance code</label>
             <div>

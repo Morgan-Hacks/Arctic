@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { MESSAGES, transmission } from "./store";
+import { EFFECTS_EVENT, MESSAGES, effects, loadEffects, transmission } from "./store";
 
 const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEF#$%&*+<>/=";
 const FONT_SIZE = 15;
@@ -31,6 +31,10 @@ const RESTART = 0.2;
  * already has the page hidden and the vault arriving; this component only takes
  * the class off once the animation is done. Doing
  * it here instead would paint the page, hide it on hydration and fade it back.
+ *
+ * Each moving part is opt-in or opt-out (see `effects` in the store): the rain
+ * is off unless somebody turns it on, and with vault motion off the loop holds
+ * still and the assembly intro is skipped.
  */
 export function HeistBackdrop() {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -50,21 +54,30 @@ export function HeistBackdrop() {
     if (build) build.muted = true;
 
     const root = document.querySelector(".heist");
+    loadEffects();
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       active.current = loop;
       loop.pause();
       return;
     }
 
+    // Switching vault motion from the effects panel starts or stops the loop.
+    const follow = () => {
+      if (active.current !== loop) return;
+      if (effects.vault) loop.play().catch(() => {});
+      else loop.pause();
+    };
+    window.addEventListener(EFFECTS_EVENT, follow);
+
     const finish = () => {
       root?.removeAttribute("data-heist-intro");
       build?.pause();
       active.current = loop;
-      loop.play().catch(() => {});
+      follow();
     };
-    if (!build || !root?.hasAttribute("data-heist-intro")) {
+    if (!build || !effects.vault || !root?.hasAttribute("data-heist-intro")) {
       finish();
-      return;
+      return () => window.removeEventListener(EFFECTS_EVENT, follow);
     }
 
     // The vault builds itself part by part; the page arrives as it locks (the
@@ -80,6 +93,7 @@ export function HeistBackdrop() {
       clearTimeout(timer);
       window.removeEventListener("pointerdown", finish);
       window.removeEventListener("keydown", finish);
+      window.removeEventListener(EFFECTS_EVENT, follow);
     };
   }, []);
 
@@ -133,7 +147,7 @@ export function HeistBackdrop() {
       ctx.fillRect(0, 0, c.width, c.height);
       ctx.textBaseline = "top";
       ctx.font = `${FONT_SIZE}px ${family}`;
-      for (let i = 0; i < cols; i++) {
+      for (let i = 0; effects.rain && i < cols; i++) {
         const d = drops[i];
         if (!d.on) continue;
         const head = Math.floor(d.y);
@@ -160,7 +174,7 @@ export function HeistBackdrop() {
       }
 
       const { text, row, col, t } = message;
-      const visible = t > 0 && t < FADE_IN + HOLD + FADE_OUT;
+      const visible = effects.rain && t > 0 && t < FADE_IN + HOLD + FADE_OUT;
       transmission.current = visible ? text : "";
       if (!visible) return;
       const alpha = t < FADE_IN ? t / FADE_IN : t < FADE_IN + HOLD ? 1 : 1 - (t - FADE_IN - HOLD) / FADE_OUT;
@@ -193,11 +207,22 @@ export function HeistBackdrop() {
     let frame = 0;
     let drawn = 0;
     let stepped = 0;
+    // With the rain off and the vault still, nothing on the canvas moves, so it
+    // is drawn once per change instead of thirty times a second.
+    let dirty = true;
+    const redraw = () => {
+      dirty = true;
+    };
     const step = (now: number) => {
       frame = requestAnimationFrame(step);
       // ~30fps for the vault, the rain itself moves every 60ms.
       if (now - drawn < 33) return;
       drawn = now;
+      if (!effects.rain && (active.current?.paused ?? true)) {
+        if (dirty) draw();
+        dirty = false;
+        return;
+      }
       if (transmission.paused) {
         // Hold whatever was showing, fully visible, so the panel and the rain
         // agree. The vault keeps turning; only the rain stops.
@@ -231,10 +256,17 @@ export function HeistBackdrop() {
       draw();
     };
     frame = requestAnimationFrame(step);
-    window.addEventListener("resize", size);
+    const resize = () => {
+      size();
+      redraw();
+    };
+    window.addEventListener("resize", resize);
+    window.addEventListener(EFFECTS_EVENT, redraw);
+    video.current?.addEventListener("loadeddata", redraw);
     return () => {
       cancelAnimationFrame(frame);
-      window.removeEventListener("resize", size);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener(EFFECTS_EVENT, redraw);
     };
   }, []);
 

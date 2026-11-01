@@ -8,6 +8,7 @@ import { ReadingToggle } from "../../components/reading-toggle";
 import { ThemeToggle } from "../../components/theme-toggle";
 import { HeistBackdrop } from "../../components/heist/backdrop";
 import { SignalPanel } from "../../components/heist/signal";
+import { EffectsPanel } from "../../components/heist/effects";
 import { Countdown } from "../../components/heist/countdown";
 import { Barlow, Barlow_Condensed, Courier_Prime } from "next/font/google";
 import Image from "next/image";
@@ -162,6 +163,7 @@ export default async function PortalLayout({
           <div className="heist-tools">
             {isOn(READING_MODE) && <ReadingToggle initial={reading} />}
             {isOn(DARK_MODE) && <ThemeToggle initial={theme} />}
+            <EffectsPanel />
             <SignalPanel />
           </div>
         ) : (
