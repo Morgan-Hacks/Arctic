@@ -14,6 +14,7 @@ const labels: Record<string, string> = {
   "applications.view_responses": "View application responses",
   "applications.view_resume": "View applicant resumes",
   "audit.view": "View the audit log",
+  "checkin.override": "Override check-in failures",
   "checkin.scan": "Check in attendees",
   "checkin.view_stats": "View check-in statistics",
   "email.delete_templates": "Delete email templates",

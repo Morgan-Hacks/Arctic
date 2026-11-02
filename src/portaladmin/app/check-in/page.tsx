@@ -3,9 +3,10 @@ import { currentPerson } from "@/lib/api";
 import { CHECK_IN_DESK, isOn } from "@/lib/features";
 import { Shell } from "../shell";
 import { loadCheckInCounts } from "../d-day/actions";
-import { searchRoster } from "./actions";
+import { findOverride, searchRoster } from "./actions";
 import { CheckedInCount } from "./count";
 import { ScanForm } from "./form";
+import { OverridePanel } from "./override-form";
 import { Roster } from "./roster";
 import styles from "./desk.module.css";
 
@@ -72,15 +73,17 @@ export default async function CheckIn({
 
   const mayScan = person.permissions.has("checkin.scan");
   const mayRead = person.permissions.has("applications.view");
+  const mayOverride = person.permissions.has("checkin.override");
 
   // Neither half. The desk's own permission is the one named, because it is
   // the one somebody sent to this screen is missing.
-  if (!mayScan && !mayRead) {
+  if (!mayScan && !mayRead && !mayOverride) {
     return (
       <Shell personId={person.personId}>
         <h1>Check-in</h1>
         <div className="empty">
-          You do not have <code>checkin.scan</code>. Ask an admin.
+          You do not have <code>checkin.scan</code> or <code>checkin.override</code>. Ask an
+          admin.
         </div>
       </Shell>
     );
@@ -114,6 +117,7 @@ export default async function CheckIn({
           ) : null}
         </div>
 
+        {mayScan || mayRead ? (
         <div className={styles.panels}>
           {mayScan ? (
             <ScanForm hasRoster={mayRead} />
@@ -129,6 +133,18 @@ export default async function CheckIn({
 
           {mayRead ? <RosterPanel read={roster} /> : <NoRoster />}
         </div>
+        ) : null}
+
+        {mayOverride ? (
+          <section className={styles.override}>
+            <h2>Override</h2>
+            <p>
+              For the code that will not scan and the name that will not change. Both take a
+              reason, and both go into the audit log with your name against them.
+            </p>
+            <OverridePanel find={findOverride.bind(null, event?.id ?? eventId)} />
+          </section>
+        ) : null}
       </div>
     </Shell>
   );

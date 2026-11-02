@@ -60,8 +60,8 @@
  * `needs` is a list, read as any-of. Sponsors is the first row that uses it
  * as more than one string: money without rows is still worth opening for
  * finance, and rows without money are the sponsorship team's whole screen.
- * Check-in is the next one coming, where viewing stats and scanning are
- * separate permissions on the same page.
+ * Check-in is the next one coming, where viewing stats, scanning and
+ * overriding are separate permissions on the same page.
  *
  * ## Why the strings are spelled out here
  *
@@ -96,7 +96,7 @@ const SECTIONS: readonly GatedSection[] = [
   { href: "/mail", label: "Email Campaign", needs: ["email.view_stats"] },
   { href: "/templates", label: "Templates", needs: ["email.manage_templates", "email.delete_templates"] },
   { href: "/audit", label: "Audit", needs: ["audit.view"] },
-  { href: "/d-day", label: "D-Day", needs: ["applications.view", "checkin.scan", "checkin.view_stats"] },
+  { href: "/d-day", label: "D-Day", needs: ["applications.view", "checkin.scan", "checkin.view_stats", "checkin.override"] },
 ];
 
 /**
@@ -121,8 +121,9 @@ export function sectionsFor(mine: ReadonlySet<string>, badges: Readonly<Record<s
       // D-Day is a place rather than a screen: what only matters once
       // doors open. Its children are filtered the way the bar itself is,
       // because they are not one permission -- the board is applicant
-      // analytics and the desk is a scanner, and a volunteer holding
-      // only checkin.scan should see the desk and not the numbers.
+      // analytics, the desk is a scanner, and the override is the
+      // judgement call on top of both, and a volunteer holding only
+      // checkin.scan should see the desk and not the numbers.
       ...(href === "/d-day" ? { children: dDay(mine) } : {}),
     })),
   ];
@@ -147,7 +148,7 @@ function dDay(mine: ReadonlySet<string>): Section[] {
     under.push({ href: "/d-day/dashboard", label: "Dashboard" });
   }
 
-  if (mine.has("checkin.scan") || mine.has("checkin.view_stats")) {
+  if (mine.has("checkin.scan") || mine.has("checkin.view_stats") || mine.has("checkin.override")) {
     under.push({ href: "/check-in", label: "Check-in" });
   }
 

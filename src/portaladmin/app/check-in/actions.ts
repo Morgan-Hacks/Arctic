@@ -11,7 +11,9 @@ import { DOOR_STATUSES } from "./roster-note";
  * POST /admin/check-in/scan, gated on checkin.scan. The code is
  * typed, pasted, or read off a QR symbol by the camera — and all
  * three arrive here, at this action, because a second way into the
- * API is a second set of answers to keep in step.
+ * API is a second set of answers to keep in step. The
+ * /admin/check-in/override routes, for the person whose code will not
+ * scan, are further down.
  *
  * The API's sentences are shown verbatim. They were written for
  * somebody standing in a doorway with a queue behind them, so this
@@ -220,4 +222,216 @@ export async function searchRoster(
   q: string,
 ): Promise<ViewRead> {
   return readView(doorFilter(event, q));
+}
+
+// ------------------------------------------------------------- the override ---
+/**
+ * The override half of the desk: finding somebody whose code will not
+ * scan, letting them in anyway, and correcting a name the portal has
+ * locked. All three behind checkin.override, which is deliberately not
+ * checkin.scan — the volunteer scanning badges and the person authorised
+ * to override are not always the same person.
+ *
+ * A reason is on both writes and the API refuses without one. An
+ * override with no reason attached is indistinguishable from a mistake
+ * when somebody reads it back in March, so the field is required here
+ * as well as there rather than only where the trail happens to notice.
+ */
+
+export type OverrideMatch = {
+  applicationId: string;
+  status: string;
+  name: string | null;
+  checkedInAt: string | null;
+  eventId?: string | null;
+  eventName?: string | null;
+};
+
+export type FindState = {
+  error?: string;
+  matches?: OverrideMatch[];
+};
+
+export type AdmitState = {
+  error?: string;
+  /** The API's sentence for the 200s. */
+  message?: string;
+  name?: string | null;
+  alreadyCheckedIn?: boolean;
+  checkedInAt?: string | null;
+  /** Echoed so the screen knows which row this answer is about. */
+  applicationId?: string;
+};
+
+export type CorrectState = {
+  error?: string;
+  name?: string | null;
+  applicationId?: string;
+};
+
+/**
+ * The event is bound on the server by the page, as the roster's is: a name
+ * that recurs across events must not turn up somebody else's application
+ * at this event's door.
+ */
+export async function findOverride(
+  event: string | undefined,
+  _previous: FindState,
+  form: FormData,
+): Promise<FindState> {
+  const q = text(form, "q");
+  if (q === "") {
+    return { error: "Type a name or an email." };
+  }
+
+  const query = new URLSearchParams({ q });
+  if (event) {
+    query.set("eventId", event);
+  }
+
+  let response: Response;
+  try {
+    response = await apiFetch(`/admin/check-in/override/find?${query}`);
+  } catch {
+    return { error: "The API could not be reached. Try again." };
+  }
+
+  if (response.status === 401) {
+    return { error: "Your session has ended. Sign in again." };
+  }
+  if (response.status === 403) {
+    return { error: "You do not have checkin.override. Ask an admin." };
+  }
+
+  try {
+    const body = (await response.json()) as {
+      matches?: OverrideMatch[];
+      error?: string;
+    };
+    if (!response.ok) {
+      return { error: body.error ?? "That did not work." };
+    }
+    return { matches: body.matches ?? [] };
+  } catch {
+    return { error: "That did not work." };
+  }
+}
+
+export async function admitWithoutCode(
+  _previous: AdmitState,
+  form: FormData,
+): Promise<AdmitState> {
+  const applicationId = text(form, "applicationId");
+  const reason = text(form, "reason");
+
+  if (applicationId === "") {
+    return { error: "Find the person first." };
+  }
+  if (reason === "") {
+    return { error: "An override needs a reason. Say what happened." };
+  }
+
+  let response: Response;
+  try {
+    response = await apiFetch("/admin/check-in/override/admit", {
+      method: "POST",
+      body: JSON.stringify({ applicationId, reason }),
+      headers: { "content-type": "application/json" },
+    });
+  } catch {
+    return { error: "The API could not be reached. Try again.", applicationId };
+  }
+
+  if (response.status === 401) {
+    return { error: "Your session has ended. Sign in again.", applicationId };
+  }
+  if (response.status === 403) {
+    return { error: "You do not have checkin.override. Ask an admin.", applicationId };
+  }
+
+  // 200 (checkedIn / alreadyCheckedIn), 409 (notConfirmed), 404 and 400
+  // all carry their own sentence — the same ones the scan gives, because
+  // this is the same desk with the same queue.
+  try {
+    const body = (await response.json()) as {
+      outcome?: string;
+      message?: string;
+      error?: string;
+      name?: string | null;
+      alreadyCheckedIn?: boolean;
+      checkedInAt?: string | null;
+    };
+
+    if (!response.ok) {
+      return {
+        error: body.error ?? "That did not work.",
+        name: body.name ?? null,
+        applicationId,
+      };
+    }
+
+    return {
+      message: body.message,
+      name: body.name ?? null,
+      alreadyCheckedIn: body.alreadyCheckedIn ?? false,
+      checkedInAt: body.checkedInAt ?? null,
+      applicationId,
+    };
+  } catch {
+    return { error: "That did not work.", applicationId };
+  }
+}
+
+export async function correctName(
+  _previous: CorrectState,
+  form: FormData,
+): Promise<CorrectState> {
+  const applicationId = text(form, "applicationId");
+  const firstName = text(form, "firstName");
+  const lastName = text(form, "lastName");
+  const reason = text(form, "reason");
+
+  if (applicationId === "") {
+    return { error: "Find the person first." };
+  }
+  if (firstName === "" || lastName === "") {
+    return { error: "Both names are required." };
+  }
+  if (reason === "") {
+    return { error: "An override needs a reason. Say what happened." };
+  }
+
+  let response: Response;
+  try {
+    response = await apiFetch("/admin/check-in/override/correct", {
+      method: "POST",
+      body: JSON.stringify({ applicationId, firstName, lastName, reason }),
+      headers: { "content-type": "application/json" },
+    });
+  } catch {
+    return { error: "The API could not be reached. Try again.", applicationId };
+  }
+
+  if (response.status === 401) {
+    return { error: "Your session has ended. Sign in again.", applicationId };
+  }
+  if (response.status === 403) {
+    return { error: "You do not have checkin.override. Ask an admin.", applicationId };
+  }
+
+  try {
+    const body = (await response.json()) as {
+      corrected?: boolean;
+      name?: string;
+      error?: string;
+    };
+
+    if (!response.ok) {
+      return { error: body.error ?? "That did not work.", applicationId };
+    }
+
+    return { name: body.name ?? null, applicationId };
+  } catch {
+    return { error: "That did not work.", applicationId };
+  }
 }

@@ -161,6 +161,33 @@ public static class Events
     /// </remarks>
     public const string CheckInScanned = "check_in.scanned";
 
+    /// <summary>
+    /// Somebody was let in at the desk without a code, or a name was
+    /// corrected there, against <c>checkin.override</c>.
+    /// </summary>
+    /// <remarks>
+    /// Emitted for every use of the override, because an override is the
+    /// signal: each one is a rule being bypassed on purpose, and a run of
+    /// them is either a bad morning at the door or something to ask about.
+    /// The record that outlives the log is
+    /// <c>applications.overrides</c> with its <c>audit.entries</c> row —
+    /// reason included. What this line carries is the actor, the application
+    /// and the kind, and never the reason or the name: like
+    /// <see cref="CheckInScanned"/>, it is counted, not read for who was in
+    /// it.
+    /// </remarks>
+    public const string CheckInOverridden = "check_in.overridden";
+
+    /// <summary>A name on an application was rewritten at the desk.</summary>
+    /// <remarks>
+    /// Half of <see cref="CheckInOverridden"/>, split out because the two are
+    /// different facts: one is a door decision, the other is data being
+    /// corrected when the applicant's own form has locked them out. Never
+    /// which name — that is the person's, and it stays on the application row
+    /// and its override record.
+    /// </remarks>
+    public const string ApplicationCorrected = "application.corrected";
+
     /// <summary>A resume was handed to an organizer as a signed link.</summary>
     /// <remarks>
     /// The permission model treats a resume as more sensitive than the rest of

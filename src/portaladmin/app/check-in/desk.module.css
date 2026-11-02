@@ -57,6 +57,11 @@
  * top: a volunteer on a phone is scanning, and should not scroll past a
  * search box to reach the box they are typing codes into.
  */
+/* The override panel, below the desk and set apart from it. */
+.override h2 {
+  margin-top: 14px;
+}
+
 .panels {
   display: grid;
   grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
