@@ -46,7 +46,7 @@ body {
   margin: 0;
   background: var(--ink);
   color: var(--paper);
-  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body), ui-sans-serif, sans-serif;
   font-size: 16px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
@@ -91,6 +91,28 @@ a {
     transparent 72%
   );
   pointer-events: none;
+}
+
+/*
+ * Grain.
+ *
+ * A large dark field rendered in flat colour bands shows its gradient as
+ * stepped rings on an 8-bit display, and the radial above is exactly that
+ * shape. A little noise breaks the bands up, and it is also the cheapest way
+ * to stop a near-black page reading as a void.
+ *
+ * Fractal noise from one inline SVG filter -- no image request, nothing to
+ * 404, and it scales to any viewport. Held very low: visible as texture, never
+ * as dirt.
+ */
+.screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.035;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /* ------------------------------------------------------------- the header --- */
@@ -170,7 +192,7 @@ a {
 }
 
 /*
- * Regular weight, and tightly tracked.
+ * Set in the display face, regular weight, tightly tracked.
  *
  * A page with nothing to offer yet has no reason to raise its voice; the size
  * carries it. `text-wrap: balance` matters more here than anywhere else on the
@@ -179,6 +201,7 @@ a {
  */
 .headline {
   margin-top: clamp(16px, 2.2vh, 22px);
+  font-family: var(--font-display), ui-sans-serif, sans-serif;
   font-size: clamp(2.5rem, 7.4vw, 5rem);
   font-weight: 400;
   line-height: 1.05;
@@ -229,17 +252,83 @@ a {
   opacity: 0.55;
 }
 
+/*
+ * 24px of height, which is WCAG 2.2's minimum target size (2.5.8, AA).
+ *
+ * These are 13px links in a row, so the text alone gives about 18px of
+ * touchable height -- fine with a mouse and a miss on a phone. The padding is
+ * vertical only so the row keeps its rhythm, and the underline is drawn with a
+ * box-shadow rather than a border so it stays on the text instead of sliding
+ * down to the edge of the enlarged box.
+ */
 .foot a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding-block: 3px;
   color: var(--paper);
   text-decoration: none;
-  padding-bottom: 2px;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  box-shadow: inset 0 -1px 0 transparent;
+  transition: box-shadow 0.15s ease, color 0.15s ease;
 }
 
 .foot a:hover {
   color: var(--accent);
-  border-bottom-color: var(--accent);
+  box-shadow: inset 0 -1px 0 var(--accent);
+}
+
+/* ------------------------------------------------------------- the entrance --- */
+
+/*
+ * One page load, staggered, and nothing else moves on this page ever again.
+ *
+ * A holding page is read once for about two seconds, so the only motion worth
+ * having is the arrival. Scattered hover tricks and a looping pulse would be
+ * noise on a page with one sentence; a single orchestrated reveal gives the
+ * column an order to be read in -- rule, label, headline, sentence, rule --
+ * and then gets out of the way.
+ *
+ * CSS only. No library, no client component, and nothing to hydrate.
+ *
+ * `backwards` on the fill matters: without it each element paints at its final
+ * opacity for the frames before its delay elapses, which is the flicker this
+ * is supposed to prevent.
+ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.copy > * {
+  animation: rise 0.75s cubic-bezier(0.2, 0, 0, 1) backwards;
+}
+
+.copy > *:nth-child(1) { animation-delay: 0.05s; }
+.copy > *:nth-child(2) { animation-delay: 0.14s; }
+.copy > *:nth-child(3) { animation-delay: 0.23s; }
+.copy > *:nth-child(4) { animation-delay: 0.34s; }
+.copy > *:nth-child(5) { animation-delay: 0.45s; }
+
+.topline,
+.foot {
+  animation: rise 0.9s cubic-bezier(0.2, 0, 0, 1) 0.5s backwards;
+}
+
+/*
+ * Nothing animates for somebody who asked for that.
+ *
+ * `animation: none` rather than a shortened duration: the elements start at
+ * opacity 0, so a reader who has asked for reduced motion must be given the
+ * finished page, not a faster version of the arrival.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .copy > *,
+  .topline,
+  .foot {
+    animation: none;
+  }
 }
 
 /* Keyboard focus, which the original page never drew at all. */
