@@ -1,20 +1,39 @@
 /* ==========================================================================
-   MorganHacks 2027 — organizer applications, single screen
-   A night scene: deep blue ground, aurora along the horizon, contour lines
-   across the field, and the M of MorganHacks drawn as a constellation.
-   Define colours here on :root; never hardcode a hex.
+   MorganHacks — the public page, between editions.
+
+   A status board, not a poster.
+
+   The page has one honest thing to say and it is that nothing is settled yet.
+   The previous design said it the way a poster would -- a night scene, an
+   aurora, a serif headline centred in the middle of the screen -- and a poster
+   with nothing on it reads as a page that failed to load. So the absence is
+   the subject here: labelled rows with "To be announced" where the facts will
+   go, a shape people already read as *pending* rather than *missing*.
+
+   Everything is left-aligned against one rail, because a board is read down a
+   column and centring puts the eye somewhere different on every line.
+
+   Define colours here on :root; never hardcode a hex below.
    ========================================================================== */
 
 :root {
-  --blue: #16306e;
-  --blue-deep: #0d1f4d;
-  --blue-lift: #2a52a8;
-  --on-blue: #ffffff;
-  --on-blue-soft: #c8d3f0;
-  --glow: #6f9bff;
+  /* Near-black rather than the old navy, and warm rather than blue-grey: the
+     ink carries a little red so the orange below sits in the same family
+     instead of vibrating against a cold ground. */
+  --ink: #0c0b0d;
+  --paper: #f4f1ec;
+  --muted: #8f8a85;
+  --line: #262429;
 
-  --pad-x: clamp(24px, 5vw, 84px);
-  --pad-y: clamp(22px, 4vh, 46px);
+  /* One accent, for the only thing on the page that is live. MorganHacks 2027
+     is being built around a heist, which is navy and orange; this is that
+     orange, and it is the single saturated colour here. */
+  --accent: #ff6a2b;
+
+  --pad-x: clamp(22px, 7vw, 120px);
+  --pad-y: clamp(22px, 5vh, 54px);
+
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
 *,
@@ -30,18 +49,21 @@ body {
 
 body {
   margin: 0;
-  /* Single screen: nothing below the fold, so nothing scrolls. */
-  overflow: hidden;
-  background: var(--blue-deep);
-  color: var(--on-blue);
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 17px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  font-size: 16px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  /* One screen; nothing sits below the fold. */
+  overflow: hidden;
 }
 
 h1,
-p {
+p,
+dl,
+dd,
+dt {
   margin: 0;
 }
 
@@ -49,143 +71,78 @@ a {
   color: inherit;
 }
 
-/* The keyboard's place on the page. This was `outline: none`, which left
-   every link and button on the marketing site focusable and invisible to
-   anyone navigating by Tab. --glow is the palette's brightest blue and the
-   only one that holds up against the deep blue ground. */
-:focus-visible {
-  outline: 2px solid var(--glow);
-  outline-offset: 3px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition-duration: 0.001ms !important;
-  }
-}
-
-/* ==========================================================================
-   The scene
-   ========================================================================== */
+/* -------------------------------------------------------------- the frame --- */
 
 .screen {
   position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100svh;
+  padding: var(--pad-y) var(--pad-x);
   isolation: isolate;
-  display: flex;
-  flex-direction: column;
-  height: 100svh;
-  overflow: hidden;
-  /* Night sky: deepest overhead, lifting toward the horizon. */
-  background: radial-gradient(
-      120% 78% at 50% 104%,
-      var(--blue-lift) 0%,
-      transparent 62%
-    ),
-    linear-gradient(180deg, var(--blue-deep) 0%, var(--blue) 72%);
 }
 
-/* A slow wash of light across the sky, like the glow off a city. */
+/*
+ * A drafting grid, not a landscape.
+ *
+ * Faint enough to read as paper texture at arm's length and to disappear on a
+ * phone in daylight. It replaces the contour lines, the aurora and the
+ * constellation with one gradient and no DOM, which is the other half of the
+ * point: the old scene was three absolutely-positioned SVG layers on a page
+ * that now says eleven words.
+ */
 .screen::before {
   content: "";
   position: absolute;
-  inset: -20% -10% 30%;
-  z-index: -3;
-  background: radial-gradient(
-      42% 50% at 22% 30%,
-      rgb(111 155 255 / 22%) 0%,
-      transparent 70%
-    ),
-    radial-gradient(
-      38% 46% at 82% 18%,
-      rgb(111 155 255 / 14%) 0%,
-      transparent 72%
-    );
-}
-
-.scene__contours {
-  position: absolute;
   inset: 0;
   z-index: -2;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  /* Fade out top and bottom so the lines read as texture, not as a diagram,
-     and so they hand off cleanly to the aurora. */
-  mask-image: linear-gradient(
-    180deg,
-    transparent 0%,
-    #000 22%,
-    #000 62%,
-    transparent 88%
-  );
-  -webkit-mask-image: linear-gradient(
-    180deg,
-    transparent 0%,
-    #000 22%,
-    #000 62%,
-    transparent 88%
-  );
-}
-
-.scene__aurora {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: -1;
-  width: 100%;
-  height: clamp(190px, 36vh, 340px);
-  pointer-events: none;
-  filter: blur(0.4px);
-}
-
-.scene__constellation {
-  position: absolute;
-  top: clamp(88px, 15vh, 150px);
-  left: clamp(40px, 7vw, 120px);
-  z-index: -2;
-  width: clamp(90px, 9vw, 130px);
+  background-image:
+    linear-gradient(to right, var(--line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+  background-size: 72px 72px;
   opacity: 0.5;
-  pointer-events: none;
+  /* Fades toward the bottom right so the footer sits on clean ground. */
+  mask-image: radial-gradient(120% 95% at 0% 0%, #000 20%, transparent 78%);
 }
 
-/* Painted after the aurora (same layer, later in DOM) so the footer links keep
-   their contrast against the brightest part of it. */
+/* A single warm pool behind the headline, so the type has somewhere to sit
+   without the page acquiring a picture. */
 .screen::after {
   content: "";
   position: absolute;
-  inset: auto 0 0 0;
+  inset: 0;
   z-index: -1;
-  height: clamp(90px, 14vh, 150px);
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgb(13 31 77 / 78%) 65%,
-    rgb(13 31 77 / 92%) 100%
+  background: radial-gradient(
+    58% 48% at 8% 42%,
+    color-mix(in srgb, var(--accent) 13%, transparent),
+    transparent 70%
   );
   pointer-events: none;
 }
 
-/* ==========================================================================
-   Content
-   ========================================================================== */
+/* ------------------------------------------------------------- the header --- */
 
 .topline {
-  flex: none;
-  padding: var(--pad-y) var(--pad-x) 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
 }
 
-/* MLH's own placement convention: pinned to a top corner, hanging from the
-   edge. Kept clear of the wordmark, which sits top-left. */
+.wordmark {
+  font-family: var(--mono);
+  font-size: clamp(12px, 1.1vw, 13px);
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+/* MLH require the badge hotlinked from their host and pinned to a top corner.
+   Narrower than before: it is a trust mark, not a headline. */
 .mlh {
-  position: absolute;
-  top: 0;
-  right: clamp(16px, 3vw, 48px);
-  z-index: 10;
-  width: clamp(56px, 5.6vw, 80px);
+  flex: none;
+  width: clamp(52px, 5vw, 66px);
+  margin-top: calc(var(--pad-y) * -1);
   line-height: 0;
 }
 
@@ -194,257 +151,191 @@ a {
   height: auto;
 }
 
-/* Small caps on wide tracking: technical rather than editorial, so it holds
-   its own against the serif headline instead of echoing it. The star is the
-   same glyph as the sky. */
-.wordmark {
-  display: inline-flex;
-  align-items: center;
-  gap: clamp(8px, 0.8vw, 11px);
-}
-
-.wordmark__star {
-  flex: none;
-  width: clamp(12px, 1.1vw, 15px);
-  fill: var(--glow);
-  filter: drop-shadow(0 0 6px rgb(111 155 255 / 70%));
-}
-
-.wordmark__text {
-  font-weight: 700;
-  font-size: clamp(14px, 1.3vw, 18px);
-  line-height: 1;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  /* Tracking adds a trailing space after the final S; pull it back so the
-     lockup optically aligns with the copy below. */
-  margin-right: -0.26em;
-}
+/* --------------------------------------------------------------- the copy --- */
 
 .copy {
-  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  /* Three groups, evenly separated by a gap that scales with the viewport.
-     space-between was tried and pushed them to the extremes, which read as
-     disconnected and crowded the footer. */
   justify-content: center;
-  gap: clamp(26px, 6.5vh, 76px);
-  min-height: 0;
-  padding: clamp(14px, 2.5vh, 36px) var(--pad-x);
-  text-align: center;
+  gap: clamp(26px, 4.4vh, 46px);
+  max-width: 44rem;
+  padding-block: clamp(18px, 4vh, 48px);
 }
 
-.copy__intro,
-.copy__act {
-  display: flex;
-  flex-direction: column;
+.status {
+  display: inline-flex;
   align-items: center;
-}
-
-.eyebrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(12px, 1.6vw, 22px);
-  width: 100%;
-  font-size: clamp(11.5px, 1vw, 13px);
-  font-weight: 600;
-  letter-spacing: 0.34em;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: clamp(11px, 1vw, 12.5px);
+  font-weight: 500;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--on-blue);
+  color: var(--muted);
 }
 
-/* Hairlines that fade outward, so the label sits in the scene rather than
-   floating loose above the headline. */
-.eyebrow::before,
-.eyebrow::after {
-  content: "";
-  flex: 0 1 clamp(28px, 7vw, 96px);
-  height: 1px;
+.status__dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+  animation: pulse 2.6s ease-in-out infinite;
 }
 
-.eyebrow::before {
-  background: linear-gradient(90deg, transparent, rgb(111 155 255 / 65%));
+.status__year {
+  color: var(--paper);
 }
 
-.eyebrow::after {
-  background: linear-gradient(90deg, rgb(111 155 255 / 65%), transparent);
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
 }
 
-.eyebrow span {
-  /* Tracking adds a trailing space; pull it back so the label optically
-     centres between the rules. */
-  margin-right: -0.34em;
-  text-shadow: 0 0 18px rgb(111 155 255 / 55%);
-}
-
+/*
+ * The headline carries the whole message, so it is the only large thing.
+ *
+ * A heavy grotesque on a tight track rather than the serif the old page used:
+ * this reads as a notice, which is what a page with nothing to apply for
+ * should sound like.
+ */
 .headline {
-  margin: clamp(16px, 3vh, 30px) auto 0;
-  max-width: 17ch;
-  font-family: var(--font-display), Georgia, serif;
-  font-weight: 400;
-  font-size: clamp(2.2rem, 5.4vw, 4.7rem);
-  line-height: 1.03;
-  letter-spacing: -0.02em;
+  max-width: 20ch;
+  font-size: clamp(2.4rem, 7.2vw, 5.1rem);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
   text-wrap: balance;
-  text-shadow: 0 0 46px rgb(111 155 255 / 32%);
 }
 
 .headline em {
-  font-style: italic;
+  font-style: normal;
+  color: var(--accent);
 }
 
-.dare {
-  margin: 0 auto;
-  max-width: 42ch;
-  font-family: var(--font-display), Georgia, serif;
-  font-style: italic;
-  font-size: clamp(1.25rem, 2.2vw, 1.9rem);
-  line-height: 1.25;
-  color: var(--on-blue-soft);
-  text-wrap: balance;
-}
-
-/* The button, its arrow and the countdown clock lived here. They went with the
-   organizer drive in November 2026 -- see site.config.ts. */
+/* -------------------------------------------------------------- the board --- */
 
 /*
- * The line that stands where the button and the clock were.
+ * Where the facts will go.
  *
- * Sized between .dare and .contact rather than matching either: it is the last
- * thing the page asks of anybody, and while there is nothing to apply for it
- * should read as a note rather than a second headline. The social links it
- * points at are already in the nav below, so it names the action without
- * adding a third place to click.
+ * A description list, because that is what it is: a label and its value. The
+ * rule above each row is what makes the right-hand side read as a slot waiting
+ * to be filled rather than a sentence that trailed off.
  */
-.announce {
-  margin: 0 auto;
-  max-width: 34ch;
-  font-size: clamp(15px, 1.4vw, 17px);
-  line-height: 1.5;
-  color: var(--on-blue-soft);
-  text-wrap: balance;
+.board {
+  display: grid;
+  grid-template-columns: minmax(8.5rem, max-content) 1fr;
+  column-gap: clamp(20px, 5vw, 64px);
+  max-width: 34rem;
 }
 
-.contact {
-  margin-top: clamp(12px, 1.8vh, 18px);
-  font-size: 14px;
-  color: var(--on-blue-soft);
+.board > dt,
+.board > dd {
+  padding-block: clamp(11px, 1.5vh, 15px);
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: clamp(12.5px, 1.2vw, 14px);
 }
 
-.contact a {
-  color: var(--on-blue);
-  text-underline-offset: 3px;
+.board > dt {
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.board > dd {
+  color: var(--paper);
+}
+
+/* ------------------------------------------------------------- the footer --- */
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px 32px;
+  padding-top: clamp(14px, 2.4vh, 22px);
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: clamp(11.5px, 1.05vw, 13px);
+  color: var(--muted);
 }
 
 .links {
-  flex: none;
   display: flex;
-  justify-content: center;
-  gap: clamp(18px, 2vw, 28px);
-  padding: 0 var(--pad-x) var(--pad-y);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
+  flex-wrap: wrap;
+  gap: 8px 26px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--on-blue-soft);
 }
 
-.links a {
+.foot a {
+  color: var(--paper);
   text-decoration: none;
-  transition: color 0.16s ease;
+  padding-bottom: 2px;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
 
-.links a:hover {
-  color: var(--on-blue);
+.foot a:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
-/* ==========================================================================
-   Responsive — height constrains as much as width on a locked screen
-   ========================================================================== */
+/* Keyboard focus, which the old page never drew at all. */
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
 
-@media (max-width: 900px) {
-  .scene__constellation {
+/* ------------------------------------------------------------------ narrow --- */
+
+@media (max-width: 40rem) {
+  .board {
+    grid-template-columns: 1fr;
+    column-gap: 0;
+  }
+
+  /* Label and value become one stacked pair, so only the label keeps the rule
+     and the two stay visibly joined. */
+  .board > dt {
+    padding-bottom: 2px;
+  }
+
+  .board > dd {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .foot {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Landscape phones: one screen with no scroll to recover anything, so the
+   board goes first. The headline never drops. */
+@media (max-height: 460px) {
+  .board,
+  .status {
     display: none;
   }
-}
 
-/* 760px is 8px off --bp-lg (48rem / 768px) — the same breakpoint, rounded. */
-@media (max-width: 48rem) {
-  /* The flanking rules need horizontal room either side of the label to read
-     as rules. With a label this long there is none left and they collapse to
-     slivers, so drop them and let the label centre on its own. Tracking comes
-     down too, so it wraps to two balanced lines rather than three ragged ones. */
-  .eyebrow::before,
-  .eyebrow::after {
-    display: none;
-  }
-  .eyebrow {
-    display: block;
-    max-width: 26ch;
-    margin-inline: auto;
-    font-size: 10.5px;
-    letter-spacing: 0.16em;
-    line-height: 1.5;
-    text-wrap: balance;
-  }
-  .eyebrow span {
-    margin-right: 0;
+  .copy {
+    gap: 18px;
   }
 
   .headline {
-    max-width: 14ch;
-    font-size: clamp(2.1rem, 9.4vw, 3.2rem);
-  }
-  /* Clear of the badge, which hangs in the top-right corner. */
-  .topline {
-    padding-right: 84px;
+    font-size: clamp(1.6rem, 5.4vw, 2.3rem);
   }
 }
 
-/* Short windows: shed optional lines rather than overflow a locked screen. The
-   headline never drops.
-
-   This block used to open with an unclosed `@media (max-height: 660px)` that
-   held no rules of its own, so everything below it was silently nested inside
-   it and the file ended one brace short. Harmless, because every block under it
-   is itself a max-height query below 660px -- but only by luck. */
-@media (max-height: 540px) {
-  .contact,
-  .dare {
-    display: none;
-  }
-}
-
-/* Landscape phones. Everything left is essential, so nothing more can be shed:
-   shrink it instead. */
-@media (max-height: 480px) {
-  :root {
-    --pad-y: 12px;
-  }
-  .eyebrow {
-    display: none;
-  }
-  .copy {
-    padding-block: 6px;
-  }
-  .headline {
-    margin-top: 10px;
-    max-width: 26ch;
-    font-size: clamp(1.5rem, 3.8vw, 2.2rem);
-  }
-  .copy {
-    gap: 14px;
-    padding-block: 8px;
-  }
-  .scene__aurora {
-    height: 34vh;
-  }
-}
-
-@media (max-height: 450px) {
-  .links {
-    display: none;
+@media (prefers-reduced-motion: reduce) {
+  .status__dot {
+    animation: none;
   }
 }

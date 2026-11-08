@@ -1,90 +1,77 @@
 import { siteConfig } from "@/site.config";
-import { Aurora, Constellation, Contours, STAR } from "./scene";
 
 const { year, announcement, contactEmail, socials, mlh } = siteConfig;
 
+/**
+ * The public page between editions.
+ *
+ * Eleven words of message and four facts, none of which are known yet. The
+ * board is the design: a label with "To be announced" beside it reads as a slot
+ * waiting to be filled, where a bare sentence reads as a page that gave up.
+ *
+ * No scene, no canvas and nothing client-side. The previous version carried
+ * three absolutely-positioned SVG layers and a countdown that ran on an
+ * interval; this one is static markup and two CSS gradients.
+ */
 export default function Home() {
   return (
     <div className="screen">
-      <Contours />
-      <Constellation />
-      <Aurora />
-
-      {/* MLH require the badge hotlinked from their host and pinned to a top
-          corner. Rendered as a plain <img> — it is an SVG, so next/image would
-          add a remote-pattern config for nothing. */}
-      <a
-        className="mlh"
-        href={mlh.href}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <img
-          src={mlh.badge}
-          alt={`Major League Hacking ${mlh.season} Hackathon Season`}
-          width={80}
-          height={139}
-        />
-      </a>
-
       <header className="topline">
-        <span className="wordmark">
-          <svg
-            className="wordmark__star"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <path d={STAR} />
-          </svg>
-          <span className="wordmark__text">MorganHacks</span>
-        </span>
+        <p className="wordmark">MorganHacks</p>
+
+        {/* MLH require the badge hotlinked from their host and pinned to a top
+            corner. A plain <img> because it is an SVG, so next/image would add
+            a remote-pattern config for nothing. */}
+        <a className="mlh" href={mlh.href} target="_blank" rel="noopener noreferrer">
+          <img
+            src={mlh.badge}
+            alt={`Major League Hacking ${mlh.season} Hackathon Season`}
+            width={80}
+            height={139}
+          />
+        </a>
       </header>
 
       <main className="copy">
-        {/* Grouped so the three blocks can spread down the screen while each
-            one stays internally tight. */}
-        <div className="copy__intro">
-          <p className="eyebrow">
-            <span>MorganHacks {year}</span>
-          </p>
+        <p className="status">
+          {/* Decorative: the words beside it already say what it means. */}
+          <span className="status__dot" aria-hidden="true" />
+          <span>
+            <span className="status__year">MorganHacks {year}</span> · In planning
+          </span>
+        </p>
 
-          <h1 className="headline">
-            {announcement.headline} <em>{announcement.headlineEmphasis}</em>.
-          </h1>
-        </div>
+        <h1 className="headline">
+          {announcement.headline} <em>{announcement.headlineEmphasis}</em>.
+        </h1>
 
-        <p className="dare">{announcement.line}</p>
-
-        <div className="copy__act">
-          {/*
-            No call to action, deliberately.
-
-            There was one until November, and it pointed at an organizer form
-            that closed on 13 September -- so for eight weeks the page offered
-            "Apply now" above the countdown's own "Applications are closed". A
-            button is a promise that something is waiting behind it, and until
-            there is, nothing here is better than something untrue.
-          */}
-          <p className="announce">{announcement.follow}</p>
-
-          <p className="contact">
-            Questions? <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
-          </p>
-        </div>
+        <dl className="board">
+          {announcement.board.map((row) => (
+            <div key={row.label} style={{ display: "contents" }}>
+              <dt>{row.label}</dt>
+              <dd>{row.value}</dd>
+            </div>
+          ))}
+        </dl>
       </main>
 
-      <nav className="links">
-        <a href={socials.instagram} target="_blank" rel="noopener noreferrer">
-          Instagram
-        </a>
-        <a href={socials.linkedin} target="_blank" rel="noopener noreferrer">
-          LinkedIn
-        </a>
-        <a href={socials.tiktok} target="_blank" rel="noopener noreferrer">
-          TikTok
-        </a>
-      </nav>
+      <footer className="foot">
+        <nav className="links" aria-label="MorganHacks on social media">
+          <a href={socials.instagram} target="_blank" rel="noopener noreferrer">
+            Instagram
+          </a>
+          <a href={socials.linkedin} target="_blank" rel="noopener noreferrer">
+            LinkedIn
+          </a>
+          <a href={socials.tiktok} target="_blank" rel="noopener noreferrer">
+            TikTok
+          </a>
+        </nav>
+
+        <p>
+          <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
+        </p>
+      </footer>
     </div>
   );
 }

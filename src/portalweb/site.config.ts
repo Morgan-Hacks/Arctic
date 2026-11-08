@@ -17,10 +17,12 @@ export const siteConfig = {
    * There is no organizer drive running, and the page no longer pretends
    * otherwise: the 2027 recruitment copy, its Google Form and its countdown
    * were removed in November 2026, eight weeks after the deadline they named
-   * had passed. Until a date is published this is the whole of the page's
-   * message, and it promises nothing it cannot keep -- 2027 is already public
-   * on the MLH badge, and everything past it is "to be announced", because
-   * inventing a date here is how a placeholder becomes a correction.
+   * had passed.
+   *
+   * It promises nothing it cannot keep. 2027 is already public on the MLH
+   * badge, and everything past it is "to be announced", because no date has
+   * been published and inventing one here is how a placeholder becomes a
+   * correction.
    *
    * Starting the next drive means writing it again rather than flipping a
    * switch. That is the right cost: the copy, the form and the dates will all
@@ -29,10 +31,27 @@ export const siteConfig = {
    */
   announcement: {
     headline: "Something is being",
-    /** Set in italic, the way the page emphasises its last beat. */
+    /** Set in the accent, which is the only coloured word on the page. */
     headlineEmphasis: "planned",
-    line: "Dates, applications and the rest: to be announced.",
-    follow: "Follow along and you will hear first.",
+
+    /**
+     * The board.
+     *
+     * One row that is already known, and the rest honestly empty. The known
+     * row is load-bearing: a board where every value reads "To be announced"
+     * looks like a page that failed to load its own content, and one real
+     * fact is what tells a reader the empty rows are pending rather than
+     * broken.
+     *
+     * Add the dates here when there are dates. Nothing else has to change.
+     */
+    board: [
+      { label: "Dates", value: "To be announced" },
+      { label: "Applications", value: "To be announced" },
+      { label: "Where", value: "Morgan State University, Baltimore" },
+      { label: "Updates", value: "@morgan.hacks" },
+    ],
+
     /**
      * What a search result and a shared link say.
      *
