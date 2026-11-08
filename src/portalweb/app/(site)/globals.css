@@ -1,20 +1,34 @@
 /* ==========================================================================
-   MorganHacks 2027 — organizer applications, single screen
-   A night scene: deep blue ground, aurora along the horizon, contour lines
-   across the field, and the M of MorganHacks drawn as a constellation.
-   Define colours here on :root; never hardcode a hex.
+   MorganHacks — the public page, between editions.
+
+   One centred column.
+
+   The page has a single thing to say, so the composition is built around
+   saying it once, in the middle, with room on every side. Everything sits on
+   one vertical axis: the rule, the eyebrow, the headline, the sentence and
+   the footer all share a centre line, and the two corners of the header
+   balance each other.
+
+   Left-aligned, this read as text pushed into a corner of an empty screen.
+   Centred, the empty space is margin rather than absence -- the same words,
+   composed instead of placed.
+
+   One typeface, one accent. Define colours on :root; never hardcode a hex.
    ========================================================================== */
 
 :root {
-  --blue: #16306e;
-  --blue-deep: #0d1f4d;
-  --blue-lift: #2a52a8;
-  --on-blue: #ffffff;
-  --on-blue-soft: #c8d3f0;
-  --glow: #6f9bff;
+  --ink: #0b0b0c;
+  --paper: #f2f0ed;
+  --muted: #8a8681;
+  --line: #222124;
 
-  --pad-x: clamp(24px, 5vw, 84px);
-  --pad-y: clamp(22px, 4vh, 46px);
+  /* Used twice and only as structure: the rule above the eyebrow and the
+     hairlines that close the block. It is the orange MorganHacks 2027 is being
+     built around, so this page and the portal read as one product. */
+  --accent: #ff6a2b;
+
+  --pad-x: clamp(24px, 6vw, 72px);
+  --pad-y: clamp(24px, 4.5vh, 48px);
 }
 
 *,
@@ -30,14 +44,13 @@ body {
 
 body {
   margin: 0;
-  /* Single screen: nothing below the fold, so nothing scrolls. */
-  overflow: hidden;
-  background: var(--blue-deep);
-  color: var(--on-blue);
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 17px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 16px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  /* One screen; nothing sits below the fold. */
+  overflow: hidden;
 }
 
 h1,
@@ -49,143 +62,92 @@ a {
   color: inherit;
 }
 
-/* The keyboard's place on the page. This was `outline: none`, which left
-   every link and button on the marketing site focusable and invisible to
-   anyone navigating by Tab. --glow is the palette's brightest blue and the
-   only one that holds up against the deep blue ground. */
-:focus-visible {
-  outline: 2px solid var(--glow);
-  outline-offset: 3px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition-duration: 0.001ms !important;
-  }
-}
-
-/* ==========================================================================
-   The scene
-   ========================================================================== */
-
+/*
+ * The body face is set here and not on `body`.
+ *
+ * --font-body is declared on the wrapper in (site)/layout.tsx, which is inside
+ * <body> -- and custom properties only inherit downwards, so `body` itself
+ * cannot see it. `font-family: var(--font-body)` there resolves to nothing, the
+ * whole declaration is dropped, and the page silently falls back to the
+ * browser default, which is Times. .screen is inside the wrapper, and
+ * everything visible is inside .screen.
+ */
 .screen {
+  font-family: var(--font-body), ui-sans-serif, sans-serif;
   position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100svh;
+  padding: var(--pad-y) var(--pad-x);
   isolation: isolate;
-  display: flex;
-  flex-direction: column;
-  height: 100svh;
-  overflow: hidden;
-  /* Night sky: deepest overhead, lifting toward the horizon. */
-  background: radial-gradient(
-      120% 78% at 50% 104%,
-      var(--blue-lift) 0%,
-      transparent 62%
-    ),
-    linear-gradient(180deg, var(--blue-deep) 0%, var(--blue) 72%);
 }
 
-/* A slow wash of light across the sky, like the glow off a city. */
+/*
+ * A single soft pool on the centre axis.
+ *
+ * Not decoration for its own sake: on a flat ground the type reads as pasted
+ * onto the page, and a dark page with nothing behind it looks switched off
+ * rather than quiet. One radial, centred on the headline, gives the column
+ * something to sit in. No grid, no layers, no scene.
+ */
 .screen::before {
   content: "";
   position: absolute;
-  inset: -20% -10% 30%;
-  z-index: -3;
-  background: radial-gradient(
-      42% 50% at 22% 30%,
-      rgb(111 155 255 / 22%) 0%,
-      transparent 70%
-    ),
-    radial-gradient(
-      38% 46% at 82% 18%,
-      rgb(111 155 255 / 14%) 0%,
-      transparent 72%
-    );
-}
-
-.scene__contours {
-  position: absolute;
   inset: 0;
-  z-index: -2;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  /* Fade out top and bottom so the lines read as texture, not as a diagram,
-     and so they hand off cleanly to the aurora. */
-  mask-image: linear-gradient(
-    180deg,
-    transparent 0%,
-    #000 22%,
-    #000 62%,
-    transparent 88%
-  );
-  -webkit-mask-image: linear-gradient(
-    180deg,
-    transparent 0%,
-    #000 22%,
-    #000 62%,
-    transparent 88%
-  );
-}
-
-.scene__aurora {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
   z-index: -1;
-  width: 100%;
-  height: clamp(190px, 36vh, 340px);
-  pointer-events: none;
-  filter: blur(0.4px);
-}
-
-.scene__constellation {
-  position: absolute;
-  top: clamp(88px, 15vh, 150px);
-  left: clamp(40px, 7vw, 120px);
-  z-index: -2;
-  width: clamp(90px, 9vw, 130px);
-  opacity: 0.5;
+  background: radial-gradient(
+    46% 42% at 50% 46%,
+    color-mix(in srgb, var(--accent) 9%, transparent),
+    transparent 72%
+  );
   pointer-events: none;
 }
 
-/* Painted after the aurora (same layer, later in DOM) so the footer links keep
-   their contrast against the brightest part of it. */
+/*
+ * Grain.
+ *
+ * A large dark field rendered in flat colour bands shows its gradient as
+ * stepped rings on an 8-bit display, and the radial above is exactly that
+ * shape. A little noise breaks the bands up, and it is also the cheapest way
+ * to stop a near-black page reading as a void.
+ *
+ * Fractal noise from one inline SVG filter -- no image request, nothing to
+ * 404, and it scales to any viewport. Held very low: visible as texture, never
+ * as dirt.
+ */
 .screen::after {
   content: "";
   position: absolute;
-  inset: auto 0 0 0;
+  inset: 0;
   z-index: -1;
-  height: clamp(90px, 14vh, 150px);
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgb(13 31 77 / 78%) 65%,
-    rgb(13 31 77 / 92%) 100%
-  );
+  opacity: 0.035;
   pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* ==========================================================================
-   Content
-   ========================================================================== */
+/* ------------------------------------------------------------- the header --- */
 
+/* Two corners that balance: the mark on the left, MLH on the right, and the
+   centred column below answers to neither. */
 .topline {
-  flex: none;
-  padding: var(--pad-y) var(--pad-x) 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
 }
 
-/* MLH's own placement convention: pinned to a top corner, hanging from the
-   edge. Kept clear of the wordmark, which sits top-left. */
+.wordmark {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* MLH require the badge hotlinked from their host and pinned to a top corner. */
 .mlh {
-  position: absolute;
-  top: 0;
-  right: clamp(16px, 3vw, 48px);
-  z-index: 10;
-  width: clamp(56px, 5.6vw, 80px);
+  flex: none;
+  width: clamp(46px, 4.2vw, 56px);
+  margin-top: calc(var(--pad-y) * -1);
   line-height: 0;
 }
 
@@ -194,370 +156,222 @@ a {
   height: auto;
 }
 
-/* Small caps on wide tracking: technical rather than editorial, so it holds
-   its own against the serif headline instead of echoing it. The star is the
-   same glyph as the sky. */
-.wordmark {
-  display: inline-flex;
-  align-items: center;
-  gap: clamp(8px, 0.8vw, 11px);
-}
-
-.wordmark__star {
-  flex: none;
-  width: clamp(12px, 1.1vw, 15px);
-  fill: var(--glow);
-  filter: drop-shadow(0 0 6px rgb(111 155 255 / 70%));
-}
-
-.wordmark__text {
-  font-weight: 700;
-  font-size: clamp(14px, 1.3vw, 18px);
-  line-height: 1;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  /* Tracking adds a trailing space after the final S; pull it back so the
-     lockup optically aligns with the copy below. */
-  margin-right: -0.26em;
-}
+/* --------------------------------------------------------------- the copy --- */
 
 .copy {
-  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  /* Three groups, evenly separated by a gap that scales with the viewport.
-     space-between was tried and pushed them to the extremes, which read as
-     disconnected and crowded the footer. */
+  align-items: center;
   justify-content: center;
-  gap: clamp(26px, 6.5vh, 76px);
-  min-height: 0;
-  padding: clamp(14px, 2.5vh, 36px) var(--pad-x);
+  max-width: 46rem;
+  margin-inline: auto;
   text-align: center;
 }
 
-.copy__intro,
-.copy__act {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+/*
+ * The rule above the eyebrow, and its twin below the sentence.
+ *
+ * They are what make this a block rather than three stacked lines: the eye
+ * reads a top and a bottom and treats everything between them as one object.
+ * Short, so they punctuate the column instead of dividing the page.
+ */
+.mark {
+  width: 36px;
+  height: 2px;
+  background: var(--accent);
+}
+
+.copy > .mark:first-child {
+  margin-bottom: clamp(26px, 3.6vh, 38px);
+}
+
+.copy > .mark:last-child {
+  margin-top: clamp(28px, 4vh, 42px);
+  /* The closing rule is quieter than the opening one: it ends the block
+     without asking to be looked at twice. */
+  width: 20px;
+  opacity: 0.45;
 }
 
 .eyebrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(12px, 1.6vw, 22px);
-  width: 100%;
-  font-size: clamp(11.5px, 1vw, 13px);
-  font-weight: 600;
-  letter-spacing: 0.34em;
+  color: var(--muted);
+  font-size: clamp(12.5px, 1.1vw, 13.5px);
+  font-weight: 500;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--on-blue);
 }
 
-/* Hairlines that fade outward, so the label sits in the scene rather than
-   floating loose above the headline. */
-.eyebrow::before,
-.eyebrow::after {
-  content: "";
-  flex: 0 1 clamp(28px, 7vw, 96px);
-  height: 1px;
-}
-
-.eyebrow::before {
-  background: linear-gradient(90deg, transparent, rgb(111 155 255 / 65%));
-}
-
-.eyebrow::after {
-  background: linear-gradient(90deg, rgb(111 155 255 / 65%), transparent);
-}
-
-.eyebrow span {
-  /* Tracking adds a trailing space; pull it back so the label optically
-     centres between the rules. */
-  margin-right: -0.34em;
-  text-shadow: 0 0 18px rgb(111 155 255 / 55%);
-}
-
+/*
+ * Set in the display face, regular weight, tightly tracked.
+ *
+ * A page with nothing to offer yet has no reason to raise its voice; the size
+ * carries it. `text-wrap: balance` matters more here than anywhere else on the
+ * page -- a centred headline that breaks into a long line and a short one is
+ * the difference between composed and accidental.
+ */
 .headline {
-  margin: clamp(16px, 3vh, 30px) auto 0;
-  max-width: 17ch;
-  font-family: var(--font-display), Georgia, serif;
+  margin-top: clamp(16px, 2.2vh, 22px);
+  font-family: var(--font-display), ui-sans-serif, sans-serif;
+  font-size: clamp(2.5rem, 7.4vw, 5rem);
   font-weight: 400;
-  font-size: clamp(2.2rem, 5.4vw, 4.7rem);
-  line-height: 1.03;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-  text-shadow: 0 0 46px rgb(111 155 255 / 32%);
-}
-
-.headline em {
-  font-style: italic;
-}
-
-.dare {
-  margin: 0 auto;
-  max-width: 42ch;
-  font-family: var(--font-display), Georgia, serif;
-  font-style: italic;
-  font-size: clamp(1.25rem, 2.2vw, 1.9rem);
-  line-height: 1.25;
-  color: var(--on-blue-soft);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
   text-wrap: balance;
 }
 
-.actions {
+.line {
+  margin-top: clamp(18px, 2.4vh, 24px);
+  /* Narrower than the headline on purpose: a centred paragraph wider than the
+     thing above it unbalances the column. */
+  max-width: 34ch;
+  color: var(--muted);
+  font-size: clamp(15px, 1.35vw, 16.5px);
+  line-height: 1.6;
+  text-wrap: balance;
+}
+
+/* ------------------------------------------------------------- the footer --- */
+
+/* Centred too. A space-between footer under a centred column puts weight in
+   the corners the composition spent its effort avoiding. */
+.foot {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 14px 22px;
-  margin-top: 0;
-}
-
-.cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 15px 34px;
-  border: 2px solid var(--on-blue);
-  border-radius: 999px;
-  background: var(--on-blue);
-  color: var(--blue);
-  font-size: 16px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
-}
-
-.cta:hover {
-  background: transparent;
-  color: var(--on-blue);
-  box-shadow: 0 0 34px rgb(111 155 255 / 45%);
-}
-
-.cta__arrow {
-  transition: transform 0.16s ease;
-}
-
-.cta:hover .cta__arrow {
-  transform: translateX(4px);
-}
-
-/* The deadline reads as a countdown between two rules rather than a pill: the
-   number carries the urgency, the date carries the fact. */
-.clock {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(22px, 3.2vw, 40px);
-  margin: clamp(20px, 3.4vh, 38px) auto 0;
-}
-
-.clock__lead {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  /* Holds the row steady while the count resolves after mount. */
-  min-width: clamp(78px, 8vw, 104px);
-  justify-content: flex-end;
-}
-
-.clock__count {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(2.3rem, 3.8vw, 3.4rem);
-  line-height: 0.86;
-  letter-spacing: -0.02em;
-  text-shadow: 0 0 26px rgb(111 155 255 / 45%);
-}
-
-.clock__unit,
-.clock__label {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  line-height: 1.35;
-  text-transform: uppercase;
-  color: var(--on-blue-soft);
-}
-
-.clock__today {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(1.5rem, 2.4vw, 2rem);
-  line-height: 1;
-  text-shadow: 0 0 26px rgb(111 155 255 / 45%);
-}
-
-.clock__when {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  text-align: left;
-}
-
-.clock__date {
-  font-size: clamp(14px, 1.25vw, 16px);
-  font-weight: 600;
-}
-
-.clock__closed {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
-}
-
-.contact {
-  margin-top: clamp(12px, 1.8vh, 18px);
-  font-size: 14px;
-  color: var(--on-blue-soft);
-}
-
-.contact a {
-  color: var(--on-blue);
-  text-underline-offset: 3px;
+  gap: 10px 22px;
+  padding-top: clamp(16px, 2.2vh, 20px);
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .links {
-  flex: none;
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: clamp(18px, 2vw, 28px);
-  padding: 0 var(--pad-x) var(--pad-y);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--on-blue-soft);
+  gap: 10px 22px;
 }
 
-.links a {
+/* A separator rather than a gap, so the two halves read as one line.
+   In --line it was invisible against the ground and read as a speck of dust
+   between the links; it wants to be punctuation, which means it has to be seen
+   and must not compete with the words either side of it. */
+.foot__sep {
+  color: var(--muted);
+  opacity: 0.55;
+}
+
+/*
+ * 24px of height, which is WCAG 2.2's minimum target size (2.5.8, AA).
+ *
+ * These are 13px links in a row, so the text alone gives about 18px of
+ * touchable height -- fine with a mouse and a miss on a phone. The padding is
+ * vertical only so the row keeps its rhythm, and the underline is drawn with a
+ * box-shadow rather than a border so it stays on the text instead of sliding
+ * down to the edge of the enlarged box.
+ */
+.foot a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding-block: 3px;
+  color: var(--paper);
   text-decoration: none;
-  transition: color 0.16s ease;
+  box-shadow: inset 0 -1px 0 transparent;
+  transition: box-shadow 0.15s ease, color 0.15s ease;
 }
 
-.links a:hover {
-  color: var(--on-blue);
+.foot a:hover {
+  color: var(--accent);
+  box-shadow: inset 0 -1px 0 var(--accent);
 }
 
-/* ==========================================================================
-   Responsive — height constrains as much as width on a locked screen
-   ========================================================================== */
+/* ------------------------------------------------------------- the entrance --- */
 
-@media (max-width: 900px) {
-  .scene__constellation {
+/*
+ * One page load, staggered, and nothing else moves on this page ever again.
+ *
+ * A holding page is read once for about two seconds, so the only motion worth
+ * having is the arrival. Scattered hover tricks and a looping pulse would be
+ * noise on a page with one sentence; a single orchestrated reveal gives the
+ * column an order to be read in -- rule, label, headline, sentence, rule --
+ * and then gets out of the way.
+ *
+ * CSS only. No library, no client component, and nothing to hydrate.
+ *
+ * `backwards` on the fill matters: without it each element paints at its final
+ * opacity for the frames before its delay elapses, which is the flicker this
+ * is supposed to prevent.
+ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.copy > * {
+  animation: rise 0.75s cubic-bezier(0.2, 0, 0, 1) backwards;
+}
+
+.copy > *:nth-child(1) { animation-delay: 0.05s; }
+.copy > *:nth-child(2) { animation-delay: 0.14s; }
+.copy > *:nth-child(3) { animation-delay: 0.23s; }
+.copy > *:nth-child(4) { animation-delay: 0.34s; }
+.copy > *:nth-child(5) { animation-delay: 0.45s; }
+
+.topline,
+.foot {
+  animation: rise 0.9s cubic-bezier(0.2, 0, 0, 1) 0.5s backwards;
+}
+
+/*
+ * Nothing animates for somebody who asked for that.
+ *
+ * `animation: none` rather than a shortened duration: the elements start at
+ * opacity 0, so a reader who has asked for reduced motion must be given the
+ * finished page, not a faster version of the arrival.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .copy > *,
+  .topline,
+  .foot {
+    animation: none;
+  }
+}
+
+/* Keyboard focus, which the original page never drew at all. */
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* ------------------------------------------------------------------ narrow --- */
+
+@media (max-width: 34rem) {
+  /* The separator is for a single line. Once the footer wraps it is pointing
+     at nothing. */
+  .foot__sep {
     display: none;
   }
 }
 
-/* 760px is 8px off --bp-lg (48rem / 768px) — the same breakpoint, rounded. */
-@media (max-width: 48rem) {
-  /* The flanking rules need horizontal room either side of the label to read
-     as rules. With a label this long there is none left and they collapse to
-     slivers, so drop them and let the label centre on its own. Tracking comes
-     down too, so it wraps to two balanced lines rather than three ragged ones. */
-  .eyebrow::before,
-  .eyebrow::after {
+/* Landscape phones: one screen with no scroll to recover anything. The
+   sentence and the closing rule go; the headline never does. */
+@media (max-height: 460px) {
+  .line,
+  .copy > .mark:last-child {
     display: none;
   }
-  .eyebrow {
-    display: block;
-    max-width: 26ch;
-    margin-inline: auto;
-    font-size: 10.5px;
-    letter-spacing: 0.16em;
-    line-height: 1.5;
-    text-wrap: balance;
-  }
-  .eyebrow span {
-    margin-right: 0;
+
+  .copy > .mark:first-child {
+    margin-bottom: 16px;
   }
 
   .headline {
-    max-width: 14ch;
-    font-size: clamp(2.1rem, 9.4vw, 3.2rem);
-  }
-  .cta {
-    width: 100%;
-    justify-content: center;
-  }
-  /* Clear of the badge, which hangs in the top-right corner. */
-  .topline {
-    padding-right: 84px;
-  }
-}
-
-/* Narrowest phones: the countdown's two columns force the date to wrap and
-   strand "EST", so stack it instead. */
-@media (max-width: 380px) {
-  .clock {
-    flex-direction: column;
-    gap: 10px;
-  }
-  .clock__lead {
-    min-width: 0;
-    justify-content: center;
-  }
-  .clock__when {
-    align-items: center;
-    text-align: center;
-  }
-}
-
-/* Short windows: shed optional lines rather than overflow a locked screen.
-   The headline, the deadline and the button never drop. */
-@media (max-height: 660px) {
-  @media (max-height: 540px) {
-  .contact,
-  .dare {
-    display: none;
-  }
-}
-
-/* Landscape phones. Everything left is essential, so nothing more can be shed:
-   shrink it instead. Without this the countdown falls off a screen that has no
-   scroll to recover it. */
-@media (max-height: 480px) {
-  :root {
-    --pad-y: 12px;
-  }
-  .eyebrow {
-    display: none;
-  }
-  .copy {
-    padding-block: 6px;
-  }
-  .headline {
-    margin-top: 10px;
-    max-width: 26ch;
-    font-size: clamp(1.5rem, 3.8vw, 2.2rem);
-  }
-  .copy {
-    gap: 14px;
-    padding-block: 8px;
-  }
-  .actions {
-    margin-top: 14px;
-  }
-  .cta {
-    padding: 11px 26px;
-    font-size: 15px;
-  }
-  .clock {
     margin-top: 12px;
-    gap: 18px;
-  }
-  .clock__count {
-    font-size: 1.9rem;
-  }
-  .clock__lead {
-    min-width: 62px;
-  }
-  .scene__aurora {
-    height: 34vh;
-  }
-}
-
-@media (max-height: 450px) {
-  .links {
-    display: none;
+    font-size: clamp(1.7rem, 5.4vw, 2.4rem);
   }
 }

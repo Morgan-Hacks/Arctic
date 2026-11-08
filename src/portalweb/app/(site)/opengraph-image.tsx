@@ -1,15 +1,16 @@
 import { ImageResponse } from "next/og";
 import { siteConfig } from "@/site.config";
 
-// Generated at build time rather than shipped as a PNG, so the deadline and
-// year come from site.config.ts like everything else and cannot drift out of
-// step with the page itself.
+// Generated at build time rather than shipped as a PNG, so the copy comes from
+// site.config.ts like everything else and cannot drift out of step with the
+// page -- which is exactly what happened while this card was still announcing
+// a drive the page had stopped running.
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = `MorganHacks ${siteConfig.year} — organizer applications`;
+export const alt = `MorganHacks ${siteConfig.year}`;
 
 export default function OpengraphImage() {
-  const { year, deadline } = siteConfig;
+  const { announcement } = siteConfig;
 
   return new ImageResponse(
     (
@@ -19,41 +20,53 @@ export default function OpengraphImage() {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
-          padding: "72px 80px",
-          // Matches the page's own ground. No gradients or webfonts: this
-          // renders in a constrained runtime, and every extra dependency is
-          // another way for the build to fail on something nobody looks at.
-          background: "#16306e",
-          color: "#ffffff",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0 86px",
+          // The page's own ground. No gradients or webfonts: this renders in a
+          // constrained runtime, and every extra dependency is another way for
+          // the build to fail on something nobody looks at.
+          background: "#0b0b0c",
+          color: "#f2f0ed",
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", fontSize: 30, letterSpacing: 6, fontWeight: 700 }}>
-          MORGANHACKS {year}
-        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+          }}
+        >
+          <div style={{ display: "flex", width: 44, height: 3, background: "#ff6a2b" }} />
 
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", fontSize: 84, lineHeight: 1.05, fontWeight: 700 }}>
-            Think you could pull this off?
-          </div>
-          <div style={{ display: "flex", marginTop: 20, fontSize: 34, color: "#c8d3f0" }}>
-            Organizer applications are open.
-          </div>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 28 }}>
           <div
             style={{
               display: "flex",
-              width: 14,
-              height: 14,
-              borderRadius: 7,
-              background: "#6f9bff",
+              marginTop: 38,
+              fontSize: 23,
+              letterSpacing: 5,
+              color: "#8a8681",
             }}
-          />
-          <div style={{ display: "flex", color: "#c8d3f0" }}>
-            Applications close {deadline.weekday}, {deadline.date} · {deadline.time}
+          >
+            {announcement.eyebrow.toUpperCase()}
+          </div>
+
+          <div style={{ display: "flex", marginTop: 20, fontSize: 94, letterSpacing: -4 }}>
+            {announcement.headline}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              marginTop: 24,
+              maxWidth: 740,
+              fontSize: 27,
+              color: "#8a8681",
+            }}
+          >
+            {announcement.line}
           </div>
         </div>
       </div>

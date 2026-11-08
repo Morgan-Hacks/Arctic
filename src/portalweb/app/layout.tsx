@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Instrument_Serif } from "next/font/google";
+import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { cookies } from "next/headers";
 import { DARK_MODE, isOn } from "@/lib/features";
@@ -57,16 +57,8 @@ const openDyslexic = localFont({
 });
 
 /** Display face. Carries the whole page, so it is the only other font loaded. */
-const display = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-  display: "swap",
-  variable: "--font-display",
-});
-
-const title = `MorganHacks ${siteConfig.year} — organizer applications`;
-const description = `Organizer applications for MorganHacks ${siteConfig.year} are open to all college students. Applications close ${siteConfig.deadline.weekday}, ${siteConfig.deadline.date} at ${siteConfig.deadline.time}.`;
+const title = `MorganHacks ${siteConfig.year}`;
+const description = siteConfig.announcement.description;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -130,7 +122,7 @@ export default async function RootLayout({
       // a dark ground, which was the honest blocker and is now dealt with: it
       // sits on its own plate in dark, see --brand-plate in tokens.css.
       data-theme={theme}
-      className={`${inter.variable} ${display.variable} ${openDyslexic.variable}`}
+      className={`${inter.variable} ${openDyslexic.variable}`}
     >
       <body>{children}</body>
     </html>
