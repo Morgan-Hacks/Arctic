@@ -1,17 +1,16 @@
 import { ImageResponse } from "next/og";
 import { siteConfig } from "@/site.config";
 
-// Generated at build time rather than shipped as a PNG, so the deadline and
-// year come from site.config.ts like everything else and cannot drift out of
-// step with the page itself.
+// Generated at build time rather than shipped as a PNG, so the copy comes from
+// site.config.ts like everything else and cannot drift out of step with the
+// page itself -- which is exactly what happened while this card was still
+// announcing a drive the page had stopped running.
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = siteConfig.recruiting
-  ? `MorganHacks ${siteConfig.year} — organizer applications`
-  : `MorganHacks ${siteConfig.year}`;
+export const alt = `MorganHacks ${siteConfig.year}`;
 
 export default function OpengraphImage() {
-  const { year, deadline, recruiting, holding } = siteConfig;
+  const { year, announcement } = siteConfig;
 
   return new ImageResponse(
     (
@@ -37,17 +36,10 @@ export default function OpengraphImage() {
 
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", fontSize: 84, lineHeight: 1.05, fontWeight: 700 }}>
-            {recruiting ? "Think you could pull this off?" : holding.card}
+            {announcement.card}
           </div>
-          {recruiting ? (
-            <div style={{ display: "flex", marginTop: 20, fontSize: 34, color: "#c8d3f0" }}>
-              Organizer applications are open.
-            </div>
-          ) : null}
         </div>
 
-        {/* The dated line goes with the drive. A card that still names a
-            September deadline is the version that gets shared in November. */}
         <div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 28 }}>
           <div
             style={{
@@ -58,11 +50,7 @@ export default function OpengraphImage() {
               background: "#6f9bff",
             }}
           />
-          <div style={{ display: "flex", color: "#c8d3f0" }}>
-            {recruiting
-              ? `Applications close ${deadline.weekday}, ${deadline.date} · ${deadline.time}`
-              : "Dates to be announced"}
-          </div>
+          <div style={{ display: "flex", color: "#c8d3f0" }}>Dates to be announced</div>
         </div>
       </div>
     ),

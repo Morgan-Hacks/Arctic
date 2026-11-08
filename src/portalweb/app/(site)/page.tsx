@@ -1,9 +1,7 @@
 import { siteConfig } from "@/site.config";
-import { Countdown } from "./countdown";
 import { Aurora, Constellation, Contours, STAR } from "./scene";
 
-const { year, recruiting, holding, organizerFormUrl, deadline, contactEmail, socials, mlh } =
-  siteConfig;
+const { year, announcement, contactEmail, socials, mlh } = siteConfig;
 
 export default function Home() {
   return (
@@ -48,62 +46,27 @@ export default function Home() {
             one stays internally tight. */}
         <div className="copy__intro">
           <p className="eyebrow">
-            <span>
-              MorganHacks {year}
-              {recruiting ? " · Organizer applications" : null}
-            </span>
+            <span>MorganHacks {year}</span>
           </p>
 
           <h1 className="headline">
-            {recruiting ? (
-              <>
-                Think you could <em>pull this off</em>?
-              </>
-            ) : (
-              <>
-                {holding.headline} <em>{holding.headlineEmphasis}</em>.
-              </>
-            )}
+            {announcement.headline} <em>{announcement.headlineEmphasis}</em>.
           </h1>
         </div>
 
-        <p className="dare">
-          {recruiting ? "Only one way to find out." : holding.line}
-        </p>
+        <p className="dare">{announcement.line}</p>
 
         <div className="copy__act">
           {/*
-            While the drive is off there is no call to action, and that is the
-            point of the switch rather than an oversight. A button is a promise
-            that something is waiting on the other side of it, and for eight
-            weeks this one led to a form that had closed. Nothing here is better
-            than something that is not true.
-          */}
-          {recruiting ? (
-            <>
-              <div className="actions">
-                <a
-                  className="cta"
-                  href={organizerFormUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Apply now
-                  <span className="cta__arrow" aria-hidden="true">
-                    →
-                  </span>
-                </a>
-              </div>
+            No call to action, deliberately.
 
-              <Countdown
-                iso={deadline.iso}
-                date={deadline.date}
-                time={deadline.time}
-              />
-            </>
-          ) : (
-            <p className="announce">{holding.follow}</p>
-          )}
+            There was one until November, and it pointed at an organizer form
+            that closed on 13 September -- so for eight weeks the page offered
+            "Apply now" above the countdown's own "Applications are closed". A
+            button is a promise that something is waiting behind it, and until
+            there is, nothing here is better than something untrue.
+          */}
+          <p className="announce">{announcement.follow}</p>
 
           <p className="contact">
             Questions? <a href={`mailto:${contactEmail}`}>{contactEmail}</a>

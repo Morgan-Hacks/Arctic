@@ -12,69 +12,39 @@ export const siteConfig = {
   year: "2027",
 
   /**
-   * Whether the organizer drive is running.
+   * What the page says.
    *
-   * `false` swaps the page for a holding message: no "Apply now", no
-   * countdown, and nothing that implies a form is waiting. The recruitment
-   * copy stays in the file beside it, so bringing the drive back is this one
-   * word rather than a rebuild.
+   * There is no organizer drive running, and the page no longer pretends
+   * otherwise: the 2027 recruitment copy, its Google Form and its countdown
+   * were removed in November 2026, eight weeks after the deadline they named
+   * had passed. Until a date is published this is the whole of the page's
+   * message, and it promises nothing it cannot keep -- 2027 is already public
+   * on the MLH badge, and everything past it is "to be announced", because
+   * inventing a date here is how a placeholder becomes a correction.
    *
-   * It is a switch rather than a date comparison on `deadline` on purpose. A
-   * drive can be paused, extended or reopened for reasons no clock knows
-   * about, and a page that decides on its own is a page nobody can correct in
-   * a hurry.
-   *
-   * Turned off on 2026-11-08: the deadline below passed on 13 September and
-   * the page had gone on offering "Apply now" next to "Applications are
-   * closed" for eight weeks, with the button still pointing at a live form.
+   * Starting the next drive means writing it again rather than flipping a
+   * switch. That is the right cost: the copy, the form and the dates will all
+   * be different, and a page that keeps a dead campaign on standby is how this
+   * one came to be serving a closed form in the first place.
    */
-  recruiting: false,
-
-  /**
-   * What the page says while `recruiting` is false.
-   *
-   * Deliberately promises nothing it cannot keep. The year is safe -- it is on
-   * the MLH badge already -- and everything past that is the one honest thing
-   * there is to say until somebody publishes a date.
-   */
-  holding: {
+  announcement: {
     headline: "Something is being",
-    /** Set in italic, the way the recruitment headline emphasises its last beat. */
+    /** Set in italic, the way the page emphasises its last beat. */
     headlineEmphasis: "planned",
     line: "Dates, applications and the rest: to be announced.",
     follow: "Follow along and you will hear first.",
     /**
      * What a search result and a shared link say.
      *
-     * Gated for the same reason the page is, and it matters more: the
-     * recruitment description states applications "are open" and names a
-     * deadline, and that sentence outlives the page in Google's index and in
-     * every link already pasted into a group chat.
+     * This outlives the page: a description sits in Google's index until a
+     * recrawl, and it renders in the preview of every link already pasted into
+     * a group chat. The sentence that was here said applications "are open"
+     * and named a deadline two months gone.
      */
     description:
       "MorganHacks at Morgan State University. Dates and applications for the next edition are to be announced.",
     /** The headline on the shared image, which has no room for a second line. */
     card: "Something is being planned.",
-  },
-
-  /** The organizer application form. Verified live 2026-08-30. */
-  organizerFormUrl: "https://forms.gle/SbJBfwhE3sPAARE66",
-
-  /**
-   * Applications close 2026-09-13 at 11:59 PM EST. Verified as a Sunday.
-   * After that date this page needs new copy — it is not self-expiring.
-   */
-  deadline: {
-    date: "September 13",
-    weekday: "Sunday",
-    /** Label as published on the recruitment flyer. */
-    time: "11:59 PM EST",
-    /**
-     * The same instant, for the countdown. Note September 13 falls inside
-     * daylight saving, so the real offset is EDT (UTC-4) even though the
-     * flyer says EST. 23:59 EDT = 03:59Z the next day.
-     */
-    iso: "2026-09-14T03:59:00Z",
   },
 
   /**

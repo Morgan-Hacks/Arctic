@@ -65,16 +65,8 @@ const display = Instrument_Serif({
   variable: "--font-display",
 });
 
-// Gated on `recruiting` like the page itself. This half matters more, not
-// less: the recruitment description says applications "are open" and names a
-// deadline, and that sentence outlives the page -- it sits in Google's index
-// and in the preview of every link already pasted into a group chat.
-const title = siteConfig.recruiting
-  ? `MorganHacks ${siteConfig.year} — organizer applications`
-  : `MorganHacks ${siteConfig.year}`;
-const description = siteConfig.recruiting
-  ? `Organizer applications for MorganHacks ${siteConfig.year} are open to all college students. Applications close ${siteConfig.deadline.weekday}, ${siteConfig.deadline.date} at ${siteConfig.deadline.time}.`
-  : siteConfig.holding.description;
+const title = `MorganHacks ${siteConfig.year}`;
+const description = siteConfig.announcement.description;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
