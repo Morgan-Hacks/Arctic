@@ -29,13 +29,16 @@ export default function Home() {
       </header>
 
       <main className="copy">
-        {/* The one coloured thing on the page, and it carries no information --
-            which is why it is a rule and not a word. */}
+        {/* Two rules, opening and closing the block. They carry no information,
+            which is why they are rules and not words: they are what makes the
+            three lines between them read as one object rather than a stack. */}
         <span className="mark" aria-hidden="true" />
 
         <p className="eyebrow">{announcement.eyebrow}</p>
         <h1 className="headline">{announcement.headline}</h1>
         <p className="line">{announcement.line}</p>
+
+        <span className="mark" aria-hidden="true" />
       </main>
 
       <footer className="foot">
@@ -50,6 +53,10 @@ export default function Home() {
             TikTok
           </a>
         </nav>
+
+        <span className="foot__sep" aria-hidden="true">
+          ·
+        </span>
 
         <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
       </footer>

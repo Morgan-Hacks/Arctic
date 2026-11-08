@@ -20,6 +20,7 @@ export default function OpengraphImage() {
           height: "100%",
           display: "flex",
           flexDirection: "column",
+          alignItems: "center",
           justifyContent: "center",
           padding: "0 86px",
           // The page's own ground. No gradients or webfonts: this renders in a
@@ -30,26 +31,43 @@ export default function OpengraphImage() {
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", width: 44, height: 3, background: "#ff6a2b" }} />
-
         <div
           style={{
             display: "flex",
-            marginTop: 40,
-            fontSize: 24,
-            letterSpacing: 4,
-            color: "#86827d",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
           }}
         >
-          {announcement.eyebrow.toUpperCase()}
-        </div>
+          <div style={{ display: "flex", width: 44, height: 3, background: "#ff6a2b" }} />
 
-        <div style={{ display: "flex", marginTop: 22, fontSize: 96, letterSpacing: -4 }}>
-          {announcement.headline}
-        </div>
+          <div
+            style={{
+              display: "flex",
+              marginTop: 38,
+              fontSize: 23,
+              letterSpacing: 5,
+              color: "#8a8681",
+            }}
+          >
+            {announcement.eyebrow.toUpperCase()}
+          </div>
 
-        <div style={{ display: "flex", marginTop: 26, fontSize: 28, color: "#86827d" }}>
-          {announcement.line}
+          <div style={{ display: "flex", marginTop: 20, fontSize: 94, letterSpacing: -4 }}>
+            {announcement.headline}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              marginTop: 24,
+              maxWidth: 740,
+              fontSize: 27,
+              color: "#8a8681",
+            }}
+          >
+            {announcement.line}
+          </div>
         </div>
       </div>
     ),

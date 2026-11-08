@@ -1,31 +1,34 @@
 /* ==========================================================================
    MorganHacks — the public page, between editions.
 
-   Three lines of type on a flat ground.
+   One centred column.
 
-   There is one fact to communicate and no date to count down to, so the page
-   is the sentence and nothing else. Everything that was here to fill space has
-   gone: the night scene, then the drafting grid, the warm pool, the status
-   dot and the board of empty rows that replaced it. A holding page that works
-   hard to look busy is a holding page that looks like it is hiding something.
+   The page has a single thing to say, so the composition is built around
+   saying it once, in the middle, with room on every side. Everything sits on
+   one vertical axis: the rule, the eyebrow, the headline, the sentence and
+   the footer all share a centre line, and the two corners of the header
+   balance each other.
 
-   One typeface, one accent, one column. Define colours on :root; never
-   hardcode a hex below.
+   Left-aligned, this read as text pushed into a corner of an empty screen.
+   Centred, the empty space is margin rather than absence -- the same words,
+   composed instead of placed.
+
+   One typeface, one accent. Define colours on :root; never hardcode a hex.
    ========================================================================== */
 
 :root {
   --ink: #0b0b0c;
   --paper: #f2f0ed;
-  --muted: #86827d;
-  --line: #232225;
+  --muted: #8a8681;
+  --line: #222124;
 
-  /* Used once, on a 34px rule that carries no information. It is the only
-     colour on the page, and it is the orange MorganHacks 2027 is being built
-     around, so this page and the portal read as one product. */
+  /* Used twice and only as structure: the rule above the eyebrow and the
+     hairlines that close the block. It is the orange MorganHacks 2027 is being
+     built around, so this page and the portal read as one product. */
   --accent: #ff6a2b;
 
-  --pad-x: clamp(24px, 7vw, 108px);
-  --pad-y: clamp(24px, 5vh, 52px);
+  --pad-x: clamp(24px, 6vw, 72px);
+  --pad-y: clamp(24px, 4.5vh, 48px);
 }
 
 *,
@@ -61,14 +64,39 @@ a {
 }
 
 .screen {
+  position: relative;
   display: grid;
   grid-template-rows: auto 1fr auto;
   min-height: 100svh;
   padding: var(--pad-y) var(--pad-x);
+  isolation: isolate;
+}
+
+/*
+ * A single soft pool on the centre axis.
+ *
+ * Not decoration for its own sake: on a flat ground the type reads as pasted
+ * onto the page, and a dark page with nothing behind it looks switched off
+ * rather than quiet. One radial, centred on the headline, gives the column
+ * something to sit in. No grid, no layers, no scene.
+ */
+.screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(
+    46% 42% at 50% 46%,
+    color-mix(in srgb, var(--accent) 9%, transparent),
+    transparent 72%
+  );
+  pointer-events: none;
 }
 
 /* ------------------------------------------------------------- the header --- */
 
+/* Two corners that balance: the mark on the left, MLH on the right, and the
+   centred column below answers to neither. */
 .topline {
   display: flex;
   align-items: flex-start;
@@ -83,11 +111,10 @@ a {
   text-transform: uppercase;
 }
 
-/* MLH require the badge hotlinked from their host and pinned to a top corner.
-   Small: it is a trust mark, not a headline. */
+/* MLH require the badge hotlinked from their host and pinned to a top corner. */
 .mlh {
   flex: none;
-  width: clamp(48px, 4.4vw, 58px);
+  width: clamp(46px, 4.2vw, 56px);
   margin-top: calc(var(--pad-y) * -1);
   line-height: 0;
 }
@@ -102,58 +129,85 @@ a {
 .copy {
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
-  max-width: 36rem;
+  max-width: 46rem;
+  margin-inline: auto;
+  text-align: center;
 }
 
+/*
+ * The rule above the eyebrow, and its twin below the sentence.
+ *
+ * They are what make this a block rather than three stacked lines: the eye
+ * reads a top and a bottom and treats everything between them as one object.
+ * Short, so they punctuate the column instead of dividing the page.
+ */
 .mark {
-  width: 34px;
+  width: 36px;
   height: 2px;
-  margin-bottom: clamp(26px, 4vh, 40px);
   background: var(--accent);
 }
 
+.copy > .mark:first-child {
+  margin-bottom: clamp(26px, 3.6vh, 38px);
+}
+
+.copy > .mark:last-child {
+  margin-top: clamp(28px, 4vh, 42px);
+  /* The closing rule is quieter than the opening one: it ends the block
+     without asking to be looked at twice. */
+  width: 20px;
+  opacity: 0.45;
+}
+
 .eyebrow {
-  margin-bottom: clamp(14px, 2vh, 20px);
   color: var(--muted);
-  font-size: clamp(13px, 1.2vw, 14px);
+  font-size: clamp(12.5px, 1.1vw, 13.5px);
   font-weight: 500;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
 }
 
 /*
- * Regular weight, not bold.
+ * Regular weight, and tightly tracked.
  *
- * The old headline was 800 and shouting; a page that has nothing to offer yet
- * has no reason to raise its voice. The size carries it.
+ * A page with nothing to offer yet has no reason to raise its voice; the size
+ * carries it. `text-wrap: balance` matters more here than anywhere else on the
+ * page -- a centred headline that breaks into a long line and a short one is
+ * the difference between composed and accidental.
  */
 .headline {
-  font-size: clamp(2.6rem, 8vw, 5.4rem);
+  margin-top: clamp(16px, 2.2vh, 22px);
+  font-size: clamp(2.5rem, 7.4vw, 5rem);
   font-weight: 400;
-  line-height: 1.04;
+  line-height: 1.05;
   letter-spacing: -0.04em;
   text-wrap: balance;
 }
 
 .line {
-  margin-top: clamp(18px, 2.6vh, 26px);
-  max-width: 30ch;
+  margin-top: clamp(18px, 2.4vh, 24px);
+  /* Narrower than the headline on purpose: a centred paragraph wider than the
+     thing above it unbalances the column. */
+  max-width: 34ch;
   color: var(--muted);
-  font-size: clamp(15px, 1.4vw, 17px);
-  line-height: 1.55;
-  text-wrap: pretty;
+  font-size: clamp(15px, 1.35vw, 16.5px);
+  line-height: 1.6;
+  text-wrap: balance;
 }
 
 /* ------------------------------------------------------------- the footer --- */
 
+/* Centred too. A space-between footer under a centred column puts weight in
+   the corners the composition spent its effort avoiding. */
 .foot {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px 32px;
-  padding-top: clamp(16px, 2.4vh, 22px);
+  align-items: center;
+  justify-content: center;
+  gap: 10px 22px;
+  padding-top: clamp(16px, 2.2vh, 20px);
   border-top: 1px solid var(--line);
   font-size: 13px;
   color: var(--muted);
@@ -162,7 +216,13 @@ a {
 .links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 24px;
+  justify-content: center;
+  gap: 10px 22px;
+}
+
+/* A separator rather than a gap, so the two halves read as one line. */
+.foot__sep {
+  color: var(--line);
 }
 
 .foot a {
@@ -187,25 +247,28 @@ a:focus-visible {
 
 /* ------------------------------------------------------------------ narrow --- */
 
-@media (max-width: 40rem) {
-  .foot {
-    flex-direction: column;
-    align-items: flex-start;
+@media (max-width: 34rem) {
+  /* The separator is for a single line. Once the footer wraps it is pointing
+     at nothing. */
+  .foot__sep {
+    display: none;
   }
 }
 
 /* Landscape phones: one screen with no scroll to recover anything. The
-   supporting line goes; the headline never does. */
+   sentence and the closing rule go; the headline never does. */
 @media (max-height: 460px) {
-  .line {
+  .line,
+  .copy > .mark:last-child {
     display: none;
   }
 
-  .mark {
-    margin-bottom: 18px;
+  .copy > .mark:first-child {
+    margin-bottom: 16px;
   }
 
   .headline {
-    font-size: clamp(1.7rem, 5.6vw, 2.4rem);
+    margin-top: 12px;
+    font-size: clamp(1.7rem, 5.4vw, 2.4rem);
   }
 }
