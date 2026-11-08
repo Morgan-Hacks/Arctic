@@ -46,7 +46,6 @@ body {
   margin: 0;
   background: var(--ink);
   color: var(--paper);
-  font-family: var(--font-body), ui-sans-serif, sans-serif;
   font-size: 16px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
@@ -63,7 +62,18 @@ a {
   color: inherit;
 }
 
+/*
+ * The body face is set here and not on `body`.
+ *
+ * --font-body is declared on the wrapper in (site)/layout.tsx, which is inside
+ * <body> -- and custom properties only inherit downwards, so `body` itself
+ * cannot see it. `font-family: var(--font-body)` there resolves to nothing, the
+ * whole declaration is dropped, and the page silently falls back to the
+ * browser default, which is Times. .screen is inside the wrapper, and
+ * everything visible is inside .screen.
+ */
 .screen {
+  font-family: var(--font-body), ui-sans-serif, sans-serif;
   position: relative;
   display: grid;
   grid-template-rows: auto 1fr auto;
