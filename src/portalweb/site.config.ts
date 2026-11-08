@@ -11,6 +11,40 @@ export const siteConfig = {
   /** The edition being recruited for. */
   year: "2027",
 
+  /**
+   * Whether the organizer drive is running.
+   *
+   * `false` swaps the page for a holding message: no "Apply now", no
+   * countdown, and nothing that implies a form is waiting. The recruitment
+   * copy stays in the file beside it, so bringing the drive back is this one
+   * word rather than a rebuild.
+   *
+   * It is a switch rather than a date comparison on `deadline` on purpose. A
+   * drive can be paused, extended or reopened for reasons no clock knows
+   * about, and a page that decides on its own is a page nobody can correct in
+   * a hurry.
+   *
+   * Turned off on 2026-11-08: the deadline below passed on 13 September and
+   * the page had gone on offering "Apply now" next to "Applications are
+   * closed" for eight weeks, with the button still pointing at a live form.
+   */
+  recruiting: false,
+
+  /**
+   * What the page says while `recruiting` is false.
+   *
+   * Deliberately promises nothing it cannot keep. The year is safe -- it is on
+   * the MLH badge already -- and everything past that is the one honest thing
+   * there is to say until somebody publishes a date.
+   */
+  holding: {
+    headline: "Something is being",
+    /** Set in italic, the way the recruitment headline emphasises its last beat. */
+    headlineEmphasis: "planned",
+    line: "Dates, applications and the rest: to be announced.",
+    follow: "Follow along and you will hear first.",
+  },
+
   /** The organizer application form. Verified live 2026-08-30. */
   organizerFormUrl: "https://forms.gle/SbJBfwhE3sPAARE66",
 

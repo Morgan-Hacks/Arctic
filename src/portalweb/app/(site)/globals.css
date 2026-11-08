@@ -405,6 +405,24 @@ a {
   font-size: clamp(1.4rem, 2.2vw, 1.9rem);
 }
 
+/*
+ * The line that stands where the button and the clock were.
+ *
+ * Sized between .dare and .contact rather than matching either: it is the last
+ * thing the page asks of anybody, and while there is nothing to apply for it
+ * should read as a note rather than a second headline. The social links it
+ * points at are already in the nav below, so it names the action without
+ * adding a third place to click.
+ */
+.announce {
+  margin: 0 auto;
+  max-width: 34ch;
+  font-size: clamp(15px, 1.4vw, 17px);
+  line-height: 1.5;
+  color: var(--on-blue-soft);
+  text-wrap: balance;
+}
+
 .contact {
   margin-top: clamp(12px, 1.8vh, 18px);
   font-size: 14px;
