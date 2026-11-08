@@ -1,18 +1,13 @@
-import { Fragment } from "react";
 import { siteConfig } from "@/site.config";
 
-const { year, announcement, contactEmail, socials, mlh } = siteConfig;
+const { announcement, contactEmail, socials, mlh } = siteConfig;
 
 /**
  * The public page between editions.
  *
- * Eleven words of message and four facts, none of which are known yet. The
- * board is the design: a label with "To be announced" beside it reads as a slot
- * waiting to be filled, where a bare sentence reads as a page that gave up.
- *
- * No scene, no canvas and nothing client-side. The previous version carried
- * three absolutely-positioned SVG layers and a countdown that ran on an
- * interval; this one is static markup and two CSS gradients.
+ * Three lines of type and a footer. There is one fact to communicate and no
+ * date to put a countdown on, so the page is the sentence and nothing else --
+ * no scene, no board, no client components and no state.
  */
 export default function Home() {
   return (
@@ -34,35 +29,13 @@ export default function Home() {
       </header>
 
       <main className="copy">
-        <p className="status">
-          {/* Decorative: the words beside it already say what it means. */}
-          <span className="status__dot" aria-hidden="true" />
-          <span>
-            <span className="status__year">MorganHacks {year}</span> · In planning
-          </span>
-        </p>
+        {/* The one coloured thing on the page, and it carries no information --
+            which is why it is a rule and not a word. */}
+        <span className="mark" aria-hidden="true" />
 
-        <h1 className="headline">
-          {announcement.headline} <em>{announcement.headlineEmphasis}</em>.
-        </h1>
-
-        {/*
-          A Fragment per row, not a wrapping <div style={{ display: "contents" }}>.
-          `display: contents` makes the pair lay out as grid items, but it does
-          nothing for selector matching -- `.board > dt` needs dt to be a direct
-          DOM child, and inside a wrapper it is not. The grid still looked right
-          and every other board rule silently stopped applying: no rules between
-          rows, no padding, no monospace. It reads as a styling problem and it is
-          a markup one.
-        */}
-        <dl className="board">
-          {announcement.board.map((row) => (
-            <Fragment key={row.label}>
-              <dt>{row.label}</dt>
-              <dd>{row.value}</dd>
-            </Fragment>
-          ))}
-        </dl>
+        <p className="eyebrow">{announcement.eyebrow}</p>
+        <h1 className="headline">{announcement.headline}</h1>
+        <p className="line">{announcement.line}</p>
       </main>
 
       <footer className="foot">
@@ -78,9 +51,7 @@ export default function Home() {
           </a>
         </nav>
 
-        <p>
-          <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
-        </p>
+        <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
       </footer>
     </div>
   );

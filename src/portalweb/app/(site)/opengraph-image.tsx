@@ -10,7 +10,7 @@ export const contentType = "image/png";
 export const alt = `MorganHacks ${siteConfig.year}`;
 
 export default function OpengraphImage() {
-  const { year, announcement } = siteConfig;
+  const { announcement } = siteConfig;
 
   return new ImageResponse(
     (
@@ -20,46 +20,36 @@ export default function OpengraphImage() {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
-          padding: "68px 76px",
+          justifyContent: "center",
+          padding: "0 86px",
           // The page's own ground. No gradients or webfonts: this renders in a
           // constrained runtime, and every extra dependency is another way for
           // the build to fail on something nobody looks at.
-          background: "#0c0b0d",
-          color: "#f4f1ec",
+          background: "#0b0b0c",
+          color: "#f2f0ed",
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 26, letterSpacing: 5 }}>
-          <div
-            style={{
-              display: "flex",
-              width: 12,
-              height: 12,
-              borderRadius: 6,
-              background: "#ff6a2b",
-            }}
-          />
-          <div style={{ display: "flex", color: "#8f8a85" }}>
-            MORGANHACKS {year} · IN PLANNING
-          </div>
+        <div style={{ display: "flex", width: 44, height: 3, background: "#ff6a2b" }} />
+
+        <div
+          style={{
+            display: "flex",
+            marginTop: 40,
+            fontSize: 24,
+            letterSpacing: 4,
+            color: "#86827d",
+          }}
+        >
+          {announcement.eyebrow.toUpperCase()}
         </div>
 
-        <div style={{ display: "flex", fontSize: 92, lineHeight: 1.02, fontWeight: 800, letterSpacing: -3 }}>
-          {announcement.card}
+        <div style={{ display: "flex", marginTop: 22, fontSize: 96, letterSpacing: -4 }}>
+          {announcement.headline}
         </div>
 
-        {/* The same board the page shows, minus the rows a 1200px card has no
-            room to spell out. */}
-        <div style={{ display: "flex", gap: 56, fontSize: 25, color: "#8f8a85" }}>
-          {announcement.board.slice(0, 2).map((row) => (
-            <div key={row.label} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ display: "flex", letterSpacing: 2, fontSize: 19 }}>
-                {row.label.toUpperCase()}
-              </div>
-              <div style={{ display: "flex", color: "#f4f1ec" }}>{row.value}</div>
-            </div>
-          ))}
+        <div style={{ display: "flex", marginTop: 26, fontSize: 28, color: "#86827d" }}>
+          {announcement.line}
         </div>
       </div>
     ),

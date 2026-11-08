@@ -12,45 +12,26 @@ export const siteConfig = {
   year: "2027",
 
   /**
-   * What the page says.
+   * What the page says. All of it.
    *
-   * There is no organizer drive running, and the page no longer pretends
-   * otherwise: the 2027 recruitment copy, its Google Form and its countdown
-   * were removed in November 2026, eight weeks after the deadline they named
-   * had passed.
+   * There is no organizer drive running and no date published, so the page has
+   * one fact and says it plainly rather than dressing it up. Four short strings
+   * is the whole of the content; anything longer would be filling space.
    *
    * It promises nothing it cannot keep. 2027 is already public on the MLH
-   * badge, and everything past it is "to be announced", because no date has
-   * been published and inventing one here is how a placeholder becomes a
-   * correction.
+   * badge, Morgan State is where it has always been, and everything else is to
+   * be announced -- because inventing a date here is how a placeholder becomes
+   * a correction.
    *
    * Starting the next drive means writing it again rather than flipping a
-   * switch. That is the right cost: the copy, the form and the dates will all
-   * be different, and a page that keeps a dead campaign on standby is how this
-   * one came to be serving a closed form in the first place.
+   * switch. The copy, the form and the dates will all be different, and a page
+   * that keeps a dead campaign on standby is how this one came to be serving a
+   * closed Google Form for eight weeks after its deadline.
    */
   announcement: {
-    headline: "Something is being",
-    /** Set in the accent, which is the only coloured word on the page. */
-    headlineEmphasis: "planned",
-
-    /**
-     * The board.
-     *
-     * One row that is already known, and the rest honestly empty. The known
-     * row is load-bearing: a board where every value reads "To be announced"
-     * looks like a page that failed to load its own content, and one real
-     * fact is what tells a reader the empty rows are pending rather than
-     * broken.
-     *
-     * Add the dates here when there are dates. Nothing else has to change.
-     */
-    board: [
-      { label: "Dates", value: "To be announced" },
-      { label: "Applications", value: "To be announced" },
-      { label: "Where", value: "Morgan State University, Baltimore" },
-      { label: "Updates", value: "@morgan.hacks" },
-    ],
+    eyebrow: "MorganHacks 2027",
+    headline: "To be announced.",
+    line: "Dates and applications for the next hackathon at Morgan State University.",
 
     /**
      * What a search result and a shared link say.
@@ -61,9 +42,7 @@ export const siteConfig = {
      * and named a deadline two months gone.
      */
     description:
-      "MorganHacks at Morgan State University. Dates and applications for the next edition are to be announced.",
-    /** The headline on the shared image, which has no room for a second line. */
-    card: "Something is being planned.",
+      "MorganHacks at Morgan State University. Dates and applications for the next hackathon are to be announced.",
   },
 
   /**

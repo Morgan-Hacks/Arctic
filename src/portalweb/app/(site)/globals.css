@@ -1,44 +1,31 @@
 /* ==========================================================================
    MorganHacks — the public page, between editions.
 
-   A status board, not a poster.
+   Three lines of type on a flat ground.
 
-   The page has one honest thing to say and it is that nothing is settled yet.
-   The previous design said it the way a poster would -- a night scene, an
-   aurora, a serif headline centred in the middle of the screen -- and a poster
-   with nothing on it reads as a page that failed to load. So the absence is
-   the subject here: labelled rows with "To be announced" where the facts will
-   go, a shape people already read as *pending* rather than *missing*.
+   There is one fact to communicate and no date to count down to, so the page
+   is the sentence and nothing else. Everything that was here to fill space has
+   gone: the night scene, then the drafting grid, the warm pool, the status
+   dot and the board of empty rows that replaced it. A holding page that works
+   hard to look busy is a holding page that looks like it is hiding something.
 
-   Everything is left-aligned against one rail, because a board is read down a
-   column and centring puts the eye somewhere different on every line.
-
-   Define colours here on :root; never hardcode a hex below.
+   One typeface, one accent, one column. Define colours on :root; never
+   hardcode a hex below.
    ========================================================================== */
 
 :root {
-  /* Near-black rather than the old navy, and warm rather than blue-grey: the
-     ink carries a little red so the orange below sits in the same family
-     instead of vibrating against a cold ground. */
-  --ink: #0c0b0d;
-  --paper: #f4f1ec;
-  --muted: #8f8a85;
-  /* Two weights of rule. The grid behind everything has to sit under the type
-     without competing with it; the board's own rules are structure and have to
-     be seen, or the rows read as loose text and the board stops being a board.
-     At #262429 for both, they were invisible on a lit screen. */
-  --line: #262429;
-  --rule: #38343d;
+  --ink: #0b0b0c;
+  --paper: #f2f0ed;
+  --muted: #86827d;
+  --line: #232225;
 
-  /* One accent, for the only thing on the page that is live. MorganHacks 2027
-     is being built around a heist, which is navy and orange; this is that
-     orange, and it is the single saturated colour here. */
+  /* Used once, on a 34px rule that carries no information. It is the only
+     colour on the page, and it is the orange MorganHacks 2027 is being built
+     around, so this page and the portal read as one product. */
   --accent: #ff6a2b;
 
-  --pad-x: clamp(22px, 7vw, 120px);
-  --pad-y: clamp(22px, 5vh, 54px);
-
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --pad-x: clamp(24px, 7vw, 108px);
+  --pad-y: clamp(24px, 5vh, 52px);
 }
 
 *,
@@ -65,10 +52,7 @@ body {
 }
 
 h1,
-p,
-dl,
-dd,
-dt {
+p {
   margin: 0;
 }
 
@@ -76,53 +60,11 @@ a {
   color: inherit;
 }
 
-/* -------------------------------------------------------------- the frame --- */
-
 .screen {
-  position: relative;
   display: grid;
   grid-template-rows: auto 1fr auto;
   min-height: 100svh;
   padding: var(--pad-y) var(--pad-x);
-  isolation: isolate;
-}
-
-/*
- * A drafting grid, not a landscape.
- *
- * Faint enough to read as paper texture at arm's length and to disappear on a
- * phone in daylight. It replaces the contour lines, the aurora and the
- * constellation with one gradient and no DOM, which is the other half of the
- * point: the old scene was three absolutely-positioned SVG layers on a page
- * that now says eleven words.
- */
-.screen::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  background-image:
-    linear-gradient(to right, var(--line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--line) 1px, transparent 1px);
-  background-size: 72px 72px;
-  opacity: 0.5;
-  /* Fades toward the bottom right so the footer sits on clean ground. */
-  mask-image: radial-gradient(120% 95% at 0% 0%, #000 20%, transparent 78%);
-}
-
-/* A single warm pool behind the headline, so the type has somewhere to sit
-   without the page acquiring a picture. */
-.screen::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: radial-gradient(
-    58% 48% at 8% 42%,
-    color-mix(in srgb, var(--accent) 13%, transparent),
-    transparent 70%
-  );
-  pointer-events: none;
 }
 
 /* ------------------------------------------------------------- the header --- */
@@ -135,18 +77,17 @@ a {
 }
 
 .wordmark {
-  font-family: var(--mono);
-  font-size: clamp(12px, 1.1vw, 13px);
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
 /* MLH require the badge hotlinked from their host and pinned to a top corner.
-   Narrower than before: it is a trust mark, not a headline. */
+   Small: it is a trust mark, not a headline. */
 .mlh {
   flex: none;
-  width: clamp(52px, 5vw, 66px);
+  width: clamp(48px, 4.4vw, 58px);
   margin-top: calc(var(--pad-y) * -1);
   line-height: 0;
 }
@@ -162,96 +103,46 @@ a {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: clamp(26px, 4.4vh, 46px);
-  max-width: 44rem;
-  padding-block: clamp(18px, 4vh, 48px);
+  max-width: 36rem;
 }
 
-.status {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--mono);
-  font-size: clamp(11px, 1vw, 12.5px);
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.status__dot {
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+.mark {
+  width: 34px;
+  height: 2px;
+  margin-bottom: clamp(26px, 4vh, 40px);
   background: var(--accent);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
-  animation: pulse 2.6s ease-in-out infinite;
 }
 
-.status__year {
-  color: var(--paper);
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.35;
-  }
+.eyebrow {
+  margin-bottom: clamp(14px, 2vh, 20px);
+  color: var(--muted);
+  font-size: clamp(13px, 1.2vw, 14px);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 /*
- * The headline carries the whole message, so it is the only large thing.
+ * Regular weight, not bold.
  *
- * A heavy grotesque on a tight track rather than the serif the old page used:
- * this reads as a notice, which is what a page with nothing to apply for
- * should sound like.
+ * The old headline was 800 and shouting; a page that has nothing to offer yet
+ * has no reason to raise its voice. The size carries it.
  */
 .headline {
-  max-width: 20ch;
-  font-size: clamp(2.4rem, 7.2vw, 5.1rem);
-  font-weight: 800;
-  line-height: 1.02;
-  letter-spacing: -0.035em;
+  font-size: clamp(2.6rem, 8vw, 5.4rem);
+  font-weight: 400;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
   text-wrap: balance;
 }
 
-.headline em {
-  font-style: normal;
-  color: var(--accent);
-}
-
-/* -------------------------------------------------------------- the board --- */
-
-/*
- * Where the facts will go.
- *
- * A description list, because that is what it is: a label and its value. The
- * rule above each row is what makes the right-hand side read as a slot waiting
- * to be filled rather than a sentence that trailed off.
- */
-.board {
-  display: grid;
-  grid-template-columns: minmax(8.5rem, max-content) 1fr;
-  column-gap: clamp(20px, 5vw, 64px);
-  max-width: 34rem;
-}
-
-.board > dt,
-.board > dd {
-  padding-block: clamp(11px, 1.5vh, 15px);
-  border-top: 1px solid var(--rule);
-  font-family: var(--mono);
-  font-size: clamp(12.5px, 1.2vw, 14px);
-}
-
-.board > dt {
+.line {
+  margin-top: clamp(18px, 2.6vh, 26px);
+  max-width: 30ch;
   color: var(--muted);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.board > dd {
-  color: var(--paper);
+  font-size: clamp(15px, 1.4vw, 17px);
+  line-height: 1.55;
+  text-wrap: pretty;
 }
 
 /* ------------------------------------------------------------- the footer --- */
@@ -261,20 +152,17 @@ a {
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 14px 32px;
-  padding-top: clamp(14px, 2.4vh, 22px);
-  border-top: 1px solid var(--rule);
-  font-family: var(--mono);
-  font-size: clamp(11.5px, 1.05vw, 13px);
+  gap: 12px 32px;
+  padding-top: clamp(16px, 2.4vh, 22px);
+  border-top: 1px solid var(--line);
+  font-size: 13px;
   color: var(--muted);
 }
 
 .links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 26px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  gap: 8px 24px;
 }
 
 .foot a {
@@ -290,7 +178,7 @@ a {
   border-bottom-color: var(--accent);
 }
 
-/* Keyboard focus, which the old page never drew at all. */
+/* Keyboard focus, which the original page never drew at all. */
 a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 4px;
@@ -300,48 +188,24 @@ a:focus-visible {
 /* ------------------------------------------------------------------ narrow --- */
 
 @media (max-width: 40rem) {
-  .board {
-    grid-template-columns: 1fr;
-    column-gap: 0;
-  }
-
-  /* Label and value become one stacked pair, so only the label keeps the rule
-     and the two stay visibly joined. */
-  .board > dt {
-    padding-bottom: 2px;
-    border-top: 1px solid var(--rule);
-  }
-
-  .board > dd {
-    padding-top: 0;
-    border-top: 0;
-  }
-
   .foot {
     flex-direction: column;
     align-items: flex-start;
   }
 }
 
-/* Landscape phones: one screen with no scroll to recover anything, so the
-   board goes first. The headline never drops. */
+/* Landscape phones: one screen with no scroll to recover anything. The
+   supporting line goes; the headline never does. */
 @media (max-height: 460px) {
-  .board,
-  .status {
+  .line {
     display: none;
   }
 
-  .copy {
-    gap: 18px;
+  .mark {
+    margin-bottom: 18px;
   }
 
   .headline {
-    font-size: clamp(1.6rem, 5.4vw, 2.3rem);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .status__dot {
-    animation: none;
+    font-size: clamp(1.7rem, 5.6vw, 2.4rem);
   }
 }
