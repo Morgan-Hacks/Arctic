@@ -43,6 +43,18 @@ export const siteConfig = {
     headlineEmphasis: "planned",
     line: "Dates, applications and the rest: to be announced.",
     follow: "Follow along and you will hear first.",
+    /**
+     * What a search result and a shared link say.
+     *
+     * Gated for the same reason the page is, and it matters more: the
+     * recruitment description states applications "are open" and names a
+     * deadline, and that sentence outlives the page in Google's index and in
+     * every link already pasted into a group chat.
+     */
+    description:
+      "MorganHacks at Morgan State University. Dates and applications for the next edition are to be announced.",
+    /** The headline on the shared image, which has no room for a second line. */
+    card: "Something is being planned.",
   },
 
   /** The organizer application form. Verified live 2026-08-30. */

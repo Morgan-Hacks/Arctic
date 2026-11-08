@@ -6,10 +6,12 @@ import { siteConfig } from "@/site.config";
 // step with the page itself.
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = `MorganHacks ${siteConfig.year} — organizer applications`;
+export const alt = siteConfig.recruiting
+  ? `MorganHacks ${siteConfig.year} — organizer applications`
+  : `MorganHacks ${siteConfig.year}`;
 
 export default function OpengraphImage() {
-  const { year, deadline } = siteConfig;
+  const { year, deadline, recruiting, holding } = siteConfig;
 
   return new ImageResponse(
     (
@@ -35,13 +37,17 @@ export default function OpengraphImage() {
 
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", fontSize: 84, lineHeight: 1.05, fontWeight: 700 }}>
-            Think you could pull this off?
+            {recruiting ? "Think you could pull this off?" : holding.card}
           </div>
-          <div style={{ display: "flex", marginTop: 20, fontSize: 34, color: "#c8d3f0" }}>
-            Organizer applications are open.
-          </div>
+          {recruiting ? (
+            <div style={{ display: "flex", marginTop: 20, fontSize: 34, color: "#c8d3f0" }}>
+              Organizer applications are open.
+            </div>
+          ) : null}
         </div>
 
+        {/* The dated line goes with the drive. A card that still names a
+            September deadline is the version that gets shared in November. */}
         <div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 28 }}>
           <div
             style={{
@@ -53,7 +59,9 @@ export default function OpengraphImage() {
             }}
           />
           <div style={{ display: "flex", color: "#c8d3f0" }}>
-            Applications close {deadline.weekday}, {deadline.date} · {deadline.time}
+            {recruiting
+              ? `Applications close ${deadline.weekday}, ${deadline.date} · ${deadline.time}`
+              : "Dates to be announced"}
           </div>
         </div>
       </div>
