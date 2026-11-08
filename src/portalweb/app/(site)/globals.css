@@ -220,9 +220,13 @@ a {
   gap: 10px 22px;
 }
 
-/* A separator rather than a gap, so the two halves read as one line. */
+/* A separator rather than a gap, so the two halves read as one line.
+   In --line it was invisible against the ground and read as a speck of dust
+   between the links; it wants to be punctuation, which means it has to be seen
+   and must not compete with the words either side of it. */
 .foot__sep {
-  color: var(--line);
+  color: var(--muted);
+  opacity: 0.55;
 }
 
 .foot a {
