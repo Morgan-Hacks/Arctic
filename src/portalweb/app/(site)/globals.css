@@ -23,7 +23,12 @@
   --ink: #0c0b0d;
   --paper: #f4f1ec;
   --muted: #8f8a85;
+  /* Two weights of rule. The grid behind everything has to sit under the type
+     without competing with it; the board's own rules are structure and have to
+     be seen, or the rows read as loose text and the board stops being a board.
+     At #262429 for both, they were invisible on a lit screen. */
   --line: #262429;
+  --rule: #38343d;
 
   /* One accent, for the only thing on the page that is live. MorganHacks 2027
      is being built around a heist, which is navy and orange; this is that
@@ -234,7 +239,7 @@ a {
 .board > dt,
 .board > dd {
   padding-block: clamp(11px, 1.5vh, 15px);
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--rule);
   font-family: var(--mono);
   font-size: clamp(12.5px, 1.2vw, 14px);
 }
@@ -258,7 +263,7 @@ a {
   justify-content: space-between;
   gap: 14px 32px;
   padding-top: clamp(14px, 2.4vh, 22px);
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--rule);
   font-family: var(--mono);
   font-size: clamp(11.5px, 1.05vw, 13px);
   color: var(--muted);
@@ -304,6 +309,7 @@ a:focus-visible {
      and the two stay visibly joined. */
   .board > dt {
     padding-bottom: 2px;
+    border-top: 1px solid var(--rule);
   }
 
   .board > dd {
