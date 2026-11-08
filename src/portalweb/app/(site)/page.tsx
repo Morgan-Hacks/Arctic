@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { siteConfig } from "@/site.config";
 
 const { year, announcement, contactEmail, socials, mlh } = siteConfig;
@@ -45,12 +46,21 @@ export default function Home() {
           {announcement.headline} <em>{announcement.headlineEmphasis}</em>.
         </h1>
 
+        {/*
+          A Fragment per row, not a wrapping <div style={{ display: "contents" }}>.
+          `display: contents` makes the pair lay out as grid items, but it does
+          nothing for selector matching -- `.board > dt` needs dt to be a direct
+          DOM child, and inside a wrapper it is not. The grid still looked right
+          and every other board rule silently stopped applying: no rules between
+          rows, no padding, no monospace. It reads as a styling problem and it is
+          a markup one.
+        */}
         <dl className="board">
           {announcement.board.map((row) => (
-            <div key={row.label} style={{ display: "contents" }}>
+            <Fragment key={row.label}>
               <dt>{row.label}</dt>
               <dd>{row.value}</dd>
-            </div>
+            </Fragment>
           ))}
         </dl>
       </main>
