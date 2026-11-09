@@ -6,7 +6,15 @@ using MorganHacks.Observability;
 using Npgsql;
 using MorganHacks.Features;
 
-var builder = Host.CreateApplicationBuilder(args);
+// A web application, for a worker that serves exactly one request.
+//
+// lark has no API and wants none. What it needs is a door somebody can knock
+// on, because SendLoop below is a BackgroundService: it starts draining the
+// queue the moment this process exists, so *being started* is the entire
+// behaviour. Container Apps' HTTP scaler brings a sleeping replica up to
+// answer a request, which turns "wake the mail worker" into a plain POST
+// instead of a database poll running every thirty seconds forever.
+var builder = WebApplication.CreateBuilder(args);
 
 builder.UseArcticLogging("lark");
 
@@ -78,5 +86,22 @@ builder.Services.AddHostedService<SendLoop>();
 // at start-up rather than at the moment somebody first relies on a flag.
 builder.AddFeatures();
 
-var host = builder.Build();
-host.Run();
+var app = builder.Build();
+
+// The door. It deliberately does nothing.
+//
+// There is no body to read and no message id to pass: by the time this handler
+// runs, the process is up and SendLoop is already claiming rows. Accepting a
+// payload would invite a caller to believe this dispatches one specific
+// message, which it does not and should not -- the queue decides what is next,
+// including retries that no caller knows about.
+//
+// 202 rather than 200 for the same reason: the work has been accepted, not
+// completed, and the caller must not wait around for it.
+app.MapPost("/api/wake", () => Results.Accepted());
+
+// Liveness for the platform's own probe, kept separate from the door above so
+// that a health check never looks like a knock in the logs.
+app.MapGet("/api/health", () => Results.Ok("ok"));
+
+app.Run();
