@@ -28,8 +28,50 @@ public sealed class QueuedEmailSender(
     TemplateStore templates,
     MessageQueue queue,
     IHttpContextAccessor http,
+    MailWaker waker,
     ILogger<QueuedEmailSender> log) : IEmailSender
 {
+    /// <summary>
+    /// Asks lark to start sending, once this request has finished.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// After the response, and not inline, because <c>EnqueueTransactionalAsync</c>
+    /// is exactly what its name says: the row is written inside the caller's
+    /// transaction and does not exist for anybody else until that transaction
+    /// commits. Knocking from here would wake lark, have it claim nothing
+    /// because there is nothing it can see, and let it go back to sleep —
+    /// leaving the message that *was* committed a moment later to wait for the
+    /// hourly rule. The bug would show up as mail that is late exactly when
+    /// traffic is low enough for lark to be asleep.
+    /// </para>
+    /// <para>
+    /// Once per request, not once per message. An endpoint that queues two
+    /// emails wants one knock; lark drains the whole queue on waking and does
+    /// not care how many rows prompted it.
+    /// </para>
+    /// <para>
+    /// With no HttpContext there is no safe moment to pick — nothing marks the
+    /// end of the surrounding transaction — so this does nothing and the
+    /// hourly rule stays responsible.
+    /// </para>
+    /// </remarks>
+    private void WakeLarkAfterResponse()
+    {
+        if (http.HttpContext is not { } context)
+        {
+            return;
+        }
+
+        const string scheduled = "lark-wake-scheduled";
+        if (!context.Items.TryAdd(scheduled, true))
+        {
+            return;
+        }
+
+        context.Response.OnCompleted(() => waker.KnockAsync());
+    }
+
     /// <summary>The template this sender needs to exist. Seeded by migration.</summary>
     public const string TemplateKey = "magic_link";
 
@@ -62,6 +104,8 @@ public sealed class QueuedEmailSender(
         log.LogInformation(
             "Queued a sign-in link for {PersonId}. {event}",
             personId, Events.MagicLinkRequested);
+
+        WakeLarkAfterResponse();
     }
 
     public async Task SendOrganizerWelcomeAsync(
@@ -92,5 +136,7 @@ public sealed class QueuedEmailSender(
         log.LogInformation(
             "Queued a console welcome for {PersonId}. {event}",
             personId, Events.OrganizerWelcomed);
+
+        WakeLarkAfterResponse();
     }
 }

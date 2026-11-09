@@ -529,6 +529,22 @@ resource atlas 'Microsoft.App/containerApps@2024-03-01' = {
             // sessions.ip read 100.100.x and put every request in a single
             // rate-limit bucket.
             { name: 'Network__ForwardLimit', value: '2' }
+            // Where to knock after queueing mail, composed by convention
+            // rather than read off lark.
+            //
+            // lark.properties.configuration.ingress.fqdn would be the obvious
+            // way to write this and it does not compile: harbor already reads
+            // atlas's FQDN and lark already reads harbor's, so atlas reading
+            // lark's closes the loop and Bicep refuses the cycle. The internal
+            // name is deterministic -- <app>.internal.<environment domain> --
+            // so taking it from the environment instead breaks the cycle
+            // without inventing a parameter somebody has to keep in sync.
+            //
+            // Absent in local development, where there is no environment to
+            // compose a name from. QueuedEmailSender treats that as "do not
+            // knock" rather than as an error, because the scale rule still
+            // picks the message up.
+            { name: 'LARK_WAKE_URL', value: 'https://ca-lark-${environmentName}.internal.${environment.properties.defaultDomain}/api/wake' }
             // Liveness only, and deliberately not the database: a Postgres
             // blip that restarts every replica turns a recoverable problem
             // into an outage.
@@ -554,7 +570,18 @@ resource atlas 'Microsoft.App/containerApps@2024-03-01' = {
 // above can wake it: a queue with no worker silently stops sending while every
 // dashboard reads green, so the replica floor and the rule that replaces it
 // have to arrive together or not at all.
-resource lark 'Microsoft.App/containerApps@2024-03-01' = {
+// A newer API version than its two neighbours, for one property.
+//
+// scale.pollingInterval is not in 2024-03-01's type definitions. Bicep still
+// renders it -- it is only a BCP037 warning -- and ARM would accept the
+// template, but whether the provider honours a property its declared contract
+// does not mention is not something to find out from a bill. A deploy that
+// goes green while the scaler keeps polling every thirty seconds is the exact
+// shape of failure this change exists to remove.
+//
+// 2025-01-01 is the earliest stable version that declares it, so the
+// difference is one minor version and the warning is gone rather than ignored.
+resource lark 'Microsoft.App/containerApps@2025-01-01' = {
   name: 'ca-lark-${environmentName}'
   location: location
   identity: pullIdentityConfig
@@ -564,6 +591,23 @@ resource lark 'Microsoft.App/containerApps@2024-03-01' = {
     configuration: {
       registries: registryConfig
       secrets: concat([dbSecret], sentrySecrets, awsSecrets, larkKedaSecrets)
+      // Internal, and only so that something can knock.
+      //
+      // lark answers one request and ignores what it says: being started is
+      // the entire point. SendLoop is a BackgroundService, so it begins
+      // draining the queue the moment the process exists, and Container Apps'
+      // own HTTP scaler brings a sleeping replica up to serve the request.
+      // That replaces a 30-second database poll with a knock that arrives when
+      // there is actually something to send.
+      //
+      // internal: there is no reason for this to be reachable from outside the
+      // environment, and the only caller is atlas.
+      ingress: {
+        external: false
+        targetPort: 8080
+        transport: 'auto'
+        allowInsecure: false
+      }
     }
     template: {
       containers: [
@@ -573,6 +617,7 @@ resource lark 'Microsoft.App/containerApps@2024-03-01' = {
           resources: containerResources
           env: concat([
             { name: 'ARCTIC_DB', secretRef: 'db-connection' }
+            { name: 'ASPNETCORE_URLS', value: 'http://+:8080' }
             { name: 'DOTNET_ENVIRONMENT', value: environmentName == 'prod' ? 'Production' : 'Staging' }
             { name: 'SendLoop__ClickTrackingBaseUrl', value: 'https://${harbor.properties.configuration.ingress.fqdn}/api' }
             { name: 'SendLoop__UnsubscribeBaseUrl', value: 'https://${harbor.properties.configuration.ingress.fqdn}/api' }
@@ -582,6 +627,22 @@ resource lark 'Microsoft.App/containerApps@2024-03-01' = {
       scale: {
         minReplicas: larkWarmReplicas
         maxReplicas: 1
+        // An hour, where this used to be thirty seconds.
+        //
+        // The scaler is no longer how mail gets noticed -- atlas knocks on the
+        // ingress above the moment it enqueues -- so this only has to catch
+        // what nobody knocked about: a send that failed and set
+        // next_attempt_at, or a row written by something that cannot knock.
+        // Those can wait an hour; a magic link cannot, and no longer does.
+        //
+        // The interval is also what the database bill is made of. The query
+        // runs whether or not lark is awake, because that is how the scaler
+        // decides to wake it -- so on a provider that suspends an idle
+        // database, a 30-second poll is a heartbeat that keeps it running
+        // every minute of every day. Measured against Neon's five-minute idle
+        // cutoff: 30s polling costs 182 compute-hours a month against a
+        // hundred free, and hourly costs 15.
+        pollingInterval: 3600
         rules: larkScaleRules
       }
     }
