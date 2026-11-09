@@ -38,6 +38,19 @@ param sharedLocation = readEnvironmentVariable('SHARED_LOCATION', 'centralus')
 
 param imageTag = readEnvironmentVariable('IMAGE_TAG')
 param dbPassword = readEnvironmentVariable('DB_PASSWORD')
+
+// The database the services talk to, when it is not the Azure server this
+// deployment creates. All three default to empty, which means that server --
+// so an environment nobody has moved is unaffected, and moving one back is
+// clearing a variable rather than reverting a deploy.
+//
+// ARCTIC_DB is the pooled endpoint the services use. ARCTIC_DB_DIRECT is the
+// same database unpooled, for migrations and dumps. ARCTIC_DB_KEDA is the same
+// database again in libpq syntax, because the scaler that wakes lark cannot
+// read the other two. See apps.bicep for why that is three values and not one.
+param appConnectionString = readEnvironmentVariable('ARCTIC_DB', '')
+param appConnectionStringDirect = readEnvironmentVariable('ARCTIC_DB_DIRECT', '')
+param appKedaConnection = readEnvironmentVariable('ARCTIC_DB_KEDA', '')
 param superAdminEmail = readEnvironmentVariable('SUPER_ADMIN_EMAIL')
 param sentryDsn = readEnvironmentVariable('SENTRY_DSN', '')
 

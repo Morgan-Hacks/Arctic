@@ -127,18 +127,28 @@ Each replica's CPU and memory is `containerSize`, one of `0.25`–`2.0`, set by
 rather than two numbers because Container Apps only accepts the two in a fixed
 1:2 ratio and does not say so until the deployment is already running.
 
-The default is not the cheapest size, for the same reason `warmReplicas`
-defaults to one. All three services measure well under it — 159–171 MiB for
-atlas and harbor, 272 MiB for lark — so `0.25` fits. But CPU is also what
-starts a .NET process, and halving it lengthens the 22-second cold start
-below. Against a replica floor of zero the size barely matters anyway: at the
-awake time these services actually accumulate, `0.25` costs nothing a month
-and `0.5` costs about 65 cents. Twenty seconds on everybody's first request is
-not worth eight dollars a year.
+The default is `0.5` because that is what these services have always run, and
+for no stronger reason. It was introduced on the assumption that a smaller size
+would lengthen cold starts badly; measuring both sizes against a confirmed-zero
+replica count showed otherwise:
 
-So drop it to `0.25` on an environment nobody waits on, the way
-`WARM_REPLICAS=0` is opted into, and raise it to `0.75` or `1.0` for the weeks
-around an open application window.
+| size | cold | warm |
+|---|---|---|
+| 0.5 vCPU | 18.5s | 0.10–0.12s |
+| 0.25 vCPU | 19.2s | 0.16s |
+
+Six tenths of a second. The cold start is pulling a 95 MiB image and starting a
+.NET runtime; neither waits on the half vCPU it didn't get. Working set is far
+below either limit — 159–171 MiB for atlas and harbor, 272 MiB for lark — so
+`0.25` is safe anywhere.
+
+It also barely matters. Against a replica floor of zero, sleeping is the whole
+saving: at the awake time these services accumulate, `0.25` costs nothing a
+month and `0.5` about 65 cents. The default stays `0.5` only because changing
+it would redeploy production to save eight dollars a year.
+
+The direction worth using is upward — `0.75` or `1.0` for the weeks around an
+open application window.
 
 Minimum replicas is `warmReplicas` (atlas, harbor) or `larkWarmReplicas`
 (lark), and both can be zero — but `lark` scaling to zero is only safe

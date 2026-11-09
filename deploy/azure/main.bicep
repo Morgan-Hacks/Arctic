@@ -47,6 +47,24 @@ param registryName string = 'crmharctic'
 @secure()
 param dbPassword string
 
+@description('''
+A whole connection string for the database the services should use, when that
+is not the Azure server this deployment provisions. Empty means that server.
+
+See platform.bicep for why this is an opaque string and not a host, and
+apps.bicep for why the pooled and direct forms are separate values.
+''')
+@secure()
+param appConnectionString string = ''
+
+@description('The same database reached without a connection pooler, for migrations and dumps. Empty falls back to appConnectionString.')
+@secure()
+param appConnectionStringDirect string = ''
+
+@description('The same database in libpq syntax, for the KEDA scaler that wakes lark. Empty means the Azure server. See apps.bicep.')
+@secure()
+param appKedaConnection string = ''
+
 param superAdminEmail string
 
 @secure()
@@ -232,6 +250,8 @@ module platform 'modules/platform.bicep' = if (deployPlatform) {
     registryName: registryName
     registryResourceGroup: sharedGroupName
     dbPassword: dbPassword
+    appConnectionString: appConnectionString
+    appConnectionStringDirect: appConnectionStringDirect
     postgresVersion: postgresVersion
     superAdminEmail: superAdminEmail
     pullIdentityId: pullIdentity.outputs.id
@@ -251,6 +271,8 @@ module apps 'modules/apps.bicep' = if (deployApps) {
     registryName: registryName
     registryResourceGroup: sharedGroupName
     dbPassword: dbPassword
+    appConnectionString: appConnectionString
+    appKedaConnection: appKedaConnection
     sentryDsn: sentryDsn
     awsRegion: awsRegion
     sesConfigurationSet: sesConfigurationSet
