@@ -131,6 +131,50 @@ Production is not that environment.
 param larkWarmReplicas int = 1
 
 @description('''
+How much CPU and memory each replica gets, as one choice rather than two.
+
+A size and not a pair of numbers on purpose. Container Apps only accepts CPU
+and memory in a fixed 1:2 ratio, and it does not tell you that until the
+deployment is already running -- so two independent parameters would let a
+plausible-looking combination fail halfway through a release. One allowed value
+indexing a table of known-good pairs cannot be set wrong, and a typo is
+rejected while the template is still being read.
+
+0.5 is the default, which is what these services have always run, and the
+default is deliberately not the cheapest option. Measured working set over a
+quiet week was 159-171 MiB for atlas and harbor and 272 MiB for lark, so 0.25
+fits all three with room -- but CPU is also what starts a .NET process, and
+halving it lengthens a cold start that the README already measures at about 22
+seconds. Somewhere around 40 is not a saving, it is a worse product.
+
+It is also worth very little. Against a replica floor of zero, scaling to
+sleep is the whole saving and the size is a rounding error: at the awake time
+these services actually accumulate, 0.25 costs nothing per month and 0.5 costs
+about 65 cents. Trading twenty seconds of everybody's first request for eight
+dollars a year is not a trade worth making where anyone is watching.
+
+So: set CONTAINER_SIZE=0.25 on an environment nobody waits on, the same way
+WARM_REPLICAS=0 is opted into rather than assumed. And raise it the other way
+-- 0.75, 1.0 -- for the weeks around an open application window, when requests
+come from people on a deadline instead of from a health probe. A variable
+rather than a literal so that move is a deployment and not a pull request.
+''')
+@allowed(['0.25', '0.5', '0.75', '1.0', '1.5', '2.0'])
+param containerSize string = '0.5'
+
+// The known-good pairs. Container Apps' Consumption profile wants memory at
+// exactly twice the CPU, so memory is derived here rather than asked for.
+var containerSizes = {
+  '0.25': { cpu: json('0.25'), memory: '0.5Gi' }
+  '0.5': { cpu: json('0.5'), memory: '1Gi' }
+  '0.75': { cpu: json('0.75'), memory: '1.5Gi' }
+  '1.0': { cpu: json('1.0'), memory: '2Gi' }
+  '1.5': { cpu: json('1.5'), memory: '3Gi' }
+  '2.0': { cpu: json('2.0'), memory: '4Gi' }
+}
+var containerResources = containerSizes[containerSize]
+
+@description('''
 Shared secret proving a request reached harbor through one of our front ends.
 
 Harbor has a public hostname, so the forwarded client address is only believed
@@ -423,7 +467,7 @@ resource atlas 'Microsoft.App/containerApps@2024-03-01' = {
         {
           name: 'atlas'
           image: '${registry.properties.loginServer}/atlas:${imageTag}'
-          resources: { cpu: json('0.5'), memory: '1Gi' }
+          resources: containerResources
           env: concat([
             { name: 'ARCTIC_DB', secretRef: 'db-connection' }
             { name: 'ASPNETCORE_URLS', value: 'http://+:8080' }
@@ -475,7 +519,7 @@ resource lark 'Microsoft.App/containerApps@2024-03-01' = {
         {
           name: 'lark'
           image: '${registry.properties.loginServer}/lark:${imageTag}'
-          resources: { cpu: json('0.5'), memory: '1Gi' }
+          resources: containerResources
           env: concat([
             { name: 'ARCTIC_DB', secretRef: 'db-connection' }
             { name: 'DOTNET_ENVIRONMENT', value: environmentName == 'prod' ? 'Production' : 'Staging' }
@@ -516,7 +560,7 @@ resource harbor 'Microsoft.App/containerApps@2024-03-01' = {
         {
           name: 'harbor'
           image: '${registry.properties.loginServer}/harbor:${imageTag}'
-          resources: { cpu: json('0.5'), memory: '1Gi' }
+          resources: containerResources
           env: concat([
             { name: 'ASPNETCORE_URLS', value: 'http://+:8080' }
             { name: 'ReverseProxy__Clusters__atlas__Destinations__primary__Address', value: 'https://${atlas.properties.configuration.ingress.fqdn}/' }

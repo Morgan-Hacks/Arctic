@@ -122,6 +122,24 @@ sequence, not a state.
 | `lark` | none at all | 0–1 |
 | `migrations` | a job | on demand |
 
+Each replica's CPU and memory is `containerSize`, one of `0.25`–`2.0`, set by
+`CONTAINER_SIZE` and defaulting to `0.5` (0.5 vCPU, 1 GiB). It is one choice
+rather than two numbers because Container Apps only accepts the two in a fixed
+1:2 ratio and does not say so until the deployment is already running.
+
+The default is not the cheapest size, for the same reason `warmReplicas`
+defaults to one. All three services measure well under it — 159–171 MiB for
+atlas and harbor, 272 MiB for lark — so `0.25` fits. But CPU is also what
+starts a .NET process, and halving it lengthens the 22-second cold start
+below. Against a replica floor of zero the size barely matters anyway: at the
+awake time these services actually accumulate, `0.25` costs nothing a month
+and `0.5` costs about 65 cents. Twenty seconds on everybody's first request is
+not worth eight dollars a year.
+
+So drop it to `0.25` on an environment nobody waits on, the way
+`WARM_REPLICAS=0` is opted into, and raise it to `0.75` or `1.0` for the weeks
+around an open application window.
+
 Minimum replicas is `warmReplicas` (atlas, harbor) or `larkWarmReplicas`
 (lark), and both can be zero — but `lark` scaling to zero is only safe
 together with the KEDA scale rule `apps.bicep` adds when

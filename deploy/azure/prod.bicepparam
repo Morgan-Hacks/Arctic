@@ -77,6 +77,16 @@ param larkWarmReplicas = int(empty(readEnvironmentVariable('LARK_WARM_REPLICAS',
   ? '1'
   : readEnvironmentVariable('LARK_WARM_REPLICAS', '1'))
 
+// CPU and memory per replica, one of the sizes apps.bicep allows. The fallback
+// is the size these services have always run, not the cheapest one: less CPU
+// also means a slower cold start. Drop it to 0.25 on an environment nobody
+// waits on, raise it for an open application window. Same empty-string
+// handling as the two above: an unset GitHub variable arrives as '', which
+// would otherwise be rejected by @allowed and fail the whole deployment.
+param containerSize = empty(readEnvironmentVariable('CONTAINER_SIZE', '0.5'))
+  ? '0.5'
+  : readEnvironmentVariable('CONTAINER_SIZE', '0.5')
+
 // Shared secret proving a request reached harbor through one of our front
 // ends. Empty means forwarded addresses are never believed, which is a coarser
 // rate limit rather than an absent one -- so a missing variable degrades
