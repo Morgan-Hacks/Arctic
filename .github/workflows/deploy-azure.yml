@@ -120,6 +120,9 @@ jobs:
       - name: Show the plan
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          ARCTIC_DB: ${{ secrets.ARCTIC_DB }}
+          ARCTIC_DB_DIRECT: ${{ secrets.ARCTIC_DB_DIRECT }}
+          ARCTIC_DB_KEDA: ${{ secrets.ARCTIC_DB_KEDA }}
           SUPER_ADMIN_EMAIL: ${{ vars.SUPER_ADMIN_EMAIL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           AWS_REGION: ${{ vars.AWS_REGION }}
@@ -147,6 +150,9 @@ jobs:
       - name: Deploy
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          ARCTIC_DB: ${{ secrets.ARCTIC_DB }}
+          ARCTIC_DB_DIRECT: ${{ secrets.ARCTIC_DB_DIRECT }}
+          ARCTIC_DB_KEDA: ${{ secrets.ARCTIC_DB_KEDA }}
           SUPER_ADMIN_EMAIL: ${{ vars.SUPER_ADMIN_EMAIL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           AWS_REGION: ${{ vars.AWS_REGION }}

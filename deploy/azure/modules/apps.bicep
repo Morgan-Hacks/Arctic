@@ -22,6 +22,33 @@ param dbPassword string
 param dbAdminUser string = 'arctic'
 param dbName string = 'morganhacks'
 
+@description('''
+A whole connection string for the database the services should use, when that
+is not the Azure server platform.bicep provisions. Empty means that server, so
+an environment nobody has moved is untouched.
+
+This is the pooled endpoint where the database has one. Three long-lived
+services opening connections as they wake is what a pooler is for, and the
+things a pooler is wrong for -- migrations, dumps -- do not read this value.
+''')
+@secure()
+param appConnectionString string = ''
+
+@description('''
+The same database in libpq syntax, for the KEDA scaler below.
+
+A third rendering of one credential, for the reason the comment above
+kedaConnectionString gives at length: KEDA hands this to libpq, libpq does not
+read Npgsql keyword syntax, and the failure is silent. Space-separated
+keywords, or the postgresql:// URI libpq also accepts.
+
+Empty means the Azure server. Required whenever appConnectionString is set and
+larkWarmReplicas is zero, because that is the combination where lark has
+nothing but this to wake it.
+''')
+@secure()
+param appKedaConnection string = ''
+
 @secure()
 @description('Empty disables error reporting, which is what lets this run with no accounts.')
 param sentryDsn string = ''
@@ -219,7 +246,11 @@ resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' existin
   name: 'psql-${suffix}'
 }
 
-var connectionString = 'Host=${postgres.properties.fullyQualifiedDomainName};Port=5432;Database=${dbName};Username=${dbAdminUser};Password=${dbPassword};SSL Mode=Require;Trust Server Certificate=true'
+// Empty means the Azure server next door, so an environment nobody has moved
+// behaves exactly as it did. See platform.bicep for why this is one opaque
+// string rather than a host parameter.
+var azureConnectionString = 'Host=${postgres.properties.fullyQualifiedDomainName};Port=5432;Database=${dbName};Username=${dbAdminUser};Password=${dbPassword};SSL Mode=Require;Trust Server Certificate=true'
+var connectionString = empty(appConnectionString) ? azureConnectionString : appConnectionString
 
 // KEDA does not speak the string above.
 //
@@ -232,7 +263,19 @@ var connectionString = 'Host=${postgres.properties.fullyQualifiedDomainName};Por
 // green. That is the exact failure the old hardcoded minReplicas: 1 existed to
 // prevent, so it is worth a second rendering of the same credentials rather
 // than a reused secret that looks interchangeable and is not.
-var kedaConnectionString = 'host=${postgres.properties.fullyQualifiedDomainName} port=5432 dbname=${dbName} user=${dbAdminUser} password=${dbPassword} sslmode=require'
+//
+// Which is also why moving the database needs its own third rendering rather
+// than reusing appConnectionString: that one is Npgsql keyword syntax, and
+// handing it to libpq fails in exactly the silent way described above. The
+// override is a separate parameter so it has to be written in libpq's own
+// syntax -- space-separated keywords, or the postgresql:// URI that libpq also
+// accepts and that hosted providers tend to hand you by default.
+//
+// There is no way to derive one from the other here. Bicep cannot parse a
+// connection string, and a secure parameter should not be picked apart in a
+// template expression even if it could.
+var azureKedaConnectionString = 'host=${postgres.properties.fullyQualifiedDomainName} port=5432 dbname=${dbName} user=${dbAdminUser} password=${dbPassword} sslmode=require'
+var kedaConnectionString = empty(appKedaConnection) ? azureKedaConnectionString : appKedaConnection
 
 // Both only exist when lark is allowed to sleep. Kept conditional so an
 // environment that keeps lark warm carries neither a second copy of the

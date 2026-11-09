@@ -34,6 +34,32 @@ param dbPassword string
 param dbAdminUser string = 'arctic'
 param dbName string = 'morganhacks'
 
+@description('''
+A whole connection string for the database the services should use, when that
+is not the Azure server this module provisions.
+
+Empty is the default and means the server next door, so nothing changes for an
+environment nobody has moved, and moving one back is clearing a variable
+rather than reverting a deploy.
+''')
+@secure()
+param appConnectionString string = ''
+
+@description('''
+The same database reached directly rather than through a connection pooler,
+for the things a pooler is wrong for.
+
+Set this whenever appConnectionString points at a pooled endpoint. Migrations
+run DDL; pg_dump needs a session-consistent snapshot. Through a transaction
+pooler the first is merely risky and the second fails quietly, producing a dump
+that restores cleanly and is missing things.
+
+Empty falls back to appConnectionString, then to the Azure server -- so an
+unpooled database needs only the one value.
+''')
+@secure()
+param appConnectionStringDirect string = ''
+
 @description('Postgres major version. Keep this the same as docker-compose and the tests.')
 param postgresVersion string = '18'
 
@@ -164,7 +190,29 @@ resource allowAzure 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@202
   }
 }
 
-var connectionString = 'Host=${postgres.properties.fullyQualifiedDomainName};Port=5432;Database=${dbName};Username=${dbAdminUser};Password=${dbPassword};SSL Mode=Require;Trust Server Certificate=true'
+// The database the services talk to, which is not necessarily the one this
+// module creates.
+//
+// dbAdminUser, dbName and dbPassword above belong to the Azure server being
+// provisioned -- they are what it is created with -- so they cannot be
+// repointed at a different host without also trying to rename the server's
+// admin login. Hence a separate, opaque override: a whole connection string,
+// not a set of components.
+//
+// Empty means the server next door, exactly as before, so an environment that
+// has not been moved is unaffected and a move is reversible by clearing one
+// variable. Opaque also keeps the password out of a Bicep string expression,
+// and therefore out of the deployment history that expression is recorded in.
+var azureConnectionString = 'Host=${postgres.properties.fullyQualifiedDomainName};Port=5432;Database=${dbName};Username=${dbAdminUser};Password=${dbPassword};SSL Mode=Require;Trust Server Certificate=true'
+
+// Migrations get the direct override rather than the pooled one. DbUp runs 60
+// scripts of DDL including CREATE EXTENSION, and a transaction pooler is the
+// wrong thing in front of that -- but it matters most for pg_dump, which needs
+// a session-consistent snapshot and will otherwise produce a dump that is
+// quietly inconsistent rather than loudly broken.
+var connectionString = empty(appConnectionStringDirect)
+  ? (empty(appConnectionString) ? azureConnectionString : appConnectionString)
+  : appConnectionStringDirect
 
 // ---------------------------------------------------------------- resumes ---
 // Azure Blob rather than the Cloudflare R2 the build plan recommends.
