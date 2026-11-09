@@ -127,6 +127,10 @@ param warmReplicas int = 1
 @maxValue(1)
 param larkWarmReplicas int = 1
 
+@description('CPU and memory per replica, as one choice. See apps.bicep for why it is a size rather than two numbers, why the default is not the cheapest option, and the measurements behind it.')
+@allowed(['0.25', '0.5', '0.75', '1.0', '1.5', '2.0'])
+param containerSize string = '0.5'
+
 @description('Whether the applicant portal is served. Empty leaves features.json to decide.')
 param enableHackerPortalFeature string = ''
 param enableHackerDirectoryFeature string = ''
@@ -260,6 +264,7 @@ module apps 'modules/apps.bicep' = if (deployApps) {
     formsBaseUrl: formsBaseUrl
     warmReplicas: warmReplicas
     larkWarmReplicas: larkWarmReplicas
+    containerSize: containerSize
     enableHackerPortalFeature: enableHackerPortalFeature
     enableHackerDirectoryFeature: enableHackerDirectoryFeature
     proxySecret: proxySecret
