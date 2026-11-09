@@ -155,6 +155,11 @@ builder.Services
 
 builder.Services.AddScoped<IEmailSender, QueuedEmailSender>();
 
+// What tells lark to start sending, rather than waiting for its scale rule.
+// See MailWaker: the rule still runs hourly as the backstop, so this failing
+// makes mail late and never makes it lost.
+builder.Services.AddMailWaker();
+
 // Singletons, because both hold nothing but the data source — which is itself
 // a singleton owning the connection pool. Scoping them would build a new
 // wrapper per request around the same pool for no reason.
