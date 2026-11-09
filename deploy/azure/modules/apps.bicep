@@ -167,24 +167,32 @@ plausible-looking combination fail halfway through a release. One allowed value
 indexing a table of known-good pairs cannot be set wrong, and a typo is
 rejected while the template is still being read.
 
-0.5 is the default, which is what these services have always run, and the
-default is deliberately not the cheapest option. Measured working set over a
-quiet week was 159-171 MiB for atlas and harbor and 272 MiB for lark, so 0.25
-fits all three with room -- but CPU is also what starts a .NET process, and
-halving it lengthens a cold start that the README already measures at about 22
-seconds. Somewhere around 40 is not a saving, it is a worse product.
+0.5 is the default because it is what these services have always run, and for
+no stronger reason than that. This parameter was introduced with the claim that
+a smaller size would lengthen cold starts badly, so the default had to be the
+larger one. That claim was wrong, and measuring it is what showed it:
 
-It is also worth very little. Against a replica floor of zero, scaling to
-sleep is the whole saving and the size is a rounding error: at the awake time
-these services actually accumulate, 0.25 costs nothing per month and 0.5 costs
-about 65 cents. Trading twenty seconds of everybody's first request for eight
-dollars a year is not a trade worth making where anyone is watching.
+  0.5  vCPU   cold 18.5s   warm 0.10-0.12s
+  0.25 vCPU   cold 19.2s   warm 0.16s
 
-So: set CONTAINER_SIZE=0.25 on an environment nobody waits on, the same way
-WARM_REPLICAS=0 is opted into rather than assumed. And raise it the other way
--- 0.75, 1.0 -- for the weeks around an open application window, when requests
-come from people on a deadline instead of from a health probe. A variable
-rather than a literal so that move is a deployment and not a pull request.
+Six tenths of a second. A .NET cold start here is pulling a 95 MiB image and
+initialising a runtime, and neither of those is waiting on the half vCPU it was
+not given. Working set is nowhere near the limit either -- 159-171 MiB for
+atlas and harbor, 272 MiB for lark -- so 0.25 is a safe size anywhere, not just
+somewhere nobody is watching.
+
+What remains true is that it hardly matters in either direction. Against a
+replica floor of zero, sleeping is the whole saving and the size is a rounding
+error: at the awake time these services actually accumulate, 0.25 costs nothing
+a month and 0.5 costs about 65 cents. The default stays 0.5 because changing it
+would redeploy production to save eight dollars a year, which is not a reason to
+touch production.
+
+So: set CONTAINER_SIZE=0.25 wherever you like -- the measurement says it is
+fine. And raise it -- 0.75, 1.0 -- for the weeks around an open application
+window, when requests come from people on a deadline instead of from a health
+probe. That is the direction this parameter actually exists for, and a variable
+rather than a literal so the move is a deployment and not a pull request.
 ''')
 @allowed(['0.25', '0.5', '0.75', '1.0', '1.5', '2.0'])
 param containerSize string = '0.5'
