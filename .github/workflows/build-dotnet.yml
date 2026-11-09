@@ -33,7 +33,20 @@ jobs:
       - name: Build
         run: dotnet build ${{ inputs.path }} --no-restore -c Release
 
+      # The atlas suite stands up over six hundred WebApplicationFactory hosts,
+      # and each host's configuration provider opens an inotify instance to watch
+      # appsettings for edits. The runner allows 128. Every test past that point
+      # failed with "The configured user limit (128) on the number of inotify
+      # instances has been reached" — 657 failures out of 1314, all the same
+      # exception and none of them a real one.
+      #
+      # Polling costs nothing here, because no test edits configuration and then
+      # expects a reload. The six hundred hosts are the actual problem and want a
+      # shared fixture, but that is a refactor of the whole suite, and it should
+      # not be a prerequisite for every change that touches atlas.
       - name: Test
+        env:
+          DOTNET_USE_POLLING_FILE_WATCHER: '1'
         run: dotnet test ${{ inputs.path }} --no-build -c Release --logger trx
 
       - name: Format check
