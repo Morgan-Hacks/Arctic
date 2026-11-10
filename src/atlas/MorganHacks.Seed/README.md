@@ -96,9 +96,12 @@ accounts; use the existing staging sign-in process.
 
 Merging alone does not seed any database. This is a separate, manually launched
 action. It uses the existing GitHub **Staging** environment's Azure OIDC variables
-(`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`) and `DB_PASSWORD`
-secret, plus optional `REGISTRY_NAME`. The existing staging infrastructure and
-schema migrations must already be deployed. Environment approval rules still apply.
+(`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`) and its
+`ARCTIC_DB_DIRECT` secret, plus optional `REGISTRY_NAME`. It falls back to
+`ARCTIC_DB`, and then to composing the old Azure connection from `DB_PASSWORD`, so
+an environment nobody has moved off that server still works. The existing staging
+infrastructure and schema migrations must already be deployed. Environment approval
+rules still apply.
 
 The action builds a standalone image, provisions `caj-seed-staging` in
 `rg-mh-staging`, and waits for that exact execution to finish. It shares the staging
@@ -107,9 +110,12 @@ to build in the registry and deploy/run this job, in addition to the existing
 staging resources. If Azure denies a step, an infrastructure maintainer must grant
 the missing access; no production credentials should be substituted.
 
-The job requires explicit staging environment settings and allows only
-`psql-mh-staging.postgres.database.azure.com:5432/morganhacks`, with full TLS
-certificate verification. There is no production target input. Local mode retains
+The job requires explicit staging environment settings and allows only the staging
+Neon project's database -- `neondb` on port 5432, as `neondb_owner` -- through either
+of that project's two endpoints, with full TLS certificate verification. Neon gives
+every project the same database and role names, so the hostname is now the only
+thing telling staging apart from production, and it is compared exactly rather than
+by prefix or suffix. There is no production target input. Local mode retains
 its Docker-cluster verification. Mock addresses are suppressed before applicants
 become visible; retain those suppressions while using the mock event.
 

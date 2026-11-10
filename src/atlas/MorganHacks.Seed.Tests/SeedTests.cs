@@ -37,16 +37,28 @@ public sealed class SeedTests
         Assert.Equal(1000, Enumerable.Range(1, 1000).Select(SeedRunner.Email).Distinct().Count());
     }
 
-    private static readonly Dictionary<string, string> StagingSettings = new()
+    private const string Direct = "ep-calm-recipe-bdcyjjj3.c-8.us-east-2.aws.neon.tech";
+    private const string Pooled = "ep-calm-recipe-bdcyjjj3-pooler.c-8.us-east-2.aws.neon.tech";
+
+    private static Dictionary<string, string> Staging(string host) => new()
     {
         ["ARCTIC_TARGET"] = "staging",
         ["DOTNET_ENVIRONMENT"] = "Staging",
-        ["ARCTIC_DB"] = "Host=psql-mh-staging.postgres.database.azure.com;Database=morganhacks;Username=arctic;Password=test-only;SSL Mode=VerifyFull",
+        ["ARCTIC_DB"] = $"Host={host};Database=neondb;Username=neondb_owner;Password=test-only;SSL Mode=VerifyFull",
     };
 
-    [Fact]
-    public void Accepts_only_explicit_staging_configuration() =>
-        Assert.Contains("psql-mh-staging", SeedSafety.StagingConnection(k => StagingSettings.GetValueOrDefault(k)));
+    private static readonly Dictionary<string, string> StagingSettings = Staging(Direct);
+
+    // Both endpoints are the same database -- the pooled one is what the services
+    // use, the direct one is what migrations and dumps use -- and the job is handed
+    // whichever the environment exports, so both have to be accepted. The direct
+    // hostname is not a substring of the pooled one, because `-pooler` is inserted
+    // before the region rather than appended, so neither case can pass by accident.
+    [Theory]
+    [InlineData(Direct)]
+    [InlineData(Pooled)]
+    public void Accepts_either_staging_endpoint(string host) =>
+        Assert.Contains(host, SeedSafety.StagingConnection(k => Staging(host).GetValueOrDefault(k)));
 
     [Theory]
     [InlineData("ARCTIC_TARGET", "production")]
@@ -54,10 +66,21 @@ public sealed class SeedTests
     [InlineData("DOTNET_ENVIRONMENT", "Production")]
     [InlineData("DOTNET_ENVIRONMENT", "")]
     [InlineData("ASPNETCORE_ENVIRONMENT", "Production")]
-    [InlineData("ARCTIC_DB", "Host=psql-mh-prod.postgres.database.azure.com;Database=morganhacks;Username=arctic;Password=test;SSL Mode=VerifyFull")]
-    [InlineData("ARCTIC_DB", "Host=localhost;Database=morganhacks;Username=arctic;Password=test;SSL Mode=VerifyFull")]
-    [InlineData("ARCTIC_DB", "Host=psql-mh-staging.postgres.database.azure.com;Database=morganhacks;Username=arctic;Password=test;SSL Mode=Require")]
-    [InlineData("ARCTIC_DB", "Host=psql-mh-staging.postgres.database.azure.com;Database=production;Username=arctic;Password=test;SSL Mode=VerifyFull")]
+    // Production, both endpoints. Neon names every project's database `neondb` and
+    // its role `neondb_owner`, so these differ from staging in the host and nothing
+    // else: it is the only thing standing between a staging seed and real data.
+    [InlineData("ARCTIC_DB", "Host=ep-polished-brook-be705m06.c-9.us-east-2.aws.neon.tech;Database=neondb;Username=neondb_owner;Password=test;SSL Mode=VerifyFull")]
+    [InlineData("ARCTIC_DB", "Host=ep-polished-brook-be705m06-pooler.c-9.us-east-2.aws.neon.tech;Database=neondb;Username=neondb_owner;Password=test;SSL Mode=VerifyFull")]
+    // The Azure server staging used to live on. Kept as a case so that moving back
+    // is a deliberate edit here, not just an environment variable someone restored.
+    [InlineData("ARCTIC_DB", "Host=psql-mh-staging.postgres.database.azure.com;Database=morganhacks;Username=arctic;Password=test;SSL Mode=VerifyFull")]
+    [InlineData("ARCTIC_DB", "Host=localhost;Database=neondb;Username=neondb_owner;Password=test;SSL Mode=VerifyFull")]
+    // A host that only looks right: the allowed name is a prefix of this one.
+    [InlineData("ARCTIC_DB", "Host=ep-calm-recipe-bdcyjjj3.c-8.us-east-2.aws.neon.tech.example.com;Database=neondb;Username=neondb_owner;Password=test;SSL Mode=VerifyFull")]
+    [InlineData("ARCTIC_DB", "Host=ep-calm-recipe-bdcyjjj3.c-8.us-east-2.aws.neon.tech;Database=neondb;Username=neondb_owner;Password=test;SSL Mode=Require")]
+    [InlineData("ARCTIC_DB", "Host=ep-calm-recipe-bdcyjjj3.c-8.us-east-2.aws.neon.tech;Database=postgres;Username=neondb_owner;Password=test;SSL Mode=VerifyFull")]
+    [InlineData("ARCTIC_DB", "Host=ep-calm-recipe-bdcyjjj3.c-8.us-east-2.aws.neon.tech;Database=neondb;Username=postgres;Password=test;SSL Mode=VerifyFull")]
+    [InlineData("ARCTIC_DB", "Host=ep-calm-recipe-bdcyjjj3.c-8.us-east-2.aws.neon.tech;Database=neondb;Username=neondb_owner;SSL Mode=VerifyFull")]
     public void Staging_refuses_wrong_environment_or_database(string key, string value) =>
         Assert.Throws<InvalidOperationException>(() => SeedSafety.StagingConnection(
             k => k == key ? value : StagingSettings.GetValueOrDefault(k)));
