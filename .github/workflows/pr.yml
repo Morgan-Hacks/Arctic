@@ -31,6 +31,11 @@ jobs:
       portaladmin: ${{ steps.filter.outputs.portaladmin }}
       portalforms: ${{ steps.filter.outputs.portalforms }}
       contracts: ${{ steps.filter.outputs.contracts }}
+      # Every filter below needs a line here. A filter without one resolves to
+      # the empty string, never equals 'true', and its job skips on every run
+      # -- a check that is always green because it never ran, which reads as
+      # coverage. infra shipped that way for exactly one push before this.
+      infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v3
@@ -78,6 +83,17 @@ jobs:
               - 'libs/ui/**'
             contracts:
               - 'libs/contracts/**'
+            # Also in lark's filter above, and both are wanted: lark's suite
+            # checks that the scale-rule query still agrees with ClaimAsync,
+            # while this one checks the templates compile and that every
+            # environment still supplies every parameter. Neither subsumes the
+            # other, and until both existed a change here ran no job at all.
+            infra:
+              - 'deploy/azure/**'
+              # And this file, so that editing the infra job runs the infra job.
+              # Otherwise a change to the gate is the one change the gate never
+              # sees, which is the shape of every gap in this file's history.
+              - '.github/workflows/pr.yml'
 
   atlas:
     needs: changes
@@ -132,6 +148,50 @@ jobs:
     if: needs.changes.outputs.contracts == 'true'
     uses: ./.github/workflows/contract-tests.yml
 
+  # Nothing compiled these templates before this job existed. A bicep error
+  # therefore surfaced as a failed deploy -- for production, after the approval,
+  # with the images already built -- and a parameter added to main.bicep without
+  # being added to both .bicepparam files surfaced the same way, on whichever
+  # environment happened to be deployed second.
+  #
+  # build-params is the half that catches that second case. It resolves
+  # readEnvironmentVariable at compile time, so a parameter with no default and
+  # no variable fails with BCP427 here rather than at deploy time.
+  #
+  # The three variables below are dummies and their values are never used, only
+  # their presence. Every other parameter has a default; these three
+  # deliberately do not, because a deploy with no IMAGE_TAG is a deploy of
+  # nothing.
+  infra:
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Bicep
+        run: az bicep install
+
+      - name: Compile the templates
+        run: |
+          set -euo pipefail
+          for template in deploy/azure/main.bicep deploy/azure/seed-staging.bicep; do
+            echo "== $template"
+            az bicep build --file "$template" --stdout > /dev/null
+          done
+
+      - name: Compile each environment's parameters
+        env:
+          IMAGE_TAG: ci
+          DB_PASSWORD: ci-placeholder-never-used
+          SUPER_ADMIN_EMAIL: ci@example.invalid
+        run: |
+          set -euo pipefail
+          for params in deploy/azure/staging.bicepparam deploy/azure/prod.bicepparam; do
+            echo "== $params"
+            az bicep build-params --file "$params" --stdout > /dev/null
+          done
+
   # The only check marked required in branch protection. Never the service
   # jobs themselves: GitHub treats a skipped job as never-completing when it
   # is required, so a docs-only PR would sit pending forever.
@@ -142,7 +202,7 @@ jobs:
     needs:
       [
         changes, atlas, lark, harbor,
-        portalweb, portaladmin, portalforms, contract-tests,
+        portalweb, portaladmin, portalforms, contract-tests, infra,
       ]
     if: always()
     runs-on: ubuntu-latest
