@@ -13,8 +13,24 @@ param location string = resourceGroup().location
 @description('Commit sha. Never "latest" — a rollback has to be a tag that already exists.')
 param imageTag string
 
-param registryName string
-param registryResourceGroup string = 'rg-mh-shared'
+// Where the images come from. ghcr.io rather than a container registry of our
+// own, because Basic ACR was the largest single line on the bill once the
+// services started sleeping -- more than all six of them put together -- and
+// ghcr.io is included with the repository that already builds them.
+//
+// The cost of that is this token. A managed identity cannot pull from ghcr.io,
+// so there is a credential here where there was none, and it is the one thing
+// in this template that has to be rotated by hand. Keep it to read:packages:
+// it pulls images and must not be able to do anything else.
+@description('Lowercase owner/repo on ghcr.io holding the images.')
+param ghcrRepository string = 'morgan-hacks/arctic'
+
+@description('GitHub user the pull token belongs to.')
+param ghcrUsername string
+
+@secure()
+@description('GitHub token with read:packages and nothing more.')
+param ghcrToken string
 
 @secure()
 param dbPassword string
@@ -241,11 +257,6 @@ var suffix = 'mh-${environmentName}'
 // depend on that deployment's outputs still being available.
 var resumeStorageAccount = 'stmh${environmentName}${uniqueString(subscription().subscriptionId, environmentName)}'
 
-resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
-  name: registryName
-  scope: resourceGroup(registryResourceGroup)
-}
-
 resource environment 'Microsoft.App/managedEnvironments@2024-03-01' existing = {
   name: 'cae-${suffix}'
 }
@@ -325,13 +336,24 @@ var larkScaleRules = larkWarmReplicas == 0 ? [
 
 var registryConfig = [
   {
-    server: registry.properties.loginServer
-    identity: pullIdentityId
+    server: 'ghcr.io'
+    username: ghcrUsername
+    passwordSecretRef: 'ghcr-token'
   }
 ]
 
-// Attached to every app and to the job, because a registry credential that is
-// an identity has to be an identity the resource actually holds.
+// Every app that pulls an image needs its own copy, because a
+// passwordSecretRef resolves against the secrets of the app it is written on.
+var ghcrSecrets = [
+  {
+    name: 'ghcr-token'
+    value: ghcrToken
+  }
+]
+
+// Still attached to every app, and no longer for the registry: the identity
+// reads applicant resumes out of blob storage, which is why it outlived the
+// AcrPull grant it was first created for.
 var pullIdentityConfig = {
   type: 'UserAssigned'
   userAssignedIdentities: {
@@ -521,13 +543,13 @@ resource atlas 'Microsoft.App/containerApps@2024-03-01' = {
         transport: 'auto'
       }
       registries: registryConfig
-      secrets: concat([dbSecret], sentrySecrets, googleSecrets, proxySecrets, openAiSecrets)
+      secrets: concat([dbSecret], ghcrSecrets, sentrySecrets, googleSecrets, proxySecrets, openAiSecrets)
     }
     template: {
       containers: [
         {
           name: 'atlas'
-          image: '${registry.properties.loginServer}/atlas:${imageTag}'
+          image: 'ghcr.io/${ghcrRepository}/atlas:${imageTag}'
           resources: containerResources
           env: concat([
             { name: 'ARCTIC_DB', secretRef: 'db-connection' }
@@ -600,7 +622,7 @@ resource lark 'Microsoft.App/containerApps@2025-01-01' = {
     managedEnvironmentId: environment.id
     configuration: {
       registries: registryConfig
-      secrets: concat([dbSecret], sentrySecrets, awsSecrets, larkKedaSecrets)
+      secrets: concat([dbSecret], ghcrSecrets, sentrySecrets, awsSecrets, larkKedaSecrets)
       // Internal, and only so that something can knock.
       //
       // lark answers one request and ignores what it says: being started is
@@ -623,7 +645,7 @@ resource lark 'Microsoft.App/containerApps@2025-01-01' = {
       containers: [
         {
           name: 'lark'
-          image: '${registry.properties.loginServer}/lark:${imageTag}'
+          image: 'ghcr.io/${ghcrRepository}/lark:${imageTag}'
           resources: containerResources
           env: concat([
             { name: 'ARCTIC_DB', secretRef: 'db-connection' }
@@ -675,13 +697,13 @@ resource harbor 'Microsoft.App/containerApps@2024-03-01' = {
         transport: 'auto'
       }
       registries: registryConfig
-      secrets: concat(sentrySecrets, proxySecrets)
+      secrets: concat(ghcrSecrets, sentrySecrets, proxySecrets)
     }
     template: {
       containers: [
         {
           name: 'harbor'
-          image: '${registry.properties.loginServer}/harbor:${imageTag}'
+          image: 'ghcr.io/${ghcrRepository}/harbor:${imageTag}'
           resources: containerResources
           env: concat([
             { name: 'ASPNETCORE_URLS', value: 'http://+:8080' }

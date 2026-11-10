@@ -72,6 +72,10 @@ jobs:
       # Required for OIDC. Without it there is no token to exchange.
       id-token: write
       contents: read
+      # Pushing images. The job's own token does this, so there is no stored
+      # push credential anywhere -- it is minted for this run and expires with
+      # it. Only the read:packages token the services pull with is long-lived.
+      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -138,7 +142,9 @@ jobs:
           WARM_REPLICAS: ${{ vars.WARM_REPLICAS || '1' }}
           LARK_WARM_REPLICAS: ${{ vars.LARK_WARM_REPLICAS || '1' }}
           CONTAINER_SIZE: ${{ vars.CONTAINER_SIZE || '0.5' }}
-          REGISTRY_NAME: ${{ vars.REGISTRY_NAME || 'crmharctic' }}
+          GHCR_REPOSITORY: ${{ vars.GHCR_REPOSITORY || 'morgan-hacks/arctic' }}
+          GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           # Empty on purpose when the variable is unset: features.json then
           # decides, which is not the same as being told 'false'.
           ENABLE_DIRECTORY_FEATURE: ${{ vars.ENABLE_DIRECTORY_FEATURE }}
@@ -168,7 +174,9 @@ jobs:
           WARM_REPLICAS: ${{ vars.WARM_REPLICAS || '1' }}
           LARK_WARM_REPLICAS: ${{ vars.LARK_WARM_REPLICAS || '1' }}
           CONTAINER_SIZE: ${{ vars.CONTAINER_SIZE || '0.5' }}
-          REGISTRY_NAME: ${{ vars.REGISTRY_NAME || 'crmharctic' }}
+          GHCR_REPOSITORY: ${{ vars.GHCR_REPOSITORY || 'morgan-hacks/arctic' }}
+          GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           # Empty on purpose when the variable is unset: features.json then
           # decides, which is not the same as being told 'false'.
           ENABLE_DIRECTORY_FEATURE: ${{ vars.ENABLE_DIRECTORY_FEATURE }}
@@ -176,6 +184,10 @@ jobs:
           PROXY_SHARED_SECRET: ${{ secrets.PROXY_SHARED_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SKIP_PUSH: ${{ steps.target.outputs.skip_push }}
+          # Separate from GHCR_TOKEN on purpose: this one can write and dies
+          # with the job, that one can only read and lives in the environment.
+          GHCR_PUSH_USER: ${{ github.actor }}
+          GHCR_PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./deploy/azure/deploy.sh ${{ steps.target.outputs.env }} --apply ${{ steps.target.outputs.tag }}
 
       - name: Record what shipped

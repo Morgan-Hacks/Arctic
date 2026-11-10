@@ -8,7 +8,7 @@ being an alphabetical pile.
 | Resource | Pattern | Example |
 |---|---|---|
 | Resource group | `rg-mh-<env>` | `rg-mh-staging`, `rg-mh-prod` |
-| Container registry | `crmharctic` | shared; registries allow no hyphens |
+| Container images | `ghcr.io/morgan-hacks/arctic/<service>` | not an Azure resource; `crmharctic` was the ACR this replaced |
 | Log Analytics | `log-mh-<env>` | `log-mh-staging`, `log-mh-prod` |
 | Container Apps env | `cae-mh-<env>` | `cae-mh-staging`, `cae-mh-prod` |
 | Postgres | `psql-mh-<env>` | `psql-mh-staging`, `psql-mh-prod` |

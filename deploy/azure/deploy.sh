@@ -23,7 +23,14 @@ fi
 
 : "${DB_PASSWORD:?set DB_PASSWORD}"
 : "${SUPER_ADMIN_EMAIL:?set SUPER_ADMIN_EMAIL}"
-export DB_PASSWORD SUPER_ADMIN_EMAIL
+# The read:packages token the services pull images with. Checked here rather
+# than left to Bicep, because readEnvironmentVariable without a default fails
+# partway through a subscription-scoped deployment, which is a worse place to
+# find out than the first line of the script.
+: "${GHCR_USERNAME:?set GHCR_USERNAME}"
+: "${GHCR_TOKEN:?set GHCR_TOKEN (read:packages)}"
+export DB_PASSWORD SUPER_ADMIN_EMAIL GHCR_USERNAME GHCR_TOKEN
+export GHCR_REPOSITORY="${GHCR_REPOSITORY:-morgan-hacks/arctic}"
 export SENTRY_DSN="${SENTRY_DSN:-}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -50,29 +57,37 @@ if [[ "$MODE" != "--apply" ]]; then
     exit 0
 fi
 
-say "1/5  Registry"
-# The registry alone. It has to exist and hold the images before the migration
-# job can even be created — Container Apps checks that the image is really
-# there when the job is defined, not when it runs.
+say "1/5  Group and pull identity"
+# Everything the later passes need to already exist. There is no registry to
+# create any more -- the images live on ghcr.io -- but the identity still has to
+# exist before the migration job references it, and the deployment name is kept
+# as-is because renaming a subscription-scoped deployment orphans the old record
+# rather than replacing it.
 DEPLOY_PLATFORM=false DEPLOY_APPS=false az deployment sub create \
     -l "$LOCATION" -n "arctic-${ENVIRONMENT}-registry" \
     -f "$HERE/main.bicep" -p "$PARAMS" -o none
 
 say "2/5  Images"
-# After the platform pass, because the registry has to exist before anything
-# can be pushed to it — and before migrations, because the job cannot run an
-# image that is not there.
+# Before migrations, because the job cannot run an image that is not there.
+# Container Apps checks the image exists when the job is defined, not when it
+# runs, so this has to happen before pass 3 rather than merely before pass 4.
 #
 # SKIP_PUSH=1 for a rollback: that tag already exists, and rebuilding it would
 # produce different bytes from the ones being rolled back to.
 if [[ "${SKIP_PUSH:-}" == "1" ]]; then
     echo "  skipped (SKIP_PUSH=1) — deploying tag ${IMAGE_TAG} as it already is"
 else
-    # Same registry the template is about to reference. push-images.sh reads
-    # REGISTRY, the template reads REGISTRY_NAME; letting them disagree would
-    # push to one registry and deploy from another, which fails at pull time
-    # with nothing in the build log explaining why.
-    REGISTRY="${REGISTRY_NAME:-crmharctic}" "$HERE/push-images.sh" "$ENVIRONMENT" "$IMAGE_TAG"
+    # Both sides read GHCR_REPOSITORY, exported above, so the path pushed to and
+    # the path deployed from cannot disagree. They used to be two variables with
+    # two defaults, and letting them differ pushed to one registry and deployed
+    # from another -- which fails at pull time with nothing in the build log
+    # explaining why.
+    #
+    # The push credential is deliberately not GHCR_TOKEN: that one is
+    # read:packages, and pushing with it would mean one key that can do both.
+    GHCR_PUSH_USER="${GHCR_PUSH_USER:-$GHCR_USERNAME}" \
+    GHCR_PUSH_TOKEN="${GHCR_PUSH_TOKEN:?set GHCR_PUSH_TOKEN (write:packages)}" \
+        "$HERE/push-images.sh" "$ENVIRONMENT" "$IMAGE_TAG"
 fi
 
 say "3/5  Platform  (Postgres, apps environment, migration job)"

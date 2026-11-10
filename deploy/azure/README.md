@@ -38,7 +38,7 @@ means resetting the admin password on the server.
 
 | Resource group | Region | Holds |
 |---|---|---|
-| `rg-mh-shared` | `centralus` | the registry (`crmharctic`), and `id-mh-deploy` — the identity GitHub Actions authenticates as |
+| `rg-mh-shared` | `centralus` | `id-mh-deploy` — the identity GitHub Actions authenticates as. Also still holds `crmharctic`, the registry images used to come from; see below |
 | `rg-mh-staging` | `centralus` | `cae-mh-staging`, `psql-mh-staging`, the three apps, `caj-migrations-staging`, `log-mh-staging` |
 | `rg-mh-prod` | `eastus2` | the same shape, suffixed `-prod` |
 
@@ -46,28 +46,59 @@ Subscription `45944a03-563f-42c2-83f7-df274ae5ae1a`, Pay-As-You-Go, in the
 tenant behind `morganhacks2022@gmail.com`. `naming.md` has the full naming
 convention; the next section has why the regions differ.
 
-## Two regions, one registry
+## Where the images come from
 
-`location` and `sharedLocation` are separate parameters on purpose. The
-registry is shared across every environment and cannot move once created — a
-resource cannot change region — while each environment's own resources can
-live wherever that environment needs to be. Both `.bicepparam` files default
-`sharedLocation` to `centralus`; only `location` differs between them, and
-`naming.md` has the reasoning for why production's is `eastus2` and staging's
-is not.
+`ghcr.io/morgan-hacks/arctic/<service>`, tagged by commit. Overridable through
+`GHCR_REPOSITORY`, though there is no good reason to.
 
-Conflating the two was a real failure, not a hypothetical one: it is why
-production's first deploy broke at the registry stage with
-`InvalidResourceLocation` the moment `location` was pointed at `eastus2`. See
+It used to be `crmharctic`, a Basic ACR in `rg-mh-shared`. That cost about
+$5.17 a month, which was nothing next to Container Apps until the services
+started sleeping — after that it was the single largest line on the bill, more
+than all six apps put together. ghcr.io comes with the repository that already
+builds the images.
+
+**What that trades away.** The ACR had no admin user, and the services pulled
+from it with a managed identity: there was no registry credential anywhere to
+leak or rotate. ghcr.io cannot be pulled with an Azure managed identity, so
+there is now a token, and it is the one credential in this deployment that a
+person has to rotate by hand.
+
+It is split in two so that neither half can do the other's job:
+
+| | who holds it | scope | lifetime |
+|---|---|---|---|
+| pull | `GHCR_TOKEN`, per environment | `read:packages` | until rotated |
+| push | the workflow's own `GITHUB_TOKEN` | `packages: write` | the length of one job |
+
+Only the pull token is long-lived, and it cannot write. The push credential is
+minted per run and is never stored.
+
+**The registry itself has not been deleted.** Removing a module from a Bicep
+template does not remove the resource — deployments are incremental — so
+`crmharctic` still exists and still holds every image a rollback might want.
+Deleting it is a separate, deliberate act:
+
+```bash
+az acr delete -n crmharctic -g rg-mh-shared --yes
+```
+
+Do that only once ghcr.io has been trusted for a while, and delete the registry
+alone — **not** `rg-mh-shared`, which also holds `id-mh-deploy`, the identity
+every deployment authenticates as.
+
+## One region per environment
+
+`location` is per-environment and `naming.md` has the reasoning for why
+production's is `eastus2` and staging's is not.
+
+There used to be a second parameter, `sharedLocation`, because the registry was
+shared across environments and a resource cannot change region. Conflating the
+two was a real failure rather than a hypothetical one: it is why production's
+first deploy broke at the registry stage with `InvalidResourceLocation` the
+moment `location` was pointed at `eastus2`. See
 [`docs/runbooks/first-production-deploy.md`](../../docs/runbooks/first-production-deploy.md)
-for the full sequence.
-
-`registryName` is a parameter too, read from `REGISTRY_NAME` and defaulting to
-the shared `crmharctic`. There is only one real reason to override it: an
-environment that cannot share that registry at all, because a managed
-identity cannot be granted `AcrPull` on a registry in a different tenant or
-subscription. That is a new registry to push images to, not just a new
-parameter value.
+for the full sequence. With no registry in the template there is nothing left
+for that parameter to pin, so it is gone.
 
 ## Why Bicep and not a shell script
 
@@ -85,7 +116,6 @@ a change to how production is provisioned should arrive as a diff.
 ```
 main.bicep              the front door — resource groups, then the modules
 naming.md               naming convention and what every tag is for
-modules/registry.bicep  the container registry, shared across environments
 modules/platform.bicep  Postgres, resume storage, the apps environment, migrations
 modules/apps.bicep      harbor, atlas, lark
 staging.bicepparam      per-environment values

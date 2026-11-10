@@ -4,7 +4,12 @@ targetScope = 'resourceGroup'
 @secure()
 param dbConnectionString string
 param imageTag string
-param registryName string = 'crmharctic'
+
+// ghcr.io, like every other image. See apps.bicep.
+param ghcrRepository string = 'morgan-hacks/arctic'
+param ghcrUsername string
+@secure()
+param ghcrToken string
 @minValue(1)
 @maxValue(1000)
 param applicantCount int = 50
@@ -15,10 +20,6 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' existing = {
 }
 resource pullIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
   name: 'id-mh-staging-pull'
-}
-resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
-  name: registryName
-  scope: resourceGroup('rg-mh-shared')
 }
 resource seed 'Microsoft.App/jobs@2024-03-01' = {
   name: 'caj-seed-staging'
@@ -35,13 +36,16 @@ resource seed 'Microsoft.App/jobs@2024-03-01' = {
       replicaTimeout: 600
       replicaRetryLimit: 0
       manualTriggerConfig: { parallelism: 1, replicaCompletionCount: 1 }
-      registries: [{ server: registry.properties.loginServer, identity: pullIdentity.id }]
-      secrets: [{ name: 'db-connection', value: dbConnectionString }]
+      registries: [{ server: 'ghcr.io', username: ghcrUsername, passwordSecretRef: 'ghcr-token' }]
+      secrets: [
+        { name: 'db-connection', value: dbConnectionString }
+        { name: 'ghcr-token', value: ghcrToken }
+      ]
     }
     template: {
       containers: [{
         name: 'seed'
-        image: '${registry.properties.loginServer}/hacker-seed:${imageTag}'
+        image: 'ghcr.io/${ghcrRepository}/hacker-seed:${imageTag}'
         resources: { cpu: json('0.5'), memory: '1Gi' }
         args: concat(['--staging', '--count', string(applicantCount)], apply ? ['--apply'] : [])
         env: [
