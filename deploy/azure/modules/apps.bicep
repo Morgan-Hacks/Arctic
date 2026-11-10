@@ -292,17 +292,27 @@ var larkKedaSecrets = larkWarmReplicas == 0
   ? [ { name: 'db-keda', value: kedaConnectionString } ]
   : []
 
-// The condition mirrors lark's own claim query, including next_attempt_at.
-// Counting every 'pending' row instead would hold the worker awake for as long
-// as one message sat in backoff -- which is both the opposite of the intent and
-// the most expensive possible way to be wrong.
+// The condition mirrors lark's own claim query, including next_attempt_at and
+// the suppression check. Counting every 'pending' row instead would hold the
+// worker awake for as long as one message sat in backoff -- which is both the
+// opposite of the intent and the most expensive possible way to be wrong.
+//
+// The suppression half of that mirror is not optional, because a suppressed row
+// is not in backoff: it is never claimable again. MessageQueue.SuppressAsync
+// sweeps the rows already queued when an address is suppressed, but nothing
+// sweeps a row queued to an address that was suppressed earlier -- the claim
+// just skips it, and its own remarks say that leaves it pending forever. One
+// such row counts as work here while being work lark cannot take, so the scaler
+// would wake it, find nothing to claim, and hold it at one replica for good.
+// That is the whole point of letting it sleep, lost to a single bounced address
+// that someone later mailed again.
 var larkScaleRules = larkWarmReplicas == 0 ? [
   {
     name: 'mail-is-waiting'
     custom: {
       type: 'postgresql'
       metadata: {
-        query: 'SELECT count(*) FROM notify.messages WHERE status = \'pending\' AND (next_attempt_at IS NULL OR next_attempt_at <= now())'
+        query: 'SELECT count(*) FROM notify.messages m WHERE m.status = \'pending\' AND (m.next_attempt_at IS NULL OR m.next_attempt_at <= now()) AND NOT EXISTS (SELECT 1 FROM notify.suppressions s WHERE s.email = m.to_email AND (s.reason <> \'unsubscribed\' OR m.priority > 0))'
         targetQueryValue: '1'
         activationTargetQueryValue: '0'
       }

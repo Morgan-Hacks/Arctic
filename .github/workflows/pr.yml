@@ -52,6 +52,14 @@ jobs:
               - 'libs/contracts/**'
               - 'libs/data/**'
               - 'libs/observability/**'
+              # Not a lib, and listed for the same reason the libs are. The
+              # scale rule that wakes lark is a copy of ClaimAsync's predicate
+              # written as a string in apps.bicep, and lark's tests now read it
+              # out of that file to check the two still agree. So editing the
+              # template can break the lark suite, and without this line the
+              # only job that would catch it never runs -- which is exactly how
+              # the two drifted apart in the first place.
+              - 'deploy/azure/**'
             harbor:
               - 'src/harbor/**'
               - 'libs/contracts/**'

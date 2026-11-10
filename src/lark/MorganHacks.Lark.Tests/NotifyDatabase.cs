@@ -152,6 +152,21 @@ public sealed class NotifyDatabase : IAsyncLifetime
             await r.IsDBNullAsync(2) ? null : r.GetFieldValue<DateTimeOffset>(2));
     }
 
+    /// <summary>Pushes a message's next attempt into the future.</summary>
+    /// <remarks>
+    /// A message in backoff is still work the queue owes someone, it is just
+    /// not work yet. Separate from <see cref="ExpireLockAsync"/>, which is
+    /// about a worker that died holding a claim.
+    /// </remarks>
+    public async Task DeferAsync(Guid id, TimeSpan by)
+    {
+        await using var cmd = DataSource.CreateCommand(
+            "UPDATE notify.messages SET next_attempt_at = now() + @by WHERE id = @id");
+        cmd.Parameters.AddWithValue("by", by);
+        cmd.Parameters.AddWithValue("id", id);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
     public async Task ExpireLockAsync(Guid id)
     {
         await using var cmd = DataSource.CreateCommand(
