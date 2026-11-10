@@ -54,8 +54,21 @@ jobs:
           docker build \
             --file src/atlas/Dockerfile.seed --platform linux/amd64 --tag "$server/hacker-seed:$GITHUB_SHA" .
           docker push "$server/hacker-seed:$GITHUB_SHA"
+      # Which database the seed writes to. Staging's is a Neon project now, so the
+      # connection comes from the environment instead of being composed here. All of
+      # these being empty still means the Azure server this repository created, so an
+      # environment nobody has moved keeps working and moving one back is clearing a
+      # secret rather than reverting this workflow.
+      #
+      # The direct endpoint is preferred over the pooled one. Seeding is bulk writes
+      # in one short-lived job, so it gains nothing from a connection pooler, and
+      # going direct means not having to reason about what PgBouncer's transaction
+      # mode does to a session. SeedSafety accepts either, so a staging environment
+      # that only has ARCTIC_DB set still works.
       - name: Configure staging job
         env:
+          ARCTIC_DB_DIRECT: ${{ secrets.ARCTIC_DB_DIRECT }}
+          ARCTIC_DB: ${{ secrets.ARCTIC_DB }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           set -euo pipefail
@@ -65,12 +78,15 @@ jobs:
           trap 'rm -f "$parameters"' EXIT
           python3 - "$parameters" <<'PY'
           import json, os, sys
-          password = os.environ.get('DB_PASSWORD')
-          if not password:
-              raise SystemExit('The Staging environment needs its existing DB_PASSWORD secret.')
-          connection = ('Host=psql-mh-staging.postgres.database.azure.com;Port=5432;'
-                        'Database=morganhacks;Username=arctic;Password="'
-                        + password.replace('"', '""') + '";SSL Mode=VerifyFull')
+          connection = (os.environ.get('ARCTIC_DB_DIRECT') or os.environ.get('ARCTIC_DB') or '').strip()
+          if not connection:
+              password = os.environ.get('DB_PASSWORD')
+              if not password:
+                  raise SystemExit('Set ARCTIC_DB_DIRECT on the Staging environment, '
+                                   'or keep its DB_PASSWORD secret for the Azure server.')
+              connection = ('Host=psql-mh-staging.postgres.database.azure.com;Port=5432;'
+                            'Database=morganhacks;Username=arctic;Password="'
+                            + password.replace('"', '""') + '";SSL Mode=VerifyFull')
           values = dict(dbConnectionString=connection, imageTag=os.environ['GITHUB_SHA'],
                         registryName=os.environ['REGISTRY_NAME'],
                         applicantCount=int(os.environ['SEED_COUNT']),
