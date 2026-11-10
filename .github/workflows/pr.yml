@@ -31,6 +31,11 @@ jobs:
       portaladmin: ${{ steps.filter.outputs.portaladmin }}
       portalforms: ${{ steps.filter.outputs.portalforms }}
       contracts: ${{ steps.filter.outputs.contracts }}
+      # Every filter below needs a line here. A filter without one resolves to
+      # the empty string, never equals 'true', and its job skips on every run
+      # -- a check that is always green because it never ran, which reads as
+      # coverage. infra shipped that way for exactly one push before this.
+      infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v3
