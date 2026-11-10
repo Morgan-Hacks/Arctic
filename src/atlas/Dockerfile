@@ -37,8 +37,13 @@ COPY libs/ libs/
 RUN dotnet publish src/atlas/MorganHacks.Api/MorganHacks.Api.csproj \
     -c Release -o /app --no-restore
 
-ARG COUNTRY_DATABASE_RELEASE=2026-09
-ARG COUNTRY_DATABASE_SHA256=cb0578ce59f569f2c933bb40feb820804a334855a60739011b0a89cab1d6e4ed
+# DB-IP keeps only the last couple of monthly releases and deletes the rest, so
+# this pin stops being downloadable rather than merely going stale: 2026-08 and
+# 2026-09 are both 404 now. Expect to bump it every month or two, and note that a
+# cached layer hides the breakage -- the build that broke on this was the first
+# one in a while to miss the cache.
+ARG COUNTRY_DATABASE_RELEASE=2026-11
+ARG COUNTRY_DATABASE_SHA256=75fe430010f6d38a8c4331c202bf0df6ce3221a6e6d823b9e5a6d951e4cf9758
 RUN curl --fail --location --retry 3 --max-time 120 \
       "https://download.db-ip.com/free/dbip-country-lite-${COUNTRY_DATABASE_RELEASE}.mmdb.gz" -o /tmp/country.mmdb.gz \
  && printf '%s  %s\n' "$COUNTRY_DATABASE_SHA256" /tmp/country.mmdb.gz | sha256sum -c - \
