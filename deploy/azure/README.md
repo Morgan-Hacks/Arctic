@@ -73,6 +73,51 @@ It is split in two so that neither half can do the other's job:
 Only the pull token is long-lived, and it cannot write. The push credential is
 minted per run and is never stored.
 
+**A new service's package has to be created by hand, once.** The push
+credential above is the workflow's own `GITHUB_TOKEN`, and it cannot create an
+organisation-owned package — only write to one that already exists and has this
+repository added to it. GitHub documents none of this, and the first deploy onto
+ghcr.io failed four times before it was clear what was missing.
+
+The symptom is distinctive: every layer uploads successfully, and then the
+manifest is refused with `error from registry: denied`, or `403 Forbidden` on a
+`HEAD` to the package's blobs. The token is not the problem — the run's
+`GITHUB_TOKEN Permissions` group says `Packages: write` — which is exactly what
+makes it hard to read.
+
+Per package, once:
+
+1. Create it with a personal token carrying `write:packages`. It must be a
+   **classic** token; a fine-grained one fails with `permission_denied: The
+   token provided does not match expected scopes`. Pushing anything at all is
+   enough to bring the package into existence:
+
+   ```bash
+   docker login ghcr.io -u <your-github-login>   # paste at docker's own prompt
+   docker pull alpine:3
+   docker tag alpine:3 ghcr.io/morgan-hacks/arctic/<service>:bootstrap
+   docker push ghcr.io/morgan-hacks/arctic/<service>:bootstrap
+   ```
+
+2. At `github.com/orgs/Morgan-Hacks/packages`, open the package and go to
+   **Package settings → Manage Actions access → Add repository → `Arctic`**,
+   then set the role to **`Write`**. `Read` is what you get by default, and it
+   still fails the push identically to never having added the repository.
+
+3. Delete the `bootstrap` tag once a real deploy has pushed over it. The four
+   current packages still carry one.
+
+Both steps need an account with **admin on the package**, which in practice
+means the account that created it. Performing step 2 as some other organisation
+member can appear to succeed without persisting — which is why three of the four
+packages still returned 403 after they looked correctly linked.
+
+**`org.opencontainers.image.source` does not substitute for step 2.** That label
+links a package to its source repository for display in the GitHub UI, and is
+worth adding for that alone, but it grants no Actions access: pushing a labelled
+image to an unlinked package still returns 403. Tested directly rather than
+assumed, because the documentation reads as though it might.
+
 **The registry itself has not been deleted.** Removing a module from a Bicep
 template does not remove the resource — deployments are incremental — so
 `crmharctic` still exists and still holds every image a rollback might want.
@@ -214,26 +259,43 @@ second thought.
 
 ## Pulling images
 
-Services pull with a **user-assigned managed identity** granted `AcrPull` on
-the shared registry, one identity per environment. The registry has no admin
-user.
+Services pull from ghcr.io with a token: each app's `registries` block names
+`ghcr.io`, takes its username from `GHCR_USERNAME` and its password from a
+`ghcr-token` secret populated from the environment's `GHCR_TOKEN`. One pair per
+environment, both read-only. The section above has how the two credentials are
+split and why only the pull half is long-lived.
 
-The alternative was the registry's admin password: one static credential shared
-by every service, readable by anyone with access to the resource, and rotating
-it means redeploying everything at once. The identity is scoped to its
-environment, grants exactly pull, and has nothing to leak.
+Pushing is CI's own `GITHUB_TOKEN`, minted per run. From a laptop it is a
+classic personal token with `write:packages`, passed to `push-images.sh` as
+`GHCR_PUSH_USER` and `GHCR_PUSH_TOKEN` — deliberately separate from the pull
+token, because pushing and pulling should not be the same key and only one of
+them has to outlive a job.
 
-Pushing still uses your own `az login`. Push belongs to a person or to CI, not
-to a running service.
+**`id-mh-<environment>-pull` is now a misnomer.** It was created to hold
+`AcrPull` on the ACR, and a managed identity cannot authenticate to ghcr.io at
+all, so it no longer has anything to do with images. It is still created and
+still attached to every app because it carries the Storage Blob Data
+Contributor grant that lets atlas read applicant resumes — see Resumes below.
+Renaming it would mean deleting and recreating the identity and every grant
+hanging off it, which is not worth it for a name.
 
-On a first deploy the role assignment occasionally has not propagated by the
-time the apps start, and they fail to pull. Re-running `deploy.sh` fixes it —
-the templates are idempotent and the grant is already there by then.
+When a pull does fail, it is a credential or a package-access problem, not a
+propagation delay: the ACR-era advice to simply re-run `deploy.sh` does not
+apply. A revision that cannot pull shows up as `latestReadyRevisionName`
+lagging `latestRevisionName`, so a deploy can report success while nothing new
+is actually serving. Worth checking explicitly:
+
+```bash
+az containerapp show -g rg-mh-prod -n ca-atlas-prod \
+  --query "{image: properties.template.containers[0].image, \
+            latest: properties.latestRevisionName, \
+            ready: properties.latestReadyRevisionName}" -o json
+```
 
 ## Resumes
 
 A storage account per environment, one private container, and a Storage Blob
-Data Contributor grant on it for the same identity that pulls the images. Atlas
+Data Contributor grant on it for the identity still attached to the apps. Atlas
 gets the account name and that identity's client id in configuration and
 nothing else: **there is no access key anywhere**, because the account has
 `allowSharedKeyAccess: false` and one does not work even if somebody finds it.
@@ -361,8 +423,12 @@ What the deploy identity may do:
 | Grant | Scope | Why |
 |---|---|---|
 | Contributor | subscription | creates the resource groups and everything in them |
-| User Access Administrator | subscription | grants AcrPull on the shared registry, and Storage Blob Data Contributor on each environment's resumes account |
-| AcrPush | the registry | pushes images; Contributor does not cover data-plane push |
+| User Access Administrator | subscription | grants Storage Blob Data Contributor on each environment's resumes account |
+
+It no longer needs `AcrPush` on the registry, or the `AcrPull` grant that
+went with it: images live in ghcr.io now and Azure is not involved in either
+half of that. Those two grants may still be attached to `id-mh-deploy` and are
+harmless, but they are no longer what the deploy relies on.
 
 **`platform.bicep` assigns Storage Blob Data Contributor on the resumes
 account, and Contributor cannot create role assignments** — without this
