@@ -42,3 +42,16 @@ docs/
 
 **/*.user
 **/.DS_Store
+
+# Development overrides must never reach a deployed artifact. These are not in
+# any image today only by accident: the host's stale obj/ used to make
+# `dotnet publish --no-restore` skip copying content files, so excluding obj/
+# above is what started publishing them. Trivy caught it immediately, on
+# atlas's appsettings.Development.json, which carries Azurite's published
+# devstoreaccount1 connection string -- a public constant, so nothing leaked,
+# but a Development config inside a production image would override real
+# settings the moment DOTNET_ENVIRONMENT said Development.
+#
+# appsettings.json itself is deliberately NOT excluded. That one is the
+# deployed configuration and the image needs it.
+**/appsettings.Development.json
