@@ -65,15 +65,52 @@ jobs:
             echo "No ${{ inputs.path }}/Dockerfile yet — skipping image build and scan."
           fi
 
-      # Context is the repository root, not the service directory. Services
+      # Buildx with its own builder instance, which is the configuration the
+      # timings below were measured on. Left as-is rather than falling back to
+      # the daemon's default builder, because that would be an untested change
+      # to the very thing responsible for the speedup.
+      - name: Set up Buildx
+        if: steps.image.outputs.exists == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      # Buildx rather than plain docker. BuildKit transfers only the files a
+      # COPY actually references; the legacy builder tars and uploads the whole
+      # context to the daemon before running a single instruction. With no
+      # .dockerignore and a job that has just run restore, build and test on the
+      # host, that context was the working tree plus a fully populated bin/ and
+      # obj/. That, not any cache, is why this step took 633s for atlas and 366s
+      # for lark. Switching to buildx alone took atlas to 57s on a run with no
+      # cache and no .dockerignore yet, which is what pins the cause.
+      #
+      # Deliberately no --cache-from/--cache-to. A type=gha layer cache was
+      # tried here and did nothing measurable: 0 CACHED layers, no cache
+      # manifest lines in the output either way, and identical timings cold and
+      # warm. Flags that look like they do something are worse than no flags, so
+      # they are gone until somebody makes them demonstrably work.
+      #
+      # If layer caching is added back, the runtime stage has to be excluded from
+      # it -- buildx spells that --no-cache-filter runtime. Every service takes
+      # an apt-get upgrade there so the image is current as of the build rather
+      # than as of whenever Microsoft last pushed the base, and Trivy gates on
+      # the result; a cached runtime layer would hand the same upgrade back for
+      # weeks and leave the scan vouching for an image nobody ships. Note also
+      # that buildx ignores a --no-cache-filter stage name that does not exist,
+      # exiting 0 with no warning at all, so that exclusion needs a check that
+      # the stage really is called runtime.
+      #
+      # Context is the repository root, not the service directory: services
       # reference libs/observability, and atlas also references lark's data
       # library, so a context scoped to one service cannot see what it needs.
+      #
+      # --load because Trivy scans through the local daemon, and a buildx build
+      # does not put the image there on its own.
       - name: Build image
         if: steps.image.outputs.exists == 'true'
         run: |
-          docker build \
+          docker buildx build \
             -f ${{ inputs.path }}/Dockerfile \
             -t ${{ inputs.service }}:${{ github.sha }} \
+            --load \
             .
 
       - name: Trivy scan
