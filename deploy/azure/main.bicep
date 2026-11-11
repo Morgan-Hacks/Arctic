@@ -22,27 +22,26 @@ param environmentName string
 // also offers Postgres 18, which is what docker-compose and the tests run.
 param location string = 'centralus'
 
-@description('''
-Where the shared resources live, which is not the same question as where an
-environment lives.
-
-The registry and its resource group are shared by every environment, so they
-cannot follow a per-environment location. Production moved to East US 2 and
-this parameter did not, because a resource cannot change region: pointing the
-shared registry at a new one fails with InvalidResourceLocation and takes the
-whole deployment with it, at stage 1, before anything environment-specific has
-been looked at.
-
-Changing this means creating a second registry under a different name and
-repointing every environment at it. It is not a knob to turn casually.
-''')
-param sharedLocation string = 'centralus'
-
 @description('Commit sha. Never "latest" — a rollback has to be a tag that already exists.')
 param imageTag string
 
-@description('Globally unique, lowercase alphanumeric.')
-param registryName string = 'crmharctic'
+// The images come from ghcr.io, which belongs to the repository that builds
+// them, so there is no registry here any more and nothing shared between the
+// environments. See apps.bicep for what that trades away.
+//
+// The registry and its resource group are deliberately not deleted by removing
+// them from this template -- Bicep deploys incrementally, so both survive and
+// still hold every image a rollback might want. Deleting them is a separate,
+// deliberate act once ghcr.io has been trusted for a while.
+@description('Lowercase owner/repo on ghcr.io holding the images.')
+param ghcrRepository string = 'morgan-hacks/arctic'
+
+@description('GitHub user the pull token belongs to.')
+param ghcrUsername string
+
+@secure()
+@description('GitHub token with read:packages and nothing more.')
+param ghcrToken string
 
 @secure()
 param dbPassword string
@@ -154,9 +153,9 @@ param enableHackerPortalFeature string = ''
 param enableHackerDirectoryFeature string = ''
 
 @description('''
-False on the first pass. The registry has to exist and hold the images before
-the migration job can be created — Container Apps validates that the image is
-really there — so pass one is the registry alone.
+False on the first pass. The images have to be pushed before the migration job
+can be created — Container Apps validates that the image is really there — so
+pass one creates the group and the identity and stops.
 ''')
 param deployPlatform bool = true
 
@@ -167,13 +166,9 @@ however long that job takes.
 ''')
 param deployApps bool = true
 
-// The registry outlives any one environment, and lives in its own group so
-// deleting an environment cannot take the images with it — including the image
-// a rollback needs.
 // Azure's own abbreviations rather than something invented here, so a group
 // reads by type and anyone who has used Azure before needs no explanation.
 // Conventions are in naming.md.
-var sharedGroupName = 'rg-mh-shared'
 var groupName = 'rg-mh-${environmentName}'
 
 // On every resource. Cost Analysis groups by these, and next year's team
@@ -186,40 +181,14 @@ var commonTags = {
   repository: 'Morgan-Hacks/Arctic'
 }
 
-// The registry outlives any one environment, so it is not tagged as belonging
-// to either.
-var sharedTags = {
-  workload: 'mh'
-  environment: 'shared'
-  managedBy: 'bicep'
-  repository: 'Morgan-Hacks/Arctic'
-}
-
-resource sharedGroup 'Microsoft.Resources/resourceGroups@2021-04-01' = {
-  name: sharedGroupName
-  location: sharedLocation
-  tags: sharedTags
-}
-
 resource group 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   name: groupName
   location: location
   tags: commonTags
 }
 
-module registry 'modules/registry.bicep' = {
-  name: 'registry'
-  scope: sharedGroup
-  params: {
-    registryName: registryName
-    location: sharedLocation
-    tags: sharedTags
-  }
-}
-
-// The identity every service pulls with, and its AcrPull grant on the shared
-// registry. Both have to exist before anything tries to start, because a
-// container app that cannot pull its image never runs at all.
+// Created for AcrPull and kept for blob storage: atlas reads applicant resumes
+// through it, so it outlived the registry it was named for.
 module pullIdentity 'modules/pull-identity.bicep' = {
   name: 'pull-identity'
   scope: group
@@ -230,16 +199,6 @@ module pullIdentity 'modules/pull-identity.bicep' = {
   }
 }
 
-module registryAccess 'modules/registry-access.bicep' = {
-  name: 'registry-access'
-  scope: sharedGroup
-  params: {
-    registryName: registryName
-    principalId: pullIdentity.outputs.principalId
-  }
-  dependsOn: [registry]
-}
-
 module platform 'modules/platform.bicep' = if (deployPlatform) {
   name: 'platform'
   scope: group
@@ -247,8 +206,9 @@ module platform 'modules/platform.bicep' = if (deployPlatform) {
     environmentName: environmentName
     location: location
     imageTag: imageTag
-    registryName: registryName
-    registryResourceGroup: sharedGroupName
+    ghcrRepository: ghcrRepository
+    ghcrUsername: ghcrUsername
+    ghcrToken: ghcrToken
     dbPassword: dbPassword
     appConnectionString: appConnectionString
     appConnectionStringDirect: appConnectionStringDirect
@@ -258,7 +218,6 @@ module platform 'modules/platform.bicep' = if (deployPlatform) {
     pullIdentityPrincipalId: pullIdentity.outputs.principalId
     tags: commonTags
   }
-  dependsOn: [registry, registryAccess]
 }
 
 module apps 'modules/apps.bicep' = if (deployApps) {
@@ -268,8 +227,9 @@ module apps 'modules/apps.bicep' = if (deployApps) {
     environmentName: environmentName
     location: location
     imageTag: imageTag
-    registryName: registryName
-    registryResourceGroup: sharedGroupName
+    ghcrRepository: ghcrRepository
+    ghcrUsername: ghcrUsername
+    ghcrToken: ghcrToken
     dbPassword: dbPassword
     appConnectionString: appConnectionString
     appKedaConnection: appKedaConnection
@@ -295,9 +255,8 @@ module apps 'modules/apps.bicep' = if (deployApps) {
     pullIdentityClientId: pullIdentity.outputs.clientId
     tags: commonTags
   }
-  dependsOn: [platform, registryAccess]
+  dependsOn: [platform]
 }
 
-output registryLoginServer string = registry.outputs.loginServer
 output postgresHost string = deployPlatform ? platform!.outputs.postgresHost : ''
 output harborFqdn string = deployApps ? apps!.outputs.harborFqdn : ''

@@ -1,9 +1,11 @@
-// The identity the services use to pull their own images.
+// The identity the services read blob storage with.
 //
-// Replaces the registry's admin password. That password is a static credential
-// shared by every service, readable by anyone with access to the resource, and
-// rotating it means redeploying everything at once. An identity is scoped to
-// this environment, grants exactly AcrPull, and has nothing to leak.
+// Created to pull images from the shared ACR, which is where the name comes
+// from. The images come from ghcr.io now and a managed identity cannot pull
+// from there, so the registry half of its job is gone and the storage half is
+// not: atlas reads applicant resumes through this identity, so it is still
+// attached to every app. Renaming it would mean recreating it and reissuing
+// every role assignment, which is not worth the tidiness.
 
 targetScope = 'resourceGroup'
 

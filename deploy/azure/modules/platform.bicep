@@ -25,8 +25,17 @@ param location string = resourceGroup().location
 @description('Commit sha. Never "latest" — a rollback has to be a tag that already exists.')
 param imageTag string
 
-param registryName string
-param registryResourceGroup string = 'rg-mh-shared'
+// See apps.bicep for why this is ghcr.io and not a registry of our own, and for
+// why the token is the one credential in here that a person has to rotate.
+@description('Lowercase owner/repo on ghcr.io holding the images.')
+param ghcrRepository string = 'morgan-hacks/arctic'
+
+@description('GitHub user the pull token belongs to.')
+param ghcrUsername string
+
+@secure()
+@description('GitHub token with read:packages and nothing more.')
+param ghcrToken string
 
 @secure()
 param dbPassword string
@@ -92,11 +101,6 @@ var resumeContainerName = 'resumes'
 // and a role assignment on a resource group that does not have one yet is how
 // the first production deploy failed.
 var inventoryContainerName = 'inventory'
-
-resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
-  name: registryName
-  scope: resourceGroup(registryResourceGroup)
-}
 
 // ---------------------------------------------------------------- logging ---
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -325,7 +329,7 @@ var blobDataContributor = subscriptionResourceId(
 resource resumeAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: storage
   // Deterministic, so re-running converges on one assignment rather than
-  // adding another. Same reasoning as the registry's AcrPull grant.
+  // adding another.
   name: guid(storage.id, pullIdentityPrincipalId, blobDataContributor)
   properties: {
     roleDefinitionId: blobDataContributor
@@ -352,13 +356,21 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
 
 var registryConfig = [
   {
-    server: registry.properties.loginServer
-    identity: pullIdentityId
+    server: 'ghcr.io'
+    username: ghcrUsername
+    passwordSecretRef: 'ghcr-token'
   }
 ]
 
-// Attached to every app and to the job, because a registry credential that is
-// an identity has to be an identity the resource actually holds.
+// The job needs its own copy, because a passwordSecretRef resolves against the
+// secrets of the resource it is written on.
+var ghcrSecret = {
+  name: 'ghcr-token'
+  value: ghcrToken
+}
+
+// Still attached, and no longer for the registry: the identity reads blobs,
+// which is why it outlived the AcrPull grant it was first created for.
 var pullIdentityConfig = {
   type: 'UserAssigned'
   userAssignedIdentities: {
@@ -388,13 +400,13 @@ resource migrations 'Microsoft.App/jobs@2024-03-01' = {
       replicaRetryLimit: 1
       manualTriggerConfig: { parallelism: 1, replicaCompletionCount: 1 }
       registries: registryConfig
-      secrets: [dbSecret]
+      secrets: [dbSecret, ghcrSecret]
     }
     template: {
       containers: [
         {
           name: 'migrations'
-          image: '${registry.properties.loginServer}/migrations:${imageTag}'
+          image: 'ghcr.io/${ghcrRepository}/migrations:${imageTag}'
           resources: { cpu: json('0.5'), memory: '1Gi' }
           env: [
             { name: 'ARCTIC_DB', secretRef: 'db-connection' }
@@ -410,6 +422,5 @@ resource migrations 'Microsoft.App/jobs@2024-03-01' = {
 
 output environmentId string = environment.id
 output postgresHost string = postgres.properties.fullyQualifiedDomainName
-output registryLoginServer string = registry.properties.loginServer
 output resumeStorageAccount string = storage.name
 output resumeContainer string = resumeContainer.name

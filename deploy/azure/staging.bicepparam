@@ -7,20 +7,17 @@ using 'main.bicep'
 
 param environmentName = 'staging'
 param location = 'centralus'
-// Which registry the images come from.
-//
-// Default is the shared one, which is what both environments used while they
-// lived in the same subscription. An environment in a different subscription
-// needs its own: a managed identity cannot be granted AcrPull on a registry in
-// another tenant, because role assignments do not cross directories. Set
-// REGISTRY_NAME on that environment.
-param registryName = readEnvironmentVariable('REGISTRY_NAME', 'crmharctic')
 
-// Where that registry lives. Deliberately not `location`: the registry is
-// shared across environments, so it cannot move when one environment does.
-param sharedLocation = readEnvironmentVariable('SHARED_LOCATION', 'centralus')
 
 param imageTag = readEnvironmentVariable('IMAGE_TAG')
+
+// The images live on ghcr.io now. GHCR_TOKEN is a GitHub token with
+// read:packages and nothing else, and it is the only credential here that
+// has to be rotated by hand -- the registry it replaced was pulled from with
+// a managed identity. See apps.bicep.
+param ghcrRepository = readEnvironmentVariable('GHCR_REPOSITORY', 'morgan-hacks/arctic')
+param ghcrUsername = readEnvironmentVariable('GHCR_USERNAME')
+param ghcrToken = readEnvironmentVariable('GHCR_TOKEN')
 param dbPassword = readEnvironmentVariable('DB_PASSWORD')
 
 // The database the services talk to, when it is not the Azure server this

@@ -27,10 +27,12 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      # The seed image is pushed with the job's own token; see deploy-azure.yml.
+      packages: write
     env:
       SEED_COUNT: ${{ inputs.count }}
       SEED_APPLY: ${{ inputs.apply }}
-      REGISTRY_NAME: ${{ vars.REGISTRY_NAME || 'crmharctic' }}
+      GHCR_REPOSITORY: ${{ vars.GHCR_REPOSITORY || 'morgan-hacks/arctic' }}
     steps:
       - uses: actions/checkout@v4
       - name: Validate inputs
@@ -49,11 +51,12 @@ jobs:
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       - name: Build seed image
         run: |
-          az acr login --name "$REGISTRY_NAME"
-          server="$(az acr show --name "$REGISTRY_NAME" --query loginServer --output tsv)"
-          docker build \
-            --file src/atlas/Dockerfile.seed --platform linux/amd64 --tag "$server/hacker-seed:$GITHUB_SHA" .
-          docker push "$server/hacker-seed:$GITHUB_SHA"
+          set -euo pipefail
+          printf '%s' "${{ secrets.GITHUB_TOKEN }}" \
+            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          image="ghcr.io/$GHCR_REPOSITORY/hacker-seed:$GITHUB_SHA"
+          docker build --file src/atlas/Dockerfile.seed --platform linux/amd64 --tag "$image" .
+          docker push "$image"
       # Which database the seed writes to. Staging's is a Neon project now, so the
       # connection comes from the environment instead of being composed here. All of
       # these being empty still means the Azure server this repository created, so an
@@ -70,6 +73,8 @@ jobs:
           ARCTIC_DB_DIRECT: ${{ secrets.ARCTIC_DB_DIRECT }}
           ARCTIC_DB: ${{ secrets.ARCTIC_DB }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
           set -euo pipefail
           az extension add --name containerapp --upgrade --only-show-errors
@@ -88,7 +93,9 @@ jobs:
                             'Database=morganhacks;Username=arctic;Password="'
                             + password.replace('"', '""') + '";SSL Mode=VerifyFull')
           values = dict(dbConnectionString=connection, imageTag=os.environ['GITHUB_SHA'],
-                        registryName=os.environ['REGISTRY_NAME'],
+                        ghcrRepository=os.environ['GHCR_REPOSITORY'],
+                        ghcrUsername=os.environ['GHCR_USERNAME'],
+                        ghcrToken=os.environ['GHCR_TOKEN'],
                         applicantCount=int(os.environ['SEED_COUNT']),
                         apply=os.environ['SEED_APPLY'] == 'true')
           with open(sys.argv[1], 'w') as output:

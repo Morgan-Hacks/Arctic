@@ -185,6 +185,8 @@ jobs:
           IMAGE_TAG: ci
           DB_PASSWORD: ci-placeholder-never-used
           SUPER_ADMIN_EMAIL: ci@example.invalid
+          GHCR_USERNAME: ci-placeholder-never-used
+          GHCR_TOKEN: ci-placeholder-never-used
         run: |
           set -euo pipefail
           for params in deploy/azure/staging.bicepparam deploy/azure/prod.bicepparam; do
