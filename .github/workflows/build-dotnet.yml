@@ -65,15 +65,59 @@ jobs:
             echo "No ${{ inputs.path }}/Dockerfile yet — skipping image build and scan."
           fi
 
+      # Buildx rather than plain docker, for one reason: the default driver can
+      # neither read nor write a layer cache, and everything below hangs on
+      # having one.
+      - name: Set up Buildx
+        if: steps.image.outputs.exists == 'true'
+        uses: docker/setup-buildx-action@v3
+
       # Context is the repository root, not the service directory. Services
       # reference libs/observability, and atlas also references lark's data
       # library, so a context scoped to one service cannot see what it needs.
+      #
+      # A PR runner starts with an empty daemon, so before the cache existed
+      # every build pulled the SDK and ran `dotnet restore` inside the
+      # container from scratch -- measured at 633s of atlas's 1019s job and
+      # 366s of lark's 451s, to produce an image whose only job here is to be
+      # scanned. The deploy workflow never felt it because push-images.sh
+      # builds all four against one warm daemon and they share the layers.
+      #
+      # --no-cache-filter runtime is the load-bearing flag, and it is a
+      # security one, not a performance one. Every service's runtime stage
+      # takes an `apt-get upgrade` so the image is current as of the build
+      # rather than as of whenever Microsoft last pushed the base;
+      # src/atlas/Dockerfile writes out why at length. Caching that layer
+      # would serve the same upgrade back for weeks and leave Trivy gating on
+      # an image nobody is shipping -- the exact failure that comment exists
+      # to prevent. So the build stage caches and the runtime stage does not.
+      #
+      # It names `runtime` literally, which holds because all three services
+      # name the stage that, deliberately -- hence the grep. buildx ignores a
+      # --no-cache-filter stage name that does not exist, exiting 0 with no
+      # warning (checked, not assumed), so a service whose final stage were
+      # called anything else would cache its upgrade and nothing anywhere
+      # would say so. That is the same shape as every other gap in this
+      # repository's CI history: a protection that is silently absent reads
+      # exactly like one that is working.
+      #
+      # --load because Trivy scans through the local daemon, and a buildx
+      # build does not put the image there on its own.
       - name: Build image
         if: steps.image.outputs.exists == 'true'
         run: |
-          docker build \
+          set -euo pipefail
+          grep -qiE '^FROM .+ AS runtime[[:space:]]*$' ${{ inputs.path }}/Dockerfile || {
+            echo "::error::${{ inputs.path }}/Dockerfile has no 'AS runtime' stage, so --no-cache-filter below would silently cache its apt-get upgrade. Name the final stage 'runtime' or change this workflow deliberately."
+            exit 1
+          }
+          docker buildx build \
             -f ${{ inputs.path }}/Dockerfile \
             -t ${{ inputs.service }}:${{ github.sha }} \
+            --cache-from type=gha,scope=${{ inputs.service }} \
+            --cache-to type=gha,mode=max,scope=${{ inputs.service }} \
+            --no-cache-filter runtime \
+            --load \
             .
 
       - name: Trivy scan
