@@ -65,58 +65,51 @@ jobs:
             echo "No ${{ inputs.path }}/Dockerfile yet — skipping image build and scan."
           fi
 
-      # Buildx rather than plain docker, for one reason: the default driver can
-      # neither read nor write a layer cache, and everything below hangs on
-      # having one.
+      # Buildx with its own builder instance, which is the configuration the
+      # timings below were measured on. Left as-is rather than falling back to
+      # the daemon's default builder, because that would be an untested change
+      # to the very thing responsible for the speedup.
       - name: Set up Buildx
         if: steps.image.outputs.exists == 'true'
         uses: docker/setup-buildx-action@v3
 
-      # Context is the repository root, not the service directory. Services
+      # Buildx rather than plain docker. BuildKit transfers only the files a
+      # COPY actually references; the legacy builder tars and uploads the whole
+      # context to the daemon before running a single instruction. With no
+      # .dockerignore and a job that has just run restore, build and test on the
+      # host, that context was the working tree plus a fully populated bin/ and
+      # obj/. That, not any cache, is why this step took 633s for atlas and 366s
+      # for lark. Switching to buildx alone took atlas to 57s on a run with no
+      # cache and no .dockerignore yet, which is what pins the cause.
+      #
+      # Deliberately no --cache-from/--cache-to. A type=gha layer cache was
+      # tried here and did nothing measurable: 0 CACHED layers, no cache
+      # manifest lines in the output either way, and identical timings cold and
+      # warm. Flags that look like they do something are worse than no flags, so
+      # they are gone until somebody makes them demonstrably work.
+      #
+      # If layer caching is added back, the runtime stage has to be excluded from
+      # it -- buildx spells that --no-cache-filter runtime. Every service takes
+      # an apt-get upgrade there so the image is current as of the build rather
+      # than as of whenever Microsoft last pushed the base, and Trivy gates on
+      # the result; a cached runtime layer would hand the same upgrade back for
+      # weeks and leave the scan vouching for an image nobody ships. Note also
+      # that buildx ignores a --no-cache-filter stage name that does not exist,
+      # exiting 0 with no warning at all, so that exclusion needs a check that
+      # the stage really is called runtime.
+      #
+      # Context is the repository root, not the service directory: services
       # reference libs/observability, and atlas also references lark's data
       # library, so a context scoped to one service cannot see what it needs.
       #
-      # A PR runner starts with an empty daemon, so before the cache existed
-      # every build pulled the SDK and ran `dotnet restore` inside the
-      # container from scratch -- measured at 633s of atlas's 1019s job and
-      # 366s of lark's 451s, to produce an image whose only job here is to be
-      # scanned. The deploy workflow never felt it because push-images.sh
-      # builds all four against one warm daemon and they share the layers.
-      #
-      # --no-cache-filter runtime is the load-bearing flag, and it is a
-      # security one, not a performance one. Every service's runtime stage
-      # takes an `apt-get upgrade` so the image is current as of the build
-      # rather than as of whenever Microsoft last pushed the base;
-      # src/atlas/Dockerfile writes out why at length. Caching that layer
-      # would serve the same upgrade back for weeks and leave Trivy gating on
-      # an image nobody is shipping -- the exact failure that comment exists
-      # to prevent. So the build stage caches and the runtime stage does not.
-      #
-      # It names `runtime` literally, which holds because all three services
-      # name the stage that, deliberately -- hence the grep. buildx ignores a
-      # --no-cache-filter stage name that does not exist, exiting 0 with no
-      # warning (checked, not assumed), so a service whose final stage were
-      # called anything else would cache its upgrade and nothing anywhere
-      # would say so. That is the same shape as every other gap in this
-      # repository's CI history: a protection that is silently absent reads
-      # exactly like one that is working.
-      #
-      # --load because Trivy scans through the local daemon, and a buildx
-      # build does not put the image there on its own.
+      # --load because Trivy scans through the local daemon, and a buildx build
+      # does not put the image there on its own.
       - name: Build image
         if: steps.image.outputs.exists == 'true'
         run: |
-          set -euo pipefail
-          grep -qiE '^FROM .+ AS runtime[[:space:]]*$' ${{ inputs.path }}/Dockerfile || {
-            echo "::error::${{ inputs.path }}/Dockerfile has no 'AS runtime' stage, so --no-cache-filter below would silently cache its apt-get upgrade. Name the final stage 'runtime' or change this workflow deliberately."
-            exit 1
-          }
           docker buildx build \
             -f ${{ inputs.path }}/Dockerfile \
             -t ${{ inputs.service }}:${{ github.sha }} \
-            --cache-from type=gha,scope=${{ inputs.service }} \
-            --cache-to type=gha,mode=max,scope=${{ inputs.service }} \
-            --no-cache-filter runtime \
             --load \
             .
 
