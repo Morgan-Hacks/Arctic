@@ -1,19 +1,44 @@
-# Build output and caches. Copying these in makes the context enormous and can
-# poison a build with binaries compiled against a different SDK.
+# Everything the service Dockerfiles need is source: the .csproj files,
+# global.json, the Directory.Build.props files, then src/ and libs/. Nothing
+# listed below is any of that, and this file is load-bearing three times over.
+#
+# Context size. Without it the context is the entire working tree plus
+# whatever the job just produced. The .NET jobs run restore, build and test on
+# the host before building the image, so bin/ and obj/ are already populated
+# and large by the time docker sees them -- and .claude/ holds git worktrees.
+# That context was the real reason `docker build` took 633s for atlas: the
+# legacy builder tars and ships the whole thing to the daemon before running a
+# single instruction. BuildKit only transfers what a COPY actually references,
+# which is most of why that step is now measured in tens of seconds.
+#
+# Correctness. `COPY src/<svc>/ src/<svc>/` lands after the container has run
+# its own `dotnet restore`, so a host obj/ overwrites the restore output that
+# the following `dotnet publish --no-restore` depends on -- including a
+# project.assets.json carrying NuGet paths from the host, which do not exist
+# inside the image. It has worked so far because the host restored the same
+# packages. Excluding obj/ makes the container's own restore the only one
+# present, which is what --no-restore was always assuming.
+#
+# Caching. A COPY whose contents change on every run can never be a cache hit.
+# Host bin/ and obj/ change on every run by definition, so without this the
+# restore layer would cache and every layer after it -- publish included --
+# would miss, every time.
+
 **/bin/
 **/obj/
 **/node_modules/
+**/TestResults/
 **/.next/
-**/.vercel/
+**/dist/
+**/coverage/
 
 .git/
 .github/
+.claude/
+.vs/
+.vscode/
+.idea/
 docs/
-doc-starter/
-plan/
-**/*.md
 
-# Never in an image.
-**/.env
-**/.env.*
-**/appsettings.Development.json
+**/*.user
+**/.DS_Store
