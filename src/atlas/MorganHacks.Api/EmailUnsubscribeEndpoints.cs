@@ -33,7 +33,17 @@ public static class EmailUnsubscribeEndpoints
         if (!http.Request.HasFormContentType || http.Request.ContentLength > 1024)
             return Results.BadRequest();
         var form = await http.Request.ReadFormAsync(ct);
-        if (form["confirm"] != "unsubscribe") return Results.BadRequest();
+
+        // Two callers, one endpoint. A reader pressing the button on the page
+        // above sends confirm=unsubscribe; a mail client acting on
+        // List-Unsubscribe-Post sends List-Unsubscribe=One-Click and nothing
+        // else, which this refused with a 400 until the header existed to send
+        // it. Both mean the same thing and neither is a cross-site risk worth
+        // a token: the id in the path is the unguessable part, it only ever
+        // stops broadcast mail, and the page says so before it happens.
+        var pressed = form["confirm"] == "unsubscribe";
+        var oneClick = form["List-Unsubscribe"] == "One-Click";
+        if (!pressed && !oneClick) return Results.BadRequest();
         await queue.SuppressAsync(email, "unsubscribed", ct);
         return Complete();
     }

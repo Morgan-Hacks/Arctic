@@ -978,7 +978,7 @@ public class CampaignTests(ApplicationsDatabase db)
              "event.name", "event.startsAt", "event.endsAt",
              "event.registrationOpensAt", "event.registrationClosesAt",
              "event.decisionsAnnouncedAt", "event.capacity",
-             "link.portal", "link.forms", "link.console"],
+             "link.portal", "link.forms", "link.console", "link.unsubscribe"],
             listed.Select(p => p.GetProperty("name").GetString()));
 
         // Grouped, so twelve names arrive under headings rather than as one
@@ -1014,7 +1014,7 @@ public class CampaignTests(ApplicationsDatabase db)
              "event.name", "event.startsAt", "event.endsAt",
              "event.registrationOpensAt", "event.registrationClosesAt",
              "event.decisionsAnnouncedAt", "event.capacity",
-             "link.portal", "link.forms", "link.console"],
+             "link.portal", "link.forms", "link.console", "link.unsubscribe"],
             await PlaceholdersOn(addresses, cookie));
 
         Assert.Equal(
@@ -1023,7 +1023,7 @@ public class CampaignTests(ApplicationsDatabase db)
              "event.name", "event.startsAt", "event.endsAt",
              "event.registrationOpensAt", "event.registrationClosesAt",
              "event.decisionsAnnouncedAt", "event.capacity",
-             "link.portal", "link.forms", "link.console"],
+             "link.portal", "link.forms", "link.console", "link.unsubscribe"],
             await PlaceholdersOn(applicants, cookie));
     }
 

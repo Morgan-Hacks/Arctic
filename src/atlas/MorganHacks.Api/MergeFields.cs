@@ -144,6 +144,26 @@ public static class MergeFields
             Origins.Forms),
         ("link.console", "The organizer console. For mail to the team, not to applicants.",
             Origins.Console),
+
+        // The one link here that is not an address this system is configured
+        // with. It renders to EmailUnsubscribe.Placeholder, which is a
+        // sentinel rather than a URL, and lark swaps it for that recipient's
+        // own address in UnsubscribeStore just before the send -- because the
+        // address identifies the person and rendering happens once for the
+        // whole campaign.
+        //
+        // The consequence is visible and worth expecting: a preview shows the
+        // sentinel in the href rather than a working link, because the preview
+        // renders through the same call the send does and there is genuinely
+        // no recipient yet.
+        //
+        // It is offered here rather than left as a raw {$unsubscribe_link}
+        // nobody could discover: the brace syntax is different from every
+        // other placeholder in the editor, so it never appeared in the {{
+        // menu and the only way to use it was to know it existed.
+        ("link.unsubscribe",
+            "Where this person stops receiving broadcasts. Fills in per recipient.",
+            _ => EmailUnsubscribe.Placeholder),
     ];
 
     /// <summary>

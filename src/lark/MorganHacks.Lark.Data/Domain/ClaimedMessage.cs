@@ -22,4 +22,13 @@ public sealed record ClaimedMessage(
     // process. It is what makes "I never got my sign-in link" one query
     // instead of two log searches lined up by hand.
     string? CorrelationId,
-    bool ClickTracking = false);
+    bool ClickTracking = false,
+
+    // Where this recipient unsubscribes, minted by UnsubscribeStore just
+    // before the send. Null on the transactional lane, where there is nothing
+    // to unsubscribe from -- see the Priority rule there.
+    //
+    // It is on the message rather than looked up by the provider because the
+    // address is per-recipient and the provider is handed one message at a
+    // time with no connection of its own.
+    string? UnsubscribeUrl = null);

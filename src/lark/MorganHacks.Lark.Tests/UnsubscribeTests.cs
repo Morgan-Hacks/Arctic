@@ -38,6 +38,71 @@ public class UnsubscribeTests(NotifyDatabase db) : IClassFixture<NotifyDatabase>
         Assert.Equal(1L, await read.ExecuteScalarAsync());
     }
 
+    /// <summary>
+    /// A broadcast gets an address even when its body never asks for one.
+    /// </summary>
+    /// <remarks>
+    /// This is the rule List-Unsubscribe depends on. Before it, the address
+    /// was minted only when the body contained the placeholder, so a template
+    /// whose author never added an unsubscribe link produced a message with
+    /// nothing for the header to carry -- and the header is the part Gmail and
+    /// Yahoo require of bulk senders, which no template author is thinking
+    /// about.
+    /// </remarks>
+    [Fact]
+    public async Task A_broadcast_gets_an_unsubscribe_address_with_no_marker_in_the_body()
+    {
+        var email = $"headers-{Guid.NewGuid():N}@example.invalid";
+        var campaign = await db.AddCampaignAsync("broadcast");
+        var id = await db.QueueAsync(campaign, email);
+
+        // Priority above zero is the broadcast lane, the same test the claim
+        // query and IsSuppressedAsync use. No placeholder anywhere in here.
+        var message = new ClaimedMessage(id, campaign, email, 10, 0, "Subject",
+            "<p>An announcement.</p>", "An announcement.", "mail@example.invalid", null, null);
+
+        var prepared = await new UnsubscribeStore(db.DataSource)
+            .PrepareAsync(message, "https://api.example.invalid/api");
+
+        Assert.NotNull(prepared.UnsubscribeUrl);
+        Assert.Contains("/email/unsubscribe/", prepared.UnsubscribeUrl);
+
+        // The body is untouched, which is the other half of it: the header
+        // carries the address and the copy is still the author's.
+        Assert.Equal(message.BodyHtml, prepared.BodyHtml);
+        Assert.Equal(message.BodyText, prepared.BodyText);
+
+        // Unencoded, because a mail client POSTs to this rather than a browser
+        // following markup. &amp; here would be a 404 nobody ever sees.
+        Assert.DoesNotContain("&amp;", prepared.UnsubscribeUrl);
+        Assert.Equal(email, await new UnsubscribeStore(db.DataSource)
+            .FindEmailAsync(Guid.Parse(new Uri(prepared.UnsubscribeUrl).Segments.Last())));
+    }
+
+    /// <summary>
+    /// A sign-in link never carries one, even if its body asks.
+    /// </summary>
+    /// <remarks>
+    /// The body placeholder is still honoured, because an author who typed it
+    /// meant it. What the transactional lane does not get is the header, which
+    /// would offer to switch off the thing the reader is in the middle of
+    /// doing.
+    /// </remarks>
+    [Fact]
+    public async Task A_sign_in_link_never_gets_an_unsubscribe_header_address()
+    {
+        var email = $"transactional-{Guid.NewGuid():N}@example.invalid";
+        var message = new ClaimedMessage(Guid.NewGuid(), Guid.NewGuid(), email, 0, 0,
+            "Sign in", $"<a href='{EmailUnsubscribe.Placeholder}'>Unsubscribe</a>",
+            EmailUnsubscribe.Placeholder, "mail@example.invalid", null, null);
+
+        var prepared = await new UnsubscribeStore(db.DataSource)
+            .PrepareAsync(message, "https://api.example.invalid/api");
+
+        Assert.Null(prepared.UnsubscribeUrl);
+        Assert.DoesNotContain(EmailUnsubscribe.Placeholder, prepared.BodyHtml);
+    }
+
     [Fact]
     public async Task Messages_without_the_marker_need_no_unsubscribe_configuration()
     {
