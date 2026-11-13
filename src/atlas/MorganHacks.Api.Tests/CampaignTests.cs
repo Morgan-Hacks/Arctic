@@ -956,6 +956,41 @@ public class CampaignTests(ApplicationsDatabase db)
         Assert.Equal("draft", campaign.GetProperty("campaign").GetProperty("status").GetString());
     }
 
+    /// <summary>
+    /// A campaign starts untracked even when its template is tracked.
+    /// </summary>
+    /// <remarks>
+    /// The new campaign dialog sends no tracking choice, and this used to fall
+    /// back to the template's click_tracking -- so a tracked template produced
+    /// tracked campaigns and the only sign was a toggle already switched on
+    /// two screens later. Open tracking is a 1x1 image in the body and click
+    /// tracking rewrites every link through our own domain; both are plain
+    /// bulk signals, and neither should arrive by inheritance.
+    /// </remarks>
+    [Fact]
+    public async Task A_campaign_is_untracked_even_when_its_template_is_tracked()
+    {
+        var (_, cookie) = await Comms();
+        var key = await TemplateWith("Tracked", "<p>Body</p>", "Body");
+
+        await using (var on = db.DataSource.CreateCommand(
+            "UPDATE notify.templates SET click_tracking = true WHERE key = @key"))
+        {
+            on.Parameters.AddWithValue("key", key);
+            await on.ExecuteNonQueryAsync();
+        }
+
+        // No trackingEnabled in the request, exactly as the dialog sends it.
+        var id = Id(await Body(await Create(
+            cookie, new { type = "explicitList", emails = new[] { Unique("tracked") } }, key)));
+        var saved = await Body(await Client().SendAsync(
+            Request(HttpMethod.Get, $"/admin/campaigns/{id}", cookie)));
+
+        Assert.False(
+            saved.GetProperty("campaign").GetProperty("trackingEnabled").GetBoolean(),
+            "A campaign should not inherit tracking from its template.");
+    }
+
     // ------------------------------------------------------- placeholders ---
 
     [Fact]

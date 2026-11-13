@@ -367,7 +367,7 @@ export function CampaignDraft({ campaign: initialCampaign, content, available, f
                 </div>
               </div>
               <div id="campaign-reply-to-editor" className={styles.field} hidden={!editingReplyTo}><label htmlFor="campaign-reply-to">Reply-to email <span>Optional</span></label><input ref={replyToInput} id="campaign-reply-to" type="email" value={draft.replyTo} onChange={event => set("replyTo", event.target.value)} placeholder={draft.fromEmail} aria-describedby="campaign-reply-to-help" autoComplete="off" spellCheck={false} /><p id="campaign-reply-to-help" className={styles.hint}>Leave empty to receive replies at the sender address.</p></div>
-              <label className={styles.tracking}><span><strong>Email tracking</strong><small>Track opens, clicks, devices, and approximate countries.</small></span><input type="checkbox" role="switch" checked={draft.trackingEnabled} onChange={event => set("trackingEnabled", event.target.checked)} /><span className={styles.switch} aria-hidden="true" /></label>
+              <label className={styles.tracking}><span><strong>Email tracking</strong><small>Track opens, clicks, devices, and approximate countries. Off by default: tracking adds a hidden image and routes every link through us, which is part of how Gmail decides a message is bulk.</small></span><input type="checkbox" role="switch" checked={draft.trackingEnabled} onChange={event => set("trackingEnabled", event.target.checked)} /><span className={styles.switch} aria-hidden="true" /></label>
             </fieldset>
             <button type="submit" style={{ display: "none" }} tabIndex={-1} aria-hidden="true">Continue to design</button>
           </form>
