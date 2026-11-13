@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { cookies } from "next/headers";
 import { DARK_MODE, isOn } from "@/lib/features";
+import { environmentName } from "../../../libs/features/flags";
 import { THEME_COOKIE, initialTheme } from "../../../libs/ui/theme";
 import { siteConfig } from "@/site.config";
 
@@ -60,10 +61,28 @@ const openDyslexic = localFont({
 const title = `MorganHacks ${siteConfig.year}`;
 const description = siteConfig.announcement.description;
 
+/**
+ * Whether this deployment is allowed to appear in a search result.
+ *
+ * staging serves the same pages as production on its own hostname, so without
+ * this there are two indexable copies of every public page and the one people
+ * are meant to find is competing with a rehearsal. It matters more now than it
+ * did when the public site was a single holding page: there are four pages
+ * here, and the Heist site is on staging for a while before it is anywhere
+ * else.
+ *
+ * Keyed off the environment rather than the hostname, so it follows the same
+ * answer the feature flags do -- see libs/features/flags.ts. Production
+ * resolves to `undefined` and nothing is written, which is the behaviour this
+ * file had before.
+ */
+const indexable = environmentName(process.env) !== "staging";
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title,
   description,
+  ...(indexable ? {} : { robots: { index: false, follow: false } }),
   openGraph: {
     title,
     description,

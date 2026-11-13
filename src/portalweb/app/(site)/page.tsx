@@ -114,8 +114,8 @@ function HeistHome() {
             <span className="heist-eyebrow">// {anniversary.eyebrow}</span>
 
             <h1 className="heist-hero__title">
-              Five years.
-              <em>One more job.</em>
+              {anniversary.headlineTop}
+              <em>{anniversary.headlineBottom}</em>
             </h1>
 
             <p className="heist-lede">

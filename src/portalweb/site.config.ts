@@ -96,6 +96,30 @@ export const siteConfig = {
     eyebrow: "Fifth edition",
     heading: "Five years of building at Morgan State.",
     line: "Four hackathons behind us and the fifth in April. Every one of them is still online.",
+
+    /**
+     * The headline, in the two lines it is set in.
+     *
+     * Split because the page sets the second line in orange underneath the
+     * first, and a single string with a marker in it would mean the page
+     * parsing its own copy. Two strings is the whole of that problem.
+     */
+    headlineTop: "Five years.",
+    headlineBottom: "One more job.",
+
+    /**
+     * What a search result and a shared link say, once the Heist site is the
+     * site.
+     *
+     * Separate from `announcement.description` above, which is the holding
+     * page's, and for the same reason that one exists: a description outlives
+     * the page. It sits in Google's index until a recrawl and it renders in
+     * the preview of every link already pasted into a group chat. While this
+     * was missing the whole Heist site was being shared with a card that said
+     * the next hackathon was to be announced.
+     */
+    description:
+      "MorganHacks returns to Morgan State University in April 2027 for its fifth year. One weekend, 24 hours, and a room full of crews.",
   },
 
   /**

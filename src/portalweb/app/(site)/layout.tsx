@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import { Bricolage_Grotesque, Manrope } from "next/font/google";
 import { Barlow, Barlow_Condensed, Courier_Prime } from "next/font/google";
 import { HEIST_THEME, isOn } from "@/lib/features";
+import { siteConfig } from "@/site.config";
 import "./globals.css";
 import "./heist.css";
 
@@ -65,6 +67,43 @@ const courier = Courier_Prime({
   preload: false,
   variable: "--font-courier",
 });
+
+/**
+ * What a search result and a shared link say for this route group.
+ *
+ * The root layout sets the title and description from `announcement`, which is
+ * the holding page's copy: "to be announced". That is correct while the
+ * holding page is what renders and wrong the moment the Heist site is, and a
+ * description is the part of a page that outlives it -- it sits in an index
+ * until a recrawl and renders in the preview of every link already pasted
+ * somewhere. So this group restates both when the theme is on.
+ *
+ * The three pages inside export their own and override this; only `/` falls
+ * through to it.
+ *
+ * Module scope rather than `generateMetadata`, because `isOn` is synchronous
+ * and resolves from the environment at load. There is nothing to await and
+ * nothing that can change between requests.
+ */
+export const metadata: Metadata = isOn(HEIST_THEME)
+  ? {
+      title: `MorganHacks ${siteConfig.year}`,
+      description: siteConfig.anniversary.description,
+      openGraph: {
+        title: `MorganHacks ${siteConfig.year}`,
+        description: siteConfig.anniversary.description,
+        url: siteConfig.url,
+        siteName: "MorganHacks",
+        locale: "en_US",
+        type: "website",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: `MorganHacks ${siteConfig.year}`,
+        description: siteConfig.anniversary.description,
+      },
+    }
+  : {};
 
 /**
  * The public site, and the reason it sits in a route group.
