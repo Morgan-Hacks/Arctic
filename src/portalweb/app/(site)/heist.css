@@ -1096,12 +1096,44 @@ a.heist-year:hover .heist-year__go {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  /* The vault goes above the copy on a narrow screen: it is the thing that
-     says what this is before a word is read. */
+  /*
+   * The art box dissolves so the vault and the countdown stop travelling
+   * together.
+   *
+   * Side by side they are one column beside the copy and the box is right.
+   * Stacked, that box puts the vault AND a running clock above the headline,
+   * so the first screen on a phone is a picture and a timer and not one word
+   * about what this is. `display: contents` makes them grid items in their own
+   * right, and then they can be ordered separately: the vault leads, because
+   * it says what this is before a word is read, the copy follows, and the
+   * clock goes under it where it is a detail rather than the headline.
+   */
   .heist-hero__art {
+    display: contents;
+  }
+
+  .heist-vaultplate {
     order: -1;
-    max-width: 22rem;
+    /* Smaller than it was. At 22rem the vault filled a phone screen on its own
+       and the headline started below the fold. */
+    max-width: 17rem;
     margin-inline: auto;
+  }
+
+  .heist-countdown {
+    order: 1;
+    justify-self: start;
+  }
+
+  /* The entrance animation was on the art box, which no longer renders. */
+  .heist-vaultplate {
+    animation: heist-site-rise 0.8s cubic-bezier(0.2, 0, 0, 1) 0.1s backwards;
+  }
+}
+
+@media (max-width: 64rem) and (prefers-reduced-motion: reduce) {
+  .heist-vaultplate {
+    animation: none;
   }
 }
 
