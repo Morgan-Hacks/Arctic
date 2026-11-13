@@ -3,5 +3,6 @@
   "enable_hacker_portal_feature": false,
   "enable_reading_mode_feature": false,
   "enable_directory_feature": false,
+  "enable_event_site_feature": false,
   "enable_heist_theme_feature": false
 }

@@ -1,0 +1,1213 @@
+/* ==========================================================================
+   MorganHacks 2027 — the public event site.
+
+   Behind enable_event_site_feature. Every selector in this file is scoped to
+   `.event-site`, which only the (site) layout writes and only when the flag is
+   on, so with the flag off this stylesheet matches nothing and the holding
+   page is exactly what it was. That is the bar docs/feature-flags.md sets.
+
+   ------------------------------------------------------------- the look ---
+
+   An index, not a screen. The page is built like a printed programme: a
+   standing rail of numbered sections down the left, section headings with a
+   mono index above them, hairline rules doing the dividing, and type carrying
+   everything. There is no scene, no canvas, no video and no loop -- which is
+   also why every page here is a server component and ships no JavaScript at
+   all.
+
+   Colour is almost absent on purpose. Three greys and an off-white do the
+   work; the one accent marks exactly four things (the current section, the
+   fifth edition, a primary action, and the one deadline in the weekend that
+   has a consequence for missing it). Depth is a 1px border and a surface
+   change, never a shadow.
+
+   Never hardcode a hex below this token block.
+   ========================================================================== */
+
+.event-site {
+  /* Ground and surfaces. */
+  --ink: #0d0f15;
+  --panel: #141720;
+  --panel-2: #1c2030;
+  --line: #2a2f40;
+
+  /* Type colours. All three clear WCAG AA on every surface above; the
+     tightest pairing in the file is --muted on --panel-2 at 5.3:1. */
+  --text: #ecebe6;
+  --soft: #c9cbd3;
+  --muted: #8d94a6;
+
+  /* The accent. Picked to be nothing like the navy and orange the portal
+     wears -- these are two unrelated products on two unrelated surfaces and
+     they are not supposed to look like each other. 14.9:1 on the ground,
+     which is what lets it carry small mono text and a dark button label. */
+  --c: #c9f24d;
+
+  /* Status. Only ever means status, and never appears without a word next to
+     it: the schedule's banner is a dot plus "Not final", not a colour. */
+  --warn: #d6a53a;
+  --warn-bg: #2a2214;
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* The font variables themselves are written on this same element by the
+     layout, so these aliases resolve. Named for their job rather than their
+     family so a face can be swapped in one place. */
+  --display: var(--font-display), system-ui, sans-serif;
+  --body: var(--font-instrument), system-ui, sans-serif;
+  --mono: var(--font-mono), ui-monospace, monospace;
+
+  --rail: 15.5rem;
+  --gut: clamp(1.25rem, 4vw, 3rem);
+
+  /* How wide running text is allowed to get. The rules and the panels span
+     the whole column, because dividing the page is their job; prose does not,
+     because at the full 68rem a line of this runs to about 130 characters and
+     the eye loses the start of the next one. */
+  --measure: 42rem;
+
+  color: var(--text);
+  font: 400 15px/1.6 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --------------------------------------------------------------------------
+   Undoing the holding page's lock.
+
+   globals.css pins html and body to 100% height and sets `overflow: hidden`,
+   because the page it was written for is one screen and nothing sits below the
+   fold. This site scrolls. `:has()` is what lets a stylesheet loaded by the
+   same layout reach up to <html> and release it without touching the rules
+   themselves, so the holding page keeps its lock when the flag is off.
+   -------------------------------------------------------------------------- */
+html:has(.event-site),
+html:has(.event-site) body {
+  height: auto;
+  overflow: visible;
+  background: #0d0f15;
+}
+
+html:has(.event-site) {
+  scroll-behavior: smooth;
+}
+
+.event-site *,
+.event-site *::before,
+.event-site *::after {
+  box-sizing: border-box;
+}
+
+.event-site :is(h1, h2, h3, h4, p, ul, ol, dl, dd, figure) {
+  margin: 0;
+}
+
+.event-site :is(a, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--c);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Tabular figures everywhere a number is read against another number: years
+   down the archive, times down the schedule, amounts across the tiers. */
+.event-site :is(.es-ed__y, .es-tl__t, .es-yr__y, .es-tier__amt) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   The frame
+   ========================================================================== */
+
+.es-skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 60;
+  padding: 10px 14px;
+  border-radius: 0 0 10px 0;
+  background: var(--c);
+  color: var(--ink);
+  font: 600 14px var(--body);
+  text-decoration: none;
+}
+
+.es-skip:focus {
+  left: 0;
+}
+
+/* MLH want the badge hotlinked from their host and pinned to a top corner of
+   the page, so it is fixed to the viewport rather than placed in the rail. */
+.es-mlh {
+  position: fixed;
+  top: 0;
+  right: clamp(0.75rem, 3vw, 2rem);
+  z-index: 30;
+  width: clamp(46px, 5.5vw, 72px);
+  line-height: 0;
+}
+
+.es-mlh img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ------------------------------------------------------------- the rail ---
+   A standing index. On a wide screen it is a column fixed to the left edge
+   carrying the wordmark, the four numbered sections and the contact details.
+   Under 60rem it becomes a floating dock along the bottom and a slim top bar
+   takes the wordmark, which is the shape that survives a phone.
+   -------------------------------------------------------------------------- */
+.es-rail {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  width: var(--rail);
+  padding: 1.75rem 1.1rem;
+  overflow-y: auto;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+}
+
+.es-rail__brand {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.es-mark {
+  font: 800 1.0625rem/1.15 var(--display);
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.es-mark__yr {
+  display: block;
+  margin-top: 0.3rem;
+  font: 500 11.5px var(--mono);
+  letter-spacing: 0.16em;
+  color: var(--c);
+}
+
+.es-nav {
+  list-style: none;
+  display: grid;
+  gap: 2px;
+  padding: 0;
+}
+
+.es-nav a {
+  display: grid;
+  grid-template-columns: 1.45rem 1fr;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 12px;
+  color: var(--soft);
+  font: 500 14.5px/1.3 var(--body);
+  text-decoration: none;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.es-nav a:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.es-nav a[aria-current="page"] {
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+  color: var(--text);
+}
+
+.es-nav__n {
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.es-nav a[aria-current="page"] .es-nav__n {
+  color: var(--c);
+}
+
+.es-rail__foot {
+  margin-top: auto;
+  display: grid;
+  gap: 0.55rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.es-rail__foot a {
+  color: var(--soft);
+  font-size: 13.5px;
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+  width: fit-content;
+  transition: border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.es-rail__foot a:hover {
+  color: var(--text);
+  border-bottom-color: var(--c);
+}
+
+.es-topbar {
+  display: none;
+}
+
+.es-main {
+  margin-left: var(--rail);
+
+  /* The hero's glow is deliberately wider than the hero, so on a narrow
+     screen it hung 50px past the right edge and gave the landing page a
+     horizontal scrollbar. `clip` rather than `hidden` on purpose: `hidden`
+     would make this a scroll container, which changes how anything sticky or
+     fixed inside it behaves. `clip` just clips. Horizontal only, so the glow
+     still bleeds up past the top of the hero, which is the part of it that
+     was doing the work. */
+  overflow-x: clip;
+}
+
+.es-wrap {
+  width: 100%;
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: clamp(2.25rem, 5vw, 4rem) var(--gut) 0;
+}
+
+/* ==========================================================================
+   Hero
+   ========================================================================== */
+
+.es-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  align-items: start;
+  padding-bottom: clamp(1rem, 3vw, 2rem);
+}
+
+/* The one gradient in the file, and it is light rather than decoration: it
+   lifts the top-left corner so the headline sits on something. */
+.es-hero::before {
+  content: "";
+  position: absolute;
+  inset: -40% -20% auto -30%;
+  height: 150%;
+  background: radial-gradient(
+    110% 70% at 10% 0%,
+    color-mix(in srgb, var(--c) 13%, transparent),
+    transparent 62%
+  );
+  pointer-events: none;
+}
+
+.es-hero > * {
+  position: relative;
+}
+
+.es-rule {
+  display: block;
+  width: 44px;
+  height: 3px;
+  background: var(--c);
+  animation: es-fade 0.5s var(--ease) both;
+}
+
+.es-hero__eyebrow {
+  margin-top: 1.5rem;
+  font: 500 11.5px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+  animation: es-fade 0.5s 0.08s var(--ease) both;
+}
+
+/* The eyebrow with a status pill beside it. The pill belongs up here rather
+   than under the lede: it qualifies every time on the page below it, so it
+   has to be read before them, not after. */
+.es-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.es-kicker .es-hero__eyebrow {
+  margin-top: 0;
+}
+
+.es-kicker {
+  margin-top: 1.5rem;
+}
+
+.es-hero__title {
+  margin-top: 1.1rem;
+  font: 800 clamp(2.1rem, 5vw, 4rem)/1.04 var(--display);
+  letter-spacing: -0.025em;
+  color: var(--text);
+}
+
+/* Each line is masked and slides up from under its own edge, in turn. The
+   <span> is the mask and must not be given a transform of its own.
+
+   The padding is not spacing. `overflow: hidden` crops at the line box, and
+   at this line height that box ends above the tail of a descender -- the "g"
+   in a headline was losing its hook. The negative margin takes the padding
+   back out of the layout so the lines stay where they were. */
+.es-hero__title span {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.1em;
+  margin-bottom: -0.1em;
+}
+
+.es-hero__title span > i {
+  display: block;
+  font-style: normal;
+  animation: es-lineup 0.62s var(--ease) both;
+}
+
+.es-hero__title span:nth-child(2) > i {
+  animation-delay: 0.09s;
+}
+
+.es-hero__lede {
+  max-width: 34rem;
+  margin-top: 1.65rem;
+  font-size: 18px;
+  color: var(--soft);
+  animation: es-rise 0.5s 0.22s var(--ease) both;
+}
+
+.es-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.75rem;
+  animation: es-rise 0.5s 0.3s var(--ease) both;
+}
+
+.es-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+  margin-top: 2rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  animation: es-rise 0.5s 0.38s var(--ease) both;
+}
+
+.es-facts dt {
+  margin-bottom: 0.3rem;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.es-facts dd {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+/* --------------------------------------------------------- the editions ---
+   The anniversary, as the hero object. Five rows, oldest first, the fifth
+   picked out. It is the claim and the evidence for it in one block, and the
+   row that has no date says so rather than being quietly filled in.
+   -------------------------------------------------------------------------- */
+.es-ed {
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel-2) 55%, var(--panel));
+  animation: es-rise 0.55s 0.16s var(--ease) both;
+}
+
+.es-ed__num {
+  font: 800 clamp(3.25rem, 8vw, 5rem)/0.82 var(--display);
+  letter-spacing: -0.05em;
+  color: var(--c);
+}
+
+.es-ed__cap {
+  margin-top: 0.5rem;
+  font: 500 11.5px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
+.es-ed__list {
+  list-style: none;
+  margin-top: 1.35rem;
+  padding: 1.25rem 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.es-ed__row {
+  display: grid;
+  grid-template-columns: 3.1rem minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: baseline;
+  padding: 0.42rem 0;
+  animation: es-rise 0.45s var(--ease) both;
+  animation-delay: calc(0.26s + var(--i) * 0.055s);
+}
+
+.es-ed__y {
+  font: 600 15px var(--mono);
+  color: var(--muted);
+}
+
+.es-ed__d {
+  font-size: 13.5px;
+  color: var(--soft);
+}
+
+.es-ed__row[data-current="true"] .es-ed__y {
+  color: var(--c);
+}
+
+.es-ed__row[data-current="true"] .es-ed__d {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.es-ed__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1.25rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+  width: 100%;
+  font: 500 12px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s var(--ease);
+}
+
+.es-ed__more:hover {
+  color: var(--c);
+}
+
+.es-ed__more svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* ---------------------------------------------------------- tier strip ---
+   The four tiers at a glance on the landing page: what they are called and
+   what they cost, and nothing else. What each one includes is a column of
+   bullet points, which belongs on /sponsors where somebody is reading rather
+   than scanning.
+   -------------------------------------------------------------------------- */
+.es-strip {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 12px;
+  margin-top: 1.75rem;
+  padding: 0;
+}
+
+.es-strip li {
+  padding: 1.1rem 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel-2) 55%, var(--panel));
+}
+
+.es-strip__n {
+  display: block;
+  font: 500 11px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.es-strip__a {
+  display: block;
+  margin-top: 0.5rem;
+  font: 800 1.375rem/1 var(--display);
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   Sections
+   ========================================================================== */
+
+.es-sec {
+  margin-top: clamp(2.75rem, 6vw, 4.5rem);
+  padding-top: clamp(1.5rem, 2.5vw, 2rem);
+  border-top: 1px solid var(--line);
+}
+
+.es-sec__head {
+  max-width: 46rem;
+}
+
+.es-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+  font: 500 11.5px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
+/* A mark, not a number. The rail already numbers the pages and a second
+   numbering running down each page would leave the reader working out which
+   of the two "02"s on screen refers to what. */
+.es-eyebrow__sq {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--c);
+}
+
+.es-h2 {
+  font: 800 clamp(1.5rem, 2.9vw, 2.125rem)/1.12 var(--display);
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.es-lede {
+  max-width: 42rem;
+  margin-top: 0.85rem;
+  font-size: 17px;
+  color: var(--soft);
+}
+
+/* -------------------------------------------------------------- numbered ---
+   How the weekend works: three rows, each with its number in a tinted tile.
+   -------------------------------------------------------------------------- */
+.es-steps {
+  list-style: none;
+  display: grid;
+  gap: 2px;
+  margin-top: 1.75rem;
+  padding: 0;
+}
+
+.es-steps li {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem 0.5rem;
+  border-radius: 12px;
+}
+
+.es-steps__n {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+  color: var(--c);
+  font: 600 13px var(--mono);
+}
+
+.es-steps h3 {
+  font: 600 16px/1.3 var(--body);
+  color: var(--text);
+}
+
+.es-steps p {
+  max-width: var(--measure);
+  margin-top: 0.3rem;
+  font-size: 14.5px;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------- timeline ---
+   The run of show. Time, rail, item. The connector is drawn by the rail cell
+   rather than by a border on the row, so the last item has nothing trailing
+   off the bottom of it.
+   -------------------------------------------------------------------------- */
+.es-day {
+  margin-top: 2.25rem;
+}
+
+.es-day__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.es-day__head h2,
+.es-day__head h3 {
+  font: 800 1.375rem/1.1 var(--display);
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.es-day__head span {
+  font: 500 12px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.es-tl {
+  list-style: none;
+  margin-top: 1.5rem;
+  padding: 0;
+}
+
+.es-tl li {
+  display: grid;
+  grid-template-columns: 4rem 1.25rem minmax(0, 1fr);
+  gap: 0 0.85rem;
+}
+
+.es-tl__t {
+  padding-top: 0.2rem;
+  font: 600 13px var(--mono);
+  color: var(--muted);
+}
+
+.es-tl__rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.es-tl__rail::before {
+  content: "";
+  position: absolute;
+  top: 0.6rem;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+
+.es-tl li:last-child .es-tl__rail::before {
+  display: none;
+}
+
+.es-tl__dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 0.5rem;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: es-pop 0.4s var(--ease) both;
+  animation-delay: calc(0.1s + var(--i) * 0.05s);
+}
+
+/* The only item in the weekend with a consequence for missing it. */
+.es-tl li[data-kind="deadline"] .es-tl__dot {
+  background: var(--c);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 20%, transparent);
+}
+
+.es-tl__b {
+  padding-bottom: 1.4rem;
+}
+
+.es-tl__b strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.es-tl__b span {
+  display: block;
+  max-width: var(--measure);
+  margin-top: 0.22rem;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.es-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent);
+  background: var(--warn-bg);
+  color: var(--warn);
+  font: 500 12px var(--mono);
+}
+
+.es-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ---------------------------------------------------------------- tiers ---
+   No tier is picked out. Which one a sponsor should take is a conversation,
+   not a thing the page knows, and a highlighted "recommended" card would be
+   the page pretending otherwise.
+   -------------------------------------------------------------------------- */
+.es-tiers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14.5rem, 1fr));
+  gap: 12px;
+  margin-top: 1.75rem;
+}
+
+.es-tier {
+  display: flex;
+  flex-direction: column;
+  padding: 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel-2) 55%, var(--panel));
+}
+
+.es-tier__name {
+  font: 500 11.5px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--muted);
+}
+
+.es-tier__amt {
+  margin-top: 0.6rem;
+  font: 800 1.875rem/1 var(--display);
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.es-tier ul {
+  list-style: none;
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1.15rem;
+  padding: 1.15rem 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.es-tier li {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  gap: 0.6rem;
+  font-size: 14px;
+  color: var(--soft);
+}
+
+.es-tier svg {
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.3rem;
+  color: var(--c);
+}
+
+/* ----------------------------------------------------------- year cards ---
+   One card per edition. An <a> where there is a site to visit and a <div>
+   where there is not, so the current edition is not a link to itself.
+   -------------------------------------------------------------------------- */
+.es-years {
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  margin-top: 1.75rem;
+  padding: 0;
+}
+
+.es-yr {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+  gap: 1.25rem;
+  align-items: center;
+  padding: 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel-2) 55%, var(--panel));
+  color: inherit;
+  text-decoration: none;
+  animation: es-rise 0.45s var(--ease) both;
+  animation-delay: calc(var(--i) * 0.06s);
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+a.es-yr:hover {
+  border-color: color-mix(in srgb, var(--c) 45%, var(--line));
+  background: var(--panel-2);
+}
+
+.es-yr__y {
+  font: 800 1.75rem/1 var(--display);
+  letter-spacing: -0.02em;
+  color: var(--c);
+}
+
+.es-yr__b strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.es-yr__b span {
+  display: block;
+  max-width: var(--measure);
+  margin-top: 0.2rem;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.es-yr__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font: 500 12px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+a.es-yr:hover .es-yr__go {
+  color: var(--c);
+}
+
+.es-yr__go svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.es-yr--current {
+  border-color: color-mix(in srgb, var(--c) 32%, var(--line));
+}
+
+/* ==========================================================================
+   Blocks
+   ========================================================================== */
+
+.es-card {
+  padding: 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel-2) 55%, var(--panel));
+}
+
+.es-card h3 {
+  font: 600 16px/1.3 var(--body);
+  color: var(--text);
+}
+
+.es-card p {
+  max-width: var(--measure);
+  margin-top: 0.4rem;
+  font-size: 14.5px;
+  color: var(--muted);
+}
+
+.es-empty {
+  display: grid;
+  justify-items: start;
+  gap: 0.8rem;
+  margin-top: 1.75rem;
+  padding: 2rem 1.75rem;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+}
+
+.es-empty p {
+  max-width: 34rem;
+  font-size: 14.5px;
+  color: var(--muted);
+}
+
+/* A statement, not a quotation. No quote marks: nobody said this, and
+   setting it in quotes would attribute it to a person who does not exist.
+   The accent edge is what marks it as lifted out of the running text. */
+.es-well {
+  max-width: 54rem;
+  margin-top: 1.75rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--c);
+  border-radius: 4px 14px 14px 4px;
+  background: var(--ink);
+  font: 600 19px/1.35 var(--display);
+  color: var(--text);
+}
+
+.es-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 9px 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font: 600 14px var(--body);
+  text-decoration: none;
+  transition: filter 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.es-btn svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.es-btn--primary {
+  background: var(--c);
+  color: var(--ink);
+}
+
+.es-btn--ghost {
+  background: var(--panel-2);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.es-btn:hover {
+  filter: brightness(1.08);
+}
+
+.es-after {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.75rem;
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+
+.es-foot {
+  margin-top: clamp(3.5rem, 8vw, 6rem);
+  border-top: 1px solid var(--line);
+}
+
+.es-foot__in {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem 2rem;
+  width: 100%;
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 1.75rem var(--gut) 2.5rem;
+}
+
+.es-foot nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.es-foot a {
+  color: var(--soft);
+  font-size: 13.5px;
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+  transition: border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.es-foot a:hover {
+  color: var(--text);
+  border-bottom-color: var(--c);
+}
+
+.es-foot p {
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.es-foot__sp {
+  flex: 1 1 2rem;
+}
+
+/* ==========================================================================
+   Motion
+   ========================================================================== */
+
+@keyframes es-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes es-lineup {
+  from {
+    transform: translateY(105%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes es-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes es-pop {
+  0% {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Every animation above is `both`-filled from a hidden or offset start, and
+   every element's resting state is its natural one -- so dropping the
+   animations is all this needs to do. Nothing is left invisible. */
+@media (prefers-reduced-motion: reduce) {
+  .event-site *,
+  .event-site *::before,
+  .event-site *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  html:has(.event-site) {
+    scroll-behavior: auto;
+  }
+}
+
+/* ==========================================================================
+   Narrow
+
+   The rail becomes a dock along the bottom and a slim bar takes the wordmark.
+   Ordered widest first so each query only has to undo the one above it.
+   ========================================================================== */
+
+@media (max-width: 68rem) {
+  .es-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .es-ed {
+    max-width: 26rem;
+  }
+}
+
+@media (max-width: 60rem) {
+  .es-rail {
+    inset: auto 0 0 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.35rem;
+    width: auto;
+    margin: 0 0.75rem 0.75rem;
+    padding: 0.4rem;
+    overflow-x: auto;
+    overflow-y: visible;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: rgb(13 15 21 / 0.82);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+  }
+
+  .es-rail__brand,
+  .es-rail__foot {
+    display: none;
+  }
+
+  .es-nav {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .es-nav a {
+    grid-template-columns: auto;
+    gap: 0.35rem;
+    padding: 0.5rem 0.75rem;
+    white-space: nowrap;
+  }
+
+  /* The number is the one thing that goes: four labels fit across a phone,
+     four labels each with an index do not. */
+  .es-nav__n {
+    display: none;
+  }
+
+  .es-topbar {
+    display: flex;
+    align-items: center;
+    padding: 1.1rem var(--gut) 0;
+    /* Clear of the MLH badge, which is fixed to the top right corner. */
+    padding-right: clamp(4.5rem, 12vw, 7rem);
+  }
+
+  .es-topbar a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .es-main {
+    margin-left: 0;
+  }
+
+  .es-wrap {
+    padding-top: clamp(1.5rem, 4vw, 2.5rem);
+  }
+
+  /* Room for the dock, so the last line of the footer is never under it. */
+  .es-foot__in {
+    padding-bottom: 6rem;
+  }
+}
+
+@media (max-width: 35rem) {
+  .es-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* A four digit year at 1.75rem is wider than 3.5rem, so it was running
+     out of its own column and into the dates beside it. The column has to
+     fit the numeral, not the other way round. */
+  .es-yr {
+    grid-template-columns: 4.25rem minmax(0, 1fr);
+    gap: 0.9rem;
+    padding: 1.15rem;
+  }
+
+  .es-yr__y {
+    font-size: 1.5rem;
+  }
+
+  .es-yr__go {
+    grid-column: 2;
+  }
+
+  .es-tl li {
+    grid-template-columns: 3.4rem 1.25rem minmax(0, 1fr);
+    gap: 0 0.6rem;
+  }
+
+  .es-well {
+    font-size: 17px;
+  }
+}

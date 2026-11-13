@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import { cookies } from "next/headers";
 import { DARK_MODE, isOn } from "@/lib/features";
 import { THEME_COOKIE, initialTheme } from "../../../libs/ui/theme";
+import { environmentName } from "../../../libs/features/flags";
 import { siteConfig } from "@/site.config";
 
 // No stylesheet here on purpose. This app serves two things with nothing in
@@ -60,10 +61,26 @@ const openDyslexic = localFont({
 const title = `MorganHacks ${siteConfig.year}`;
 const description = siteConfig.announcement.description;
 
+/**
+ * Whether a crawler should index what it finds here.
+ *
+ * Staging serves the same hostnames' worth of pages as production and, until
+ * this was here, served them to Google as well -- which is how a staging
+ * rehearsal of a public site ends up competing with the site in search
+ * results, and how a page behind a feature flag gets found by people the flag
+ * was keeping it from.
+ *
+ * Production writes no robots tag at all, exactly as before, because an
+ * explicit `index, follow` is the default and saying it changes nothing except
+ * the diff.
+ */
+const indexable = environmentName(process.env) !== "staging";
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title,
   description,
+  ...(indexable ? {} : { robots: { index: false, follow: false } }),
   openGraph: {
     title,
     description,

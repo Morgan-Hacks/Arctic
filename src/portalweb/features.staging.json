@@ -1,5 +1,6 @@
 {
   "enable_hacker_portal_feature": true,
   "enable_directory_feature": true,
+  "enable_event_site_feature": true,
   "enable_heist_theme_feature": true
 }

@@ -47,6 +47,22 @@ export const HACKER_PORTAL = "enable_hacker_portal_feature";
 export const READING_MODE = "enable_reading_mode_feature";
 
 /**
+ * The full public event site, instead of the holding page.
+ *
+ * Off means `/` is the holding page exactly as it was, and /schedule,
+ * /sponsors and /editions do not exist -- each calls notFound(), so they
+ * answer 404 rather than rendering a styled "nothing here", which would
+ * itself tell somebody that something is there. That is the bar
+ * docs/feature-flags.md sets: a feature which is off should be
+ * indistinguishable from one that was never built.
+ *
+ * Separate from HEIST_THEME below, which dresses the portal. The two are
+ * unrelated looks on unrelated surfaces and flipping one must never move the
+ * other.
+ */
+export const EVENT_SITE = "enable_event_site_feature";
+
+/**
  * The 2027 Heist look for the portal: navy and orange, code rain, the vault.
  *
  * Off means the frame carries no `heist` class, none of the Heist components
