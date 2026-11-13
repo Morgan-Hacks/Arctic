@@ -1,0 +1,1206 @@
+/*
+ * The public Heist site, behind enable_heist_theme_feature.
+ *
+ * Every rule here is scoped to `.heist-site`, which (site)/layout.tsx only
+ * puts on the frame when the flag is on. With the flag off this file matches
+ * nothing and the holding page in globals.css is exactly what it was -- the
+ * bar docs/feature-flags.md sets: a feature that is off is indistinguishable
+ * from one that was never built.
+ *
+ * The palette and the faces are not invented here. They are the kit already
+ * running in app/portal/heist.css -- navy ground, chalk type, orange alarm,
+ * Barlow and Courier Prime -- so the public site and the portal read as one
+ * event rather than two projects that happen to share a domain.
+ *
+ * What is different is the shape. The portal is a fixed frame around one
+ * screen of somebody's own data; this scrolls, and it is read once by somebody
+ * deciding whether to come.
+ */
+
+/* ---------------------------------------------------------------- ground ---
+ *
+ * globals.css locks the page to one screen for the holding page: `overflow:
+ * hidden` on body and a full-height html. That is right for a page with one
+ * sentence on it and wrong for every page here, so the lock is lifted for the
+ * frames that carry this class and left alone for the one that does not.
+ *
+ * `:has()` rather than a second stylesheet or a body class from JavaScript.
+ * The element that knows is the wrapper, the element that needs the rule is
+ * its ancestor, and this is the one selector that reads upwards. The portal's
+ * stylesheet already does the same thing for the same reason.
+ */
+html:has(.heist-site),
+html:has(.heist-site) body {
+  height: auto;
+  overflow: visible;
+  background: #071a2b;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:has(.heist-site),
+  html:has(.heist-site) body {
+    scroll-behavior: auto;
+  }
+}
+
+.heist-site {
+  /* The kit, copied from app/portal/heist.css rather than imported. That file
+     declares these on `.heist`, which is the portal's frame and is not an
+     ancestor of anything here. Two declarations of one palette is a real cost;
+     it is paid once, in two files that sit beside each other, rather than by
+     making the portal's frame a parent of the public site. */
+  --navy-900: #071a2b;
+  --navy-800: #0b2239;
+  --navy-700: #0f2e4b;
+  --navy-600: #16405f;
+  --chalk: #e9f2f9;
+  --dim: #9dbbd2;
+  --faint-blue: #5f86a4;
+  --orange: #ff7a1a;
+  --orange-600: #e8590c;
+  --orange-200: #ffc08a;
+  --glass: rgb(7 26 43 / 0.72);
+  --edge: rgb(157 187 210 / 0.22);
+  --edge-strong: rgb(157 187 210 / 0.4);
+
+  --display: var(--font-barlow-condensed), ui-sans-serif, sans-serif;
+  --body: var(--font-barlow), ui-sans-serif, sans-serif;
+  --mono: var(--font-courier), ui-monospace, monospace;
+
+  /* One gutter value for the whole site. Every section reads it, so the
+     columns of different sections line up down the page instead of each
+     picking its own padding. */
+  --gutter: clamp(20px, 5vw, 64px);
+  --measure: 74rem;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  background: var(--navy-900);
+  color: var(--chalk);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The code rain sits behind everything, fixed, and never scrolls with the
+   page. It is drawn by components/heist-site/rain.tsx. */
+.heist-site__rain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  /* Courier Prime, which the canvas reads off this element with
+     getComputedStyle -- next/font hashes the family name, so it cannot be
+     spelled out in the script. */
+  font-family: var(--mono);
+}
+
+/* A wash over the rain so type always has somewhere to sit. Without it the
+   headline competes with a moving field of glyphs and loses. */
+.heist-site::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 70% at 12% 0%, rgb(255 122 26 / 0.12), transparent 58%),
+    linear-gradient(to bottom, rgb(7 26 43 / 0.62), rgb(7 26 43 / 0.9) 70%);
+}
+
+/* Grain, for the same reason the holding page has it: a large dark field in
+   flat bands shows its gradients as rings on an 8-bit display. */
+.heist-site::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.04;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/*
+ * Everything in the page's own flow sits above the two fixed washes.
+ *
+ * The rain is excluded by name. It is a child of this element too, and this
+ * rule is written with the same specificity as its own -- so without the
+ * `:not()` it wins on source order, turns `position: fixed` back into
+ * `relative` and drops the canvas into the flow as an ordinary block. The
+ * backdrop then paints one band wherever that block happened to land rather
+ * than covering the viewport.
+ */
+.heist-site > *:not(.heist-site__rain) {
+  position: relative;
+  z-index: 2;
+}
+
+.heist-site a {
+  color: inherit;
+}
+
+.heist-site :focus-visible {
+  outline: 2px solid var(--orange-200);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ------------------------------------------------------------------ type --- */
+
+.heist-site h1,
+.heist-site h2,
+.heist-site h3,
+.heist-site p,
+.heist-site ul,
+.heist-site ol,
+.heist-site dl,
+.heist-site dd,
+.heist-site figure {
+  margin: 0;
+}
+
+/* The label that sits above a heading. Mono, tracked, and prefixed with the
+   two slashes the portal's own labels use, so the voice carries across. */
+.heist-eyebrow {
+  display: block;
+  color: var(--orange);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.heist-h2 {
+  font-family: var(--display);
+  font-size: clamp(2rem, 4.6vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.heist-lede {
+  max-width: 52ch;
+  color: var(--dim);
+  font-size: clamp(1rem, 1.5vw, 1.125rem);
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+
+/* ---------------------------------------------------------------- layout --- */
+
+.heist-shell {
+  width: 100%;
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.heist-section {
+  padding-block: clamp(56px, 9vh, 112px);
+}
+
+/* A hairline between sections rather than a change of ground. The page is one
+   continuous night; a banded background would cut it into unrelated slabs. */
+.heist-section + .heist-section {
+  border-top: 1px solid var(--edge);
+}
+
+.heist-section__head {
+  display: grid;
+  gap: 14px;
+  max-width: 48rem;
+  margin-bottom: clamp(28px, 4vh, 48px);
+}
+
+/* ------------------------------------------------------------------- nav --- */
+
+.heist-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--edge);
+}
+
+.heist-nav__row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding: 12px var(--gutter);
+}
+
+/* The wordmark, set the way the portal sets it: condensed caps, the second
+   half in orange, the year in a mono tag. */
+.heist-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.heist-wordmark b {
+  color: var(--orange);
+  font-weight: 700;
+}
+
+.heist-wordmark i {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--navy-900);
+  background: var(--orange);
+  border-radius: 3px;
+  padding: 2px 5px;
+}
+
+.heist-nav__links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.heist-nav__links a {
+  position: relative;
+  padding: 8px 12px;
+  color: var(--dim);
+  font-size: 0.9375rem;
+  text-decoration: none;
+  /* A two-word label breaking across two lines doubles the header's height
+     and drags the ticker down with it. These are labels, not prose. */
+  white-space: nowrap;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.heist-nav__links a:hover {
+  color: var(--chalk);
+  background: rgb(157 187 210 / 0.08);
+}
+
+.heist-nav__links a[aria-current="page"] {
+  color: var(--chalk);
+}
+
+/* The marker loop drawn around the current tab, same component the portal
+   uses. It is absolutely positioned so it does not change the link's box. */
+.heist-nav__links .heist-marker {
+  position: absolute;
+  inset: -2px -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 4px);
+  overflow: visible;
+  fill: none;
+  stroke: var(--orange);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.heist-nav__links .heist-marker path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: heist-site-marker 0.62s cubic-bezier(0.3, 0, 0.2, 1) forwards;
+  vector-effect: non-scaling-stroke;
+}
+
+.heist-nav__links .heist-marker path.heist-marker__ghost {
+  opacity: 0.3;
+  animation-delay: 0.07s;
+}
+
+@keyframes heist-site-marker {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ---------------------------------------------------------------- button --- */
+
+.heist-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 11px 20px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-family: var(--body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.heist-button--primary {
+  background: var(--orange);
+  color: var(--navy-900);
+}
+
+.heist-button--primary:hover {
+  filter: brightness(1.08);
+}
+
+.heist-button--ghost {
+  background: rgb(157 187 210 / 0.06);
+  border-color: var(--edge-strong);
+  color: var(--chalk);
+}
+
+.heist-button--ghost:hover {
+  background: rgb(157 187 210 / 0.12);
+  border-color: var(--dim);
+}
+
+/* ---------------------------------------------------------------- ticker --- */
+
+.heist-ticker {
+  overflow: hidden;
+  border-bottom: 1px solid var(--edge);
+  background: rgb(255 122 26 / 0.07);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--orange-200);
+  white-space: nowrap;
+  padding-block: 7px;
+}
+
+.heist-ticker > div {
+  display: inline-flex;
+  animation: heist-site-tick 42s linear infinite;
+}
+
+.heist-ticker span {
+  padding-right: 2rem;
+}
+
+@keyframes heist-site-tick {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heist-ticker > div {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ hero --- */
+
+.heist-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 72px);
+  padding-block: clamp(48px, 8vh, 104px) clamp(56px, 9vh, 112px);
+}
+
+.heist-hero__copy {
+  display: grid;
+  gap: 22px;
+  justify-items: start;
+}
+
+/*
+ * The headline, and the one place on the site that is allowed to be loud.
+ *
+ * Condensed caps at this size is the kit's voice -- it is the face the asset
+ * kit sets the event name in. `text-wrap: balance` is doing real work: the
+ * line breaks into two or three depending on the viewport, and an unbalanced
+ * break here reads as a page that was never looked at.
+ */
+.heist-hero__title {
+  font-family: var(--display);
+  /* Sized to the column, not the viewport. The hero's copy side is about
+     590px at 1440, and the longer of the two lines has to sit on one line at
+     that width -- at 9.5vw it did not, and the break pushed the countdown and
+     the first section below the fold. */
+  font-size: clamp(2.5rem, 5.6vw, 4.75rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.heist-hero__title em {
+  display: block;
+  font-style: normal;
+  color: var(--orange);
+}
+
+.heist-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+/* The facts under the buttons: where, when, what it costs. A row of small
+   mono labels rather than a paragraph, because these are the three things
+   somebody scans for and a sentence makes them read to find them. */
+.heist-hero__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 26px;
+  padding-top: 4px;
+  margin: 0;
+}
+
+.heist-hero__facts div {
+  display: grid;
+  gap: 2px;
+}
+
+.heist-hero__facts dt {
+  color: var(--faint-blue);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.heist-hero__facts dd {
+  margin: 0;
+  color: var(--chalk);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------------- vault --- */
+
+.heist-vaultplate {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  max-width: 30rem;
+  margin-inline: auto;
+}
+
+/*
+ * The plate is a square of navy with a round vault glowing on it, and the mask
+ * is what stops it reading as a square.
+ *
+ * The canvas has to be opaque for the blend in vault.tsx to work at all, so
+ * its corners are flat ground against a page that has a gradient wash over it
+ * -- close, but near enough to see the edge. Fading the corners out means
+ * there is no edge to see: the vault emerges from the page instead of sitting
+ * in a tile on top of it.
+ *
+ * `closest-side` so the circle tracks the square however it is sized.
+ */
+.heist-vaultplate canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  mask-image: radial-gradient(closest-side circle, #000 54%, transparent 76%);
+}
+
+/* The decoder ring around the vault: two dashed circles, counter-rotating.
+   Pure decoration, and the only decoration on the page that is not type. */
+.heist-vaultplate::before,
+.heist-vaultplate::after {
+  content: "";
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  border: 1px dashed rgb(157 187 210 / 0.25);
+  pointer-events: none;
+  animation: heist-site-spin 44s linear infinite;
+}
+
+.heist-vaultplate::after {
+  inset: 15%;
+  border-color: rgb(255 122 26 / 0.22);
+  animation-duration: 30s;
+  animation-direction: reverse;
+}
+
+@keyframes heist-site-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heist-vaultplate::before,
+  .heist-vaultplate::after {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------- countdown --- */
+
+.heist-countdown {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  background: rgb(11 34 57 / 0.86);
+}
+
+.heist-countdown__label {
+  color: var(--orange);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.heist-countdown__clock {
+  display: flex;
+  gap: 18px;
+}
+
+.heist-countdown__unit {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.heist-countdown__unit b {
+  font-family: var(--display);
+  font-size: clamp(1.75rem, 3.4vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.heist-countdown__unit small {
+  color: var(--faint-blue);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ----------------------------------------------------------------- cards --- */
+
+.heist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 14px;
+}
+
+.heist-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 22px;
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  /* Opaque enough to carry a paragraph. The rain is fixed and runs behind
+     every surface on the page; at 0.5 it was legible through the card and
+     every line of body copy had glyphs moving behind it. */
+  background: rgb(11 34 57 / 0.86);
+}
+
+.heist-card h3 {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.heist-card p {
+  color: var(--dim);
+  font-size: 0.9375rem;
+}
+
+/* The mono index in the corner of a card: 01, 02, 03. It gives the row a
+   reading order without numbering the headings. */
+.heist-card__index {
+  color: var(--orange);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+/* ------------------------------------------------------------- the years --- */
+
+/*
+ * One row per edition, not a grid of cards.
+ *
+ * Five years in a line is the whole point of the section -- it is a span of
+ * time, and a span reads as rows. Cards would make them five separate things.
+ */
+.heist-years {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.heist-year {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(14px, 3vw, 32px);
+  padding: 20px 16px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+a.heist-year:hover {
+  background: rgb(11 34 57 / 0.9);
+  border-color: var(--edge-strong);
+}
+
+.heist-year__num {
+  font-family: var(--display);
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--orange);
+  font-variant-numeric: tabular-nums;
+}
+
+.heist-year__body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.heist-year__body strong {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.heist-year__body span {
+  color: var(--dim);
+  font-size: 0.875rem;
+}
+
+.heist-year__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--faint-blue);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+a.heist-year:hover .heist-year__go {
+  color: var(--orange);
+}
+
+/* This edition is not a link anywhere; it is the page you are on. */
+.heist-year--current {
+  background: rgb(255 122 26 / 0.07);
+  border-color: rgb(255 122 26 / 0.3);
+}
+
+.heist-year--current .heist-year__go {
+  color: var(--orange);
+}
+
+/* ------------------------------------------------------------- schedule --- */
+
+.heist-day + .heist-day {
+  margin-top: clamp(32px, 5vh, 56px);
+}
+
+.heist-day__head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding-bottom: 14px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--edge);
+}
+
+/* h2 on the schedule page, where the page title is the h1, and h3 anywhere
+   the day sits under another heading. The rule follows the component, not one
+   chosen level -- it was written for h3 alone and "Saturday" rendered in the
+   body face because the page that uses it is correctly headed. */
+.heist-day__head :is(h2, h3) {
+  font-family: var(--display);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.heist-day__head span {
+  color: var(--faint-blue);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.heist-run {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * A timeline, drawn with a border on the middle column rather than a pseudo
+ * element behind the row. The line is then exactly as tall as the list and
+ * cannot overshoot the last item, which is the usual bug in this pattern.
+ */
+.heist-run li {
+  display: grid;
+  grid-template-columns: 4.5rem 1px minmax(0, 1fr);
+  gap: 0 18px;
+  align-items: start;
+}
+
+.heist-run__time {
+  padding-block: 16px;
+  color: var(--chalk);
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.heist-run__rail {
+  position: relative;
+  justify-self: center;
+  width: 1px;
+  height: 100%;
+  background: var(--edge);
+}
+
+.heist-run li:first-child .heist-run__rail {
+  background: linear-gradient(to bottom, transparent 22px, var(--edge) 22px);
+}
+
+.heist-run li:last-child .heist-run__rail {
+  background: linear-gradient(to bottom, var(--edge) 22px, transparent 22px);
+}
+
+/* The dot. Its colour is the one piece of status on this page: a meal, the
+   deadline, and the main beats are told apart by it -- never by colour alone,
+   which is why each row also says what it is in words. */
+.heist-run__dot {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  translate: -50% 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--faint-blue);
+  box-shadow: 0 0 0 4px rgb(95 134 164 / 0.18);
+}
+
+.heist-run__body {
+  padding-block: 14px;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.heist-run li + li .heist-run__body {
+  border-top: 1px solid var(--edge);
+  padding-top: 15px;
+}
+
+.heist-run__body strong {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.heist-run__body span {
+  color: var(--dim);
+  font-size: 0.9375rem;
+}
+
+.heist-run li[data-kind="main"] .heist-run__dot {
+  background: var(--orange);
+  box-shadow: 0 0 0 4px rgb(255 122 26 / 0.2);
+}
+
+.heist-run li[data-kind="stop"] .heist-run__dot {
+  background: #e0697a;
+  box-shadow: 0 0 0 4px rgb(224 105 122 / 0.2);
+}
+
+.heist-run li[data-kind="meal"] .heist-run__dot {
+  background: #4cc08a;
+  box-shadow: 0 0 0 4px rgb(76 192 138 / 0.2);
+}
+
+/* A tag saying what kind of thing this is, so the dot's colour is never the
+   only carrier of that information. */
+.heist-run__tag {
+  justify-self: start;
+  margin-top: 4px;
+  padding: 2px 7px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 5px;
+  color: var(--faint-blue);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------- notice --- */
+
+/* The provisional banner on the schedule, and the honest empty state on the
+   sponsor wall. Both say "this is not settled yet", so both look the same. */
+.heist-notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid rgb(214 165 58 / 0.4);
+  border-radius: 12px;
+  background: rgb(42 34 20 / 0.5);
+  color: #e8d5a8;
+  font-size: 0.9375rem;
+}
+
+.heist-notice b {
+  display: block;
+  color: #ffd98a;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+/* ---------------------------------------------------------------- tiers --- */
+
+.heist-tiers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.heist-tier {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 24px 22px;
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  background: rgb(11 34 57 / 0.86);
+}
+
+/* The top tier is the one being sold, so it is the one that is marked. A
+   single highlighted card in a row of four is a price list; four highlighted
+   cards is wallpaper. */
+.heist-tier--lead {
+  border-color: rgb(255 122 26 / 0.45);
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgb(255 122 26 / 0.14), transparent 62%),
+    rgb(11 34 57 / 0.9);
+}
+
+.heist-tier__name {
+  font-family: var(--display);
+  font-size: 1.375rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+
+.heist-tier__amount {
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--orange);
+  font-variant-numeric: tabular-nums;
+}
+
+.heist-tier ul {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.heist-tier li {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  gap: 10px;
+  color: var(--dim);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+/* A tick drawn in CSS rather than an icon font or an SVG per row. */
+.heist-tier li::before {
+  content: "";
+  width: 7px;
+  height: 11px;
+  margin-top: 5px;
+  border: solid var(--orange);
+  border-width: 0 2px 2px 0;
+  rotate: 45deg;
+}
+
+/* ---------------------------------------------------------------- footer --- */
+
+.heist-foot {
+  border-top: 1px solid var(--edge);
+  background: rgb(7 26 43 / 0.6);
+  padding-block: clamp(36px, 6vh, 64px) 28px;
+}
+
+.heist-foot__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(auto-fit, minmax(10rem, 1fr));
+  gap: clamp(24px, 4vw, 48px);
+  align-items: start;
+}
+
+.heist-foot__about p {
+  margin-top: 10px;
+  max-width: 34ch;
+  color: var(--dim);
+  font-size: 0.9375rem;
+}
+
+.heist-foot__col h2 {
+  color: var(--faint-blue);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.heist-foot__col ul {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.heist-foot__col a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--dim);
+  font-size: 0.9375rem;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.heist-foot__col a:hover {
+  color: var(--orange);
+}
+
+.heist-foot__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: clamp(28px, 4vh, 44px);
+  padding-top: 20px;
+  border-top: 1px solid var(--edge);
+  color: var(--faint-blue);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+/* MLH require the badge hotlinked from their host and pinned to a top corner
+   of the page. It is in the nav for that reason, not the footer. */
+.heist-mlh {
+  flex: none;
+  width: clamp(52px, 4.4vw, 62px);
+  line-height: 0;
+}
+
+.heist-mlh img {
+  width: 100%;
+  height: auto;
+}
+
+/* ------------------------------------------------------------- entrance --- */
+
+@keyframes heist-site-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+.heist-hero__copy > *,
+.heist-hero__art {
+  animation: heist-site-rise 0.8s cubic-bezier(0.2, 0, 0, 1) backwards;
+}
+
+.heist-hero__copy > *:nth-child(1) { animation-delay: 0.06s; }
+.heist-hero__copy > *:nth-child(2) { animation-delay: 0.14s; }
+.heist-hero__copy > *:nth-child(3) { animation-delay: 0.22s; }
+.heist-hero__copy > *:nth-child(4) { animation-delay: 0.3s; }
+.heist-hero__copy > *:nth-child(5) { animation-delay: 0.38s; }
+.heist-hero__art { animation-delay: 0.2s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .heist-hero__copy > *,
+  .heist-hero__art {
+    animation: none;
+  }
+}
+
+/* ----------------------------------------------------------------- narrow --- */
+
+@media (max-width: 64rem) {
+  .heist-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The vault goes above the copy on a narrow screen: it is the thing that
+     says what this is before a word is read. */
+  .heist-hero__art {
+    order: -1;
+    max-width: 22rem;
+    margin-inline: auto;
+  }
+}
+
+@media (max-width: 48rem) {
+  .heist-nav__links {
+    gap: 0;
+  }
+
+  .heist-nav__links a {
+    padding: 8px 9px;
+    font-size: 0.875rem;
+  }
+
+  /* The marker loop is drawn for a label with room around it. At this width
+     the labels are shoulder to shoulder and it reads as a scribble. */
+  .heist-nav__links .heist-marker {
+    display: none;
+  }
+
+  .heist-year {
+    grid-template-columns: 4rem minmax(0, 1fr);
+    gap: 14px;
+    padding: 16px 12px;
+  }
+
+  .heist-year__go {
+    grid-column: 2;
+    margin-top: 2px;
+  }
+
+  .heist-run li {
+    grid-template-columns: 3.5rem 1px minmax(0, 1fr);
+    gap: 0 12px;
+  }
+}
+
+/*
+ * The nav links drop onto their own row below the wordmark rather than
+ * shrinking further.
+ *
+ * At 48rem rather than the 34rem this was first written for: a wordmark, four
+ * labels, a button and the column reserved for the MLH badge stop fitting on
+ * one line at about 620px, not at 544px. Below that the labels were still on
+ * the wordmark's row and "Five years" was wrapping inside its own link.
+ */
+@media (max-width: 48rem) {
+  .heist-nav__row {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding-block: 10px;
+  }
+
+  .heist-nav__links {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .heist-nav__links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .heist-nav__cta {
+    margin-left: auto;
+  }
+
+  .heist-hero__facts {
+    gap: 12px 20px;
+  }
+
+  .heist-foot__top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/*
+ * The MLH badge, pinned.
+ *
+ * MLH's terms put it in a top corner of the page. It is fixed rather than part
+ * of the nav because it is 80x139 and nothing that shape fits in a 60px row;
+ * the nav reserves room on its right so the button never slides under it.
+ */
+.heist-site .heist-mlh {
+  position: fixed;
+  top: 0;
+  right: clamp(12px, 2.5vw, 28px);
+  z-index: 60;
+  width: clamp(44px, 4vw, 56px);
+}
+
+.heist-nav__row {
+  padding-right: calc(var(--gutter) + clamp(44px, 4vw, 56px) + 16px);
+}
+
+@media (max-width: 34rem) {
+  .heist-nav__row {
+    padding-right: calc(var(--gutter) + 52px);
+  }
+}
