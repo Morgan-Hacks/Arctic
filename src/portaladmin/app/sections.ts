@@ -45,6 +45,9 @@
  *   behind `sponsors.view_financials`. Either half is worth opening on its
  *   own -- finance reads money without managing rows -- so the row carries
  *   both and the panels inside gate the rest.
+ * - Volunteers is `GET /admin/volunteer-shifts`, behind `volunteers.manage`.
+ *   Like inventory there is no separate read permission: reaching the rota
+ *   already means its names may be moved around.
  * - People is `GET /admin/people`, behind `people.view`.
  * - Mail is `GET /admin/campaigns`, behind `email.view_stats`.
  * - Audit is `GET /admin/audit`, behind `audit.view`.
@@ -93,6 +96,7 @@ const SECTIONS: readonly GatedSection[] = [
   { href: "/applicants", label: "Applicants", needs: ["applications.view"] },
   { href: "/inventory", label: "Inventory", needs: ["inventory.manage"] },
   { href: "/sponsors", label: "Sponsors", needs: ["sponsors.view", "sponsors.view_financials"] },
+  { href: "/volunteers", label: "Volunteers", needs: ["volunteers.manage"] },
   { href: "/mail", label: "Email Campaign", needs: ["email.view_stats"] },
   { href: "/templates", label: "Templates", needs: ["email.manage_templates", "email.delete_templates"] },
   { href: "/audit", label: "Audit", needs: ["audit.view"] },

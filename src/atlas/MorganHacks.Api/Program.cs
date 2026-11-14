@@ -10,6 +10,7 @@ using MorganHacks.Applications.Data;
 using MorganHacks.Applications.Logistics;
 using MorganHacks.Applications.Services;
 using MorganHacks.Applications.Sponsors;
+using MorganHacks.Applications.Volunteers;
 using MorganHacks.Applications.Storage;
 using MorganHacks.Applications.Segments;
 using MorganHacks.Audit;
@@ -204,6 +205,10 @@ builder.Services.AddHostedService<LowStockAlertWorker>();
 // Who is backing the event, and the two aggregates built on top of them. A
 // singleton for the same reason: stateless over the shared data source.
 builder.Services.AddSingleton<ISponsorStore, PostgresSponsorStore>();
+
+// Who is covering which volunteer shift, and where the gaps are. A singleton
+// for the same reason: stateless over the shared data source.
+builder.Services.AddSingleton<IVolunteerShiftStore, PostgresVolunteerShiftStore>();
 
 // The assistant.
 //
@@ -505,6 +510,7 @@ app.MapApplicants();
 app.MapApplicantAnalytics();
 app.MapInventory();
 app.MapSponsors();
+app.MapVolunteerShifts();
 app.MapEmailAnalytics();
 app.MapTemplates();
 app.MapEmailTracking();
