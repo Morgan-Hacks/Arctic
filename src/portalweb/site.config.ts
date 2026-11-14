@@ -331,6 +331,22 @@ export const siteConfig = {
         ],
       },
       {
+        /**
+         * No resume row here, deliberately.
+         *
+         * Resumes have gone to sponsors in past years, but the application
+         * form has never asked anybody whether they may: the only sharing
+         * agreement it captures is StartingQuestions.DataSharingLabel, which
+         * names Major League Hacking and MLH/DEV administration and says
+         * nothing about sponsors or recruiting. Rather than advertise
+         * somebody else's CV on a public page with no opt-in behind it, the
+         * offer is the room and the people in it.
+         *
+         * To put it back: add an Agreement() field to the form first, while
+         * applications are still closed. Agreements record against a form
+         * version on purpose, so a consent added later does not reach back
+         * over applications already submitted.
+         */
         group: "Hiring",
         perks: [
           {
@@ -342,11 +358,6 @@ export const siteConfig = {
             label: "Recruiters on site",
             help: "Bring people whose job is hiring, not just engineers.",
             cells: [false, true, true, true],
-          },
-          {
-            label: "Resumes, where shared",
-            help: "Only from attendees who opted in to sharing them with sponsors. Nobody else is in the file.",
-            cells: [false, false, true, true],
           },
           {
             label: "A message to attendees",
