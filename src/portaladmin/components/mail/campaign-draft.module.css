@@ -1789,3 +1789,140 @@
     display: none;
   }
 }
+
+/* ==========================================================================
+   Importing recipients from a spreadsheet
+
+   Sits under the paste box in the Email list audience. The file is read in the
+   browser, so everything here is about one question -- which column is which
+   -- and about saying plainly when the answer does not work.
+   ========================================================================== */
+
+.importer {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.importer input[type="file"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--field);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.importer input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.importer input[type="file"]:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.importMap {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--raised);
+}
+
+.importFile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.importFile strong {
+  color: var(--ink);
+  font-weight: 600;
+  /* A long filename should not push the row count and Remove off the end. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.importFile button {
+  margin-left: auto;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.importFile button:hover {
+  color: var(--ink);
+}
+
+/* Three across where there is room, stacked on a narrow console. */
+.importColumns {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+
+.importColumns .field {
+  margin: 0;
+}
+
+.importProblem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--danger, #b7374c) 35%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--danger, #b7374c) 8%, transparent);
+  color: var(--danger, #b7374c);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.importProblem strong {
+  display: block;
+  font-weight: 600;
+}
+
+.importProblem p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.importReady {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--ok, #23845b);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.importReady span {
+  color: var(--muted);
+}

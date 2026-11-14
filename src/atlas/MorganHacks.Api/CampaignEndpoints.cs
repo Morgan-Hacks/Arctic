@@ -230,7 +230,17 @@ public static class CampaignEndpoints
             sourceId = value.TryGetProperty("eventId", out var eventId) ? eventId.GetString()
                 : value.TryGetProperty("formId", out var formId) ? formId.GetString() : null,
             statuses = value.TryGetProperty("statuses", out var statuses) ? statuses.Deserialize<string[]>() : null,
-            count = value.TryGetProperty("emails", out var emails) ? (int?)emails.GetArrayLength() : null,
+            // Both spellings of a typed list. `recipients` is what Segment
+            // writes now that the elements carry names; `emails` is what every
+            // campaign drafted before that has stored, and this list is where
+            // those are still read back. Counted straight off the document
+            // rather than by parsing it, because this runs once per row of the
+            // campaigns table.
+            count = value.TryGetProperty("recipients", out var recipients)
+                ? (int?)recipients.GetArrayLength()
+                : value.TryGetProperty("emails", out var emails)
+                    ? (int?)emails.GetArrayLength()
+                    : null,
 
             // The criterion an answer segment stores, read back as it was
             // written. The list says "Answered track with hardware" from these

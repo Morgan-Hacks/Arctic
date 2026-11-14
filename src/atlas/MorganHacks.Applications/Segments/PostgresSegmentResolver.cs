@@ -659,15 +659,46 @@ public sealed class PostgresSegmentResolver(NpgsqlDataSource dataSource) : ISegm
     /// than mailed with the greeting still standing in it.
     /// </para>
     /// </remarks>
-    private static ResolvedSegment Addresses(Segment.Addresses segment) =>
-        new(segment.Emails.Select(email => new SegmentMember(
-                null,
-                email,
-                new Dictionary<string, object?>(StringComparer.Ordinal)
-                {
-                    [ApplicantColumns.Address.Column] = email,
-                })).ToList(),
-            Overflowed: false);
+    /// <summary>
+    /// A typed list, which needs no query: the segment already is the answer.
+    /// </summary>
+    /// <remarks>
+    /// Null person ids throughout, because these people frequently have no row
+    /// in this system — which is the point of the shape.
+    /// <para>
+    /// A name is written into <see cref="SegmentMember.Fields"/> only when
+    /// there is one, never as an empty string. That is what lets the coverage
+    /// check count the blanks: a key present with nothing behind it reads as
+    /// filled, and a greeting template would go out to somebody as "Hi ,"
+    /// having passed every check on the way.
+    /// </para>
+    /// </remarks>
+    private static ResolvedSegment Addresses(Segment.Addresses segment)
+    {
+        var members = new List<SegmentMember>(segment.Recipients.Count);
+
+        foreach (var recipient in segment.Recipients)
+        {
+            var fields = new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                [ApplicantColumns.Address.Column] = recipient.Email,
+            };
+
+            if (recipient.FirstName is { Length: > 0 } first)
+            {
+                fields[ApplicantColumns.FirstName.Column] = first;
+            }
+
+            if (recipient.LastName is { Length: > 0 } last)
+            {
+                fields[ApplicantColumns.LastName.Column] = last;
+            }
+
+            members.Add(new SegmentMember(null, recipient.Email, fields));
+        }
+
+        return new ResolvedSegment(members, Overflowed: false);
+    }
 
     /// <summary>
     /// Reads the rows into members, one column of

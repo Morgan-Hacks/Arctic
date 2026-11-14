@@ -100,7 +100,22 @@ export type Segment =
   | { type: "applicationStatus"; eventId: string; statuses: string[] }
   | { type: "formRespondents"; formId: string }
   | { type: "formAnswer"; formId: string; question: string; value: string }
-  | { type: "explicitList"; emails: string[] };
+  | { type: "explicitList"; recipients: ListRecipient[] };
+
+/**
+ * One person on a typed list.
+ *
+ * Both names are optional and usually absent: the list is as often four
+ * sponsors typed in by hand as it is four hundred rows out of a spreadsheet,
+ * and the first kind have no names on file anywhere. A template that greets
+ * people is refused at send when somebody in the list has no name, which is
+ * the check that makes leaving them optional here safe.
+ */
+export type ListRecipient = {
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+};
 
 /**
  * One campaign, with the fields the list does not carry.
@@ -429,7 +444,11 @@ export function describeSegment(
     return `Answered ${segment.question} = ${segment.value} · ${formName ?? segment.formId}`;
   }
 
-  return `Address list · ${segment.emails.length}`;
+  const named = segment.recipients.filter(r => r.firstName || r.lastName).length;
+
+  return named > 0
+    ? `Address list · ${segment.recipients.length} (${named} with names)`
+    : `Address list · ${segment.recipients.length}`;
 }
 
 const campaignDate = new Intl.DateTimeFormat("en-US", {
