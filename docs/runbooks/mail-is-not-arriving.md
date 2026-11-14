@@ -174,3 +174,58 @@ side in `NULLIF` before the `COALESCE`; if it reappears, that is the line.
 **Escalate to:** the tech lead. Before changing anything in SES, check the
 account first — most of what looks like a broken identity is a key pointed at
 the wrong one.
+
+---
+
+## It arrives, but in Gmail's Promotions tab
+
+This is not the failure the rest of this page is about. The mail is being
+delivered, authenticated and accepted. Gmail has sorted it, and **there is no
+header, flag or setting that moves a message to Primary.** Anybody who tells
+you otherwise is selling something.
+
+What is already right, so you can stop re-checking it:
+
+- SPF passes and `morganhacks.com` includes `amazonses.com`.
+- A custom MAIL FROM is configured at `bounce.morganhacks.com`, with the SES
+  feedback MX and its own SPF record. This is the part most setups skip, and it
+  is what gives SPF alignment for DMARC.
+- DMARC exists, at `p=none`. Monitoring only, which is the right place to be
+  until the reports are boring.
+- DKIM is signed by SES. The selectors are random strings, so you cannot check
+  it with `dig` unless you know them; read it off **SES → Verified identities →
+  morganhacks.com → DKIM** instead.
+
+So authentication is not the problem, and changing DNS will not fix this.
+
+**What actually decides the tab** is the shape of the message and how the
+people receiving it behave, judged per recipient. In rough order of how much
+they matter:
+
+1. **Tracking.** Open tracking puts a 1×1 image in the body and click tracking
+   rewrites every link through our own domain. Both are plain bulk markers. New
+   campaigns start untracked; leave them that way for anything going to a large
+   list, and turn it on only when somebody actually needs the numbers.
+2. **How the mail looks.** Tables, buttons, multiple images and multiple
+   columns read as marketing. A short message that looks like a person typed it
+   reads as mail.
+3. **Replies.** A real `Reply-to` that somebody reads is one of the strongest
+   signals there is, and the cheapest to arrange.
+4. **Who it goes to.** Mail to people with an existing relationship to
+   MorganHacks gets opened; mail to a list that has never heard of us gets
+   ignored, and being ignored is itself the signal.
+5. **How much goes at once.** A few thousand from a domain that normally sends
+   hundreds is a reputation event on its own. Split a large outreach send
+   across days.
+
+**`List-Unsubscribe` does not help with this and may make it worse**, because
+the header is also one of the ways Gmail recognises bulk mail. It is set on
+every broadcast anyway, and should stay set: Google and Yahoo both require a
+one-click unsubscribe from bulk senders, and the alternative to an easy
+unsubscribe is a spam complaint. Complaints land in `notify.suppressions` and
+damage the reputation of a domain that also carries **sign-in links and
+decision emails**, which is a far more expensive thing to lose than a tab.
+
+If what you actually need is for one specific group to see the mail, the honest
+answer is to ask them to drag it to Primary once, or to reply. Both teach
+Gmail, and neither is something the sender can do.
