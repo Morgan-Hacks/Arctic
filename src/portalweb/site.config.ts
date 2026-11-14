@@ -225,11 +225,22 @@ export const siteConfig = {
    * The five editions, oldest first.
    *
    * Each year had its own site and each one is still up, so the links go out
-   * rather than reconstructing anything here. The notes are deliberately plain
-   * and include what is missing: 2025 never published its dates, and saying so
-   * is better than a blank or an invented weekend.
+   * rather than reconstructing anything here. The notes are deliberately
+   * plain. 2025's dates were missing from this list until somebody who was
+   * there supplied them; a `dates: null` renders as no line at all rather
+   * than as a guess, which is what made the gap visible enough to be filled.
    *
    * 2027 is in the list with no link, because it is the page you are on.
+   */
+  /**
+   * The previews under /editions are screenshots of each year's own site,
+   * taken from the live page and scaled to 800px wide. They are in
+   * public/editions/ rather than hotlinked, because a hotlinked screenshot
+   * of a site is just that site's bandwidth and it breaks the day somebody
+   * takes the old host down.
+   *
+   * Re-take them if a year's site changes. 2023's was captured scrolled down
+   * past the fold, because the top of that page is empty sky.
    */
   editions: [
     {
@@ -237,30 +248,35 @@ export const siteConfig = {
       dates: "April 1-2, 2023" as string | null,
       note: "The first one.",
       href: "https://2023.morganhacks.com" as string | null,
+      preview: "/editions/2023.jpg" as string | null,
     },
     {
       year: "2024",
       dates: "April 6-7, 2024" as string | null,
       note: "The second, the same weekend in April.",
       href: "https://2024.morganhacks.com" as string | null,
+      preview: "/editions/2024.jpg" as string | null,
     },
     {
       year: "2025",
-      dates: null as string | null,
-      note: "The third. Its site never published the dates.",
+      dates: "April 26-27, 2025" as string | null,
+      note: "The third.",
       href: "https://2025.morganhacks.com" as string | null,
+      preview: "/editions/2025.jpg" as string | null,
     },
     {
       year: "2026",
       dates: "April 11-12, 2026" as string | null,
       note: "The fourth, and the last before this rebuild.",
       href: "https://2026.morganhacks.com" as string | null,
+      preview: "/editions/2026.jpg" as string | null,
     },
     {
       year: "2027",
       dates: null as string | null,
       note: "The fifth. You are reading it.",
       href: null as string | null,
+      preview: null as string | null,
     },
   ],
 

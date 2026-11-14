@@ -73,40 +73,69 @@ function Holding() {
 }
 
 /**
- * The five editions, as a ledger.
+ * The five editions, as a wall of screenshots.
  *
- * Shared with /editions, which sets the same list without the surrounding
- * section. The year is a display numeral hung on the left and everything else
- * sits beside it, so five entries read as one continuous record rather than
- * as five cards.
+ * It was a list of years and sentences, which is the right shape for a
+ * reference and the wrong one for the argument this section is making. The
+ * argument is "look how much of this there already is", and five actual
+ * screenshots make it in a second where five paragraphs made somebody read.
+ *
+ * Each image is the year's own site as it stands today, so the wall is also
+ * the one part of this page nobody has to maintain: it is true by
+ * construction, and when a year's site changes the screenshot is wrong in a
+ * way that is visible rather than silent.
  */
-export function EditionLedger() {
+export function EditionGrid() {
   return (
-    <ol className="es-ledger">
-      {editions.map((entry) => (
-        <li
-          key={entry.year}
-          className={`es-year${entry.href === null ? " es-year--now" : ""}`}
-        >
-          <div className="es-year__num">{entry.year}</div>
+    <ol className="es-wall">
+      {editions.map((entry) => {
+        const live = entry.href !== null;
+        const Card = live ? "a" : "div";
 
-          <div className="es-year__body">
-            {/* 2025 never published its dates. Saying so is better than a gap
-                the reader has to interpret, and better than inventing one. */}
-            {entry.dates === null ? null : (
-              <span className="es-year__dates es-label">{entry.dates}</span>
-            )}
-            <p className="es-year__note">{entry.note}</p>
-          </div>
+        return (
+          <li key={entry.year} className={`es-card${live ? "" : " es-card--now"}`}>
+            <Card
+              {...(live ? { href: entry.href as string } : {})}
+              className="es-card__body"
+            >
+              <div className="es-card__shot">
+                {entry.preview === null ? (
+                  // 2027 has no screenshot because 2027 is this page. A
+                  // placeholder that admitted nothing would read as a
+                  // missing image, so it says what it is.
+                  <div className="es-card__here">
+                    <span className="es-label">You are here</span>
+                  </div>
+                ) : (
+                  <img
+                    src={entry.preview}
+                    alt={`The MorganHacks ${entry.year} website`}
+                    width={800}
+                    height={455}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                )}
+              </div>
 
-          {entry.href === null ? null : (
-            <a className="es-year__link" href={entry.href}>
-              <span>Its site</span>
-              <ArrowUpRight />
-            </a>
-          )}
-        </li>
-      ))}
+              <div className="es-card__meta">
+                <span className="es-card__year">{entry.year}</span>
+                <span className="es-card__text">
+                  {entry.dates === null ? null : (
+                    <span className="es-card__dates es-label">{entry.dates}</span>
+                  )}
+                  <span className="es-card__note">{entry.note}</span>
+                </span>
+                {live ? (
+                  <span className="es-card__go" aria-hidden="true">
+                    <ArrowUpRight />
+                  </span>
+                ) : null}
+              </div>
+            </Card>
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -224,7 +253,7 @@ function EventHome() {
         </dl>
 
         <Reveal>
-          <EditionLedger />
+          <EditionGrid />
         </Reveal>
       </section>
 

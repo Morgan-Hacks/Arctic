@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Frame, SectionHead } from "@/components/event-site/frame";
 import { EVENT_SITE, isOn } from "@/lib/features";
-import { EditionLedger } from "../page";
+import { EditionGrid } from "../page";
 
 export const metadata: Metadata = {
   title: "Every MorganHacks",
@@ -32,7 +32,7 @@ export default function EditionsPage() {
           heading="One April at a time."
           lede="Nothing here is reconstructed. The links go out to the sites each year's team built."
         />
-        <EditionLedger />
+        <EditionGrid />
       </section>
 
       <section className="es-sec">

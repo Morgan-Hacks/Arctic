@@ -783,100 +783,164 @@ html:has(.event-site) body {
   opacity: 0.55;
 }
 
-/* ----------------------------------------------------------------- ledger --- */
+/* ------------------------------------------------------------------- wall --- */
 
-.es-ledger {
+/**
+ * The five editions, as screenshots.
+ *
+ * Two up on a laptop and one up on a phone, rather than three or four: these
+ * are pictures of websites, and a picture of a website shrunk to a third of
+ * a column is a grey rectangle. Better to scroll past five legible ones.
+ */
+.es-wall {
   list-style: none;
   margin: 0;
   padding: 0;
-}
-
-.es-year {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+}
+
+@media (min-width: 52rem) {
+  .es-wall {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* The current year takes the full width at the end of the run, which is
+     what makes it read as the one you are standing in rather than the fifth
+     item in a list. */
+  .es-card--now {
+    grid-column: 1 / -1;
+  }
+}
+
+.es-card__body {
+  display: block;
+  height: 100%;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 65%, transparent);
+  overflow: hidden;
+  text-decoration: none;
+  transition: border-color 0.28s var(--ease), transform 0.28s var(--ease),
+    box-shadow 0.28s var(--ease);
+}
+
+a.es-card__body:hover {
+  border-color: color-mix(in srgb, var(--gold) 50%, transparent);
+  transform: translateY(-3px);
+  box-shadow: 0 22px 50px -28px #000;
+}
+
+/**
+ * The screenshot itself.
+ *
+ * Held at the ratio it was captured at so nothing reflows while the images
+ * load, and dimmed a little at rest: these are five different sites with
+ * five different palettes, and at full strength they fight both each other
+ * and the page they are sitting on. Hover brings one of them up.
+ */
+.es-card__shot {
+  position: relative;
+  aspect-ratio: 800 / 455;
+  overflow: hidden;
+  background: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
+.es-card__shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  filter: saturate(0.85) brightness(0.82);
+  transform: scale(1.01);
+  transition: filter 0.3s var(--ease), transform 0.5s var(--ease);
+}
+
+a.es-card__body:hover .es-card__shot img {
+  filter: none;
+  transform: scale(1.04);
+}
+
+/* A hairline of the technical colour across the top of each shot, so the
+   screenshots read as specimens on a wall rather than as stock images. */
+.es-card__shot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--cyan) 22%, transparent);
+}
+
+/* The year you are standing in. No screenshot, because it is this page. */
+.es-card__here {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  background-image: linear-gradient(color-mix(in srgb, var(--cyan) 30%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--cyan) 30%, transparent) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(60% 70% at 50% 50%, #000, transparent);
+}
+
+.es-card--now .es-card__shot {
+  aspect-ratio: 1000 / 240;
+}
+
+.es-card__meta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: 0.375rem 1.5rem;
-  padding: clamp(1.125rem, 3vw, 1.75rem) 0;
-  border-top: 1px solid var(--line);
-  transition: border-color 0.25s var(--ease);
+  gap: 0 1.125rem;
+  padding: clamp(1rem, 2.5vw, 1.375rem);
 }
 
-.es-year:first-child {
-  border-top: 0;
-  padding-top: 0;
-}
-
-.es-year:hover {
-  border-top-color: color-mix(in srgb, var(--gold) 40%, transparent);
-}
-
-.es-year__num {
+.es-card__year {
   font-family: var(--font-serif-display), Georgia, serif;
-  font-size: clamp(2.25rem, 7vw, 3.5rem);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
   line-height: 1;
   letter-spacing: -0.03em;
   color: var(--text);
-  grid-column: 1;
 }
 
-.es-year--now .es-year__num {
+.es-card--now .es-card__year {
   color: var(--gold);
 }
 
-.es-year__body {
-  grid-column: 1;
-  max-width: 34em;
-}
-
-.es-year__dates {
+.es-card__text {
   display: block;
-  margin-bottom: 0.25rem;
+  min-width: 0;
 }
 
-.es-year__note {
+.es-card__dates {
+  display: block;
+  margin-bottom: 0.1875rem;
+}
+
+.es-card__note {
+  display: block;
   color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.45;
 }
 
-.es-year__link {
-  grid-column: 2;
-  grid-row: 1;
+.es-card__go {
   display: inline-flex;
-  align-items: center;
-  gap: 0.4375rem;
-  min-height: 44px;
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.6875rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  text-decoration: none;
+  width: 18px;
+  height: 18px;
   color: var(--muted);
-  white-space: nowrap;
-  transition: color 0.18s var(--ease), gap 0.18s var(--ease);
+  transition: color 0.2s var(--ease), transform 0.2s var(--ease);
 }
 
-.es-year__link:hover {
+.es-card__go svg {
+  width: 100%;
+  height: 100%;
+}
+
+a.es-card__body:hover .es-card__go {
   color: var(--gold);
-  gap: 0.6875rem;
-}
-
-.es-year__link svg {
-  width: 13px;
-  height: 13px;
-  flex: none;
-}
-
-@media (min-width: 48rem) {
-  .es-year {
-    grid-template-columns: 6.5rem minmax(0, 1fr) auto;
-  }
-
-  .es-year__body {
-    grid-column: 2;
-  }
-
-  .es-year__link {
-    grid-column: 3;
-  }
+  transform: translate(2px, -2px);
 }
 
 /* ------------------------------------------------------------- the weekend --- */
