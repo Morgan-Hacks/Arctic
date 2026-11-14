@@ -72,6 +72,24 @@ export const HEIST_THEME = "enable_heist_theme_feature";
  */
 export const DARK_MODE = "enable_dark_mode_feature";
 
+/**
+ * The public event site: the three pages that replace the holding screen.
+ *
+ * Nothing to do with HEIST_THEME above, which dresses the signed-in portal.
+ * This one decides whether morganhacks.com is a one-screen notice or a site,
+ * and the two are independent -- the portal can wear the Heist look while the
+ * front of the site is still the holding page, which is exactly the state
+ * staging is in today.
+ *
+ * Off means `/` renders the holding page and nothing else, and /editions and
+ * /sponsors call notFound(). A 404 rather than a 403, so a route nobody may
+ * see does not admit to existing; see docs/feature-flags.md for why that is
+ * the bar.
+ *
+ * Turning it on needs real April dates first. The site states them.
+ */
+export const EVENT_SITE = "enable_event_site_feature";
+
 export function isOn(flag: string): boolean {
   // The variable sits above both files, which is what makes it the lever
   // somebody can throw during an incident without rebuilding an image. The
