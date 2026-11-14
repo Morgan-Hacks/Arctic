@@ -1,0 +1,239 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+/**
+ * The three bits of motion on the site, as small client islands.
+ *
+ * Everything else stays a server component. These are the only pieces that
+ * need a browser, so they are the only pieces that ship JavaScript, and each
+ * one renders its finished state on the server first -- the rotating word
+ * starts on a real word, the counters start on their real number. With
+ * JavaScript off, or before it loads, the page reads correctly and simply
+ * does not move.
+ *
+ * All three check `prefers-reduced-motion` and do nothing when it is set.
+ * Not reduced motion, none: a word swapping itself out is exactly what that
+ * setting is asking you not to do.
+ */
+
+function usesReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+/**
+ * Fires once when the element first comes into view.
+ *
+ * Shared by the reveal and the counters, because they want the same thing and
+ * two observers watching the same element would be two answers to one
+ * question.
+ */
+function useInView<T extends HTMLElement>(enabled = true) {
+  const ref = useRef<T | null>(null);
+  const [seen, setSeen] = useState(!enabled);
+
+  useEffect(() => {
+    if (!enabled || seen) return;
+    const el = ref.current;
+    if (!el) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setSeen(true);
+          io.disconnect();
+        }
+      },
+      // A little before the edge, so the thing has finished moving by the
+      // time it is properly on screen rather than starting then.
+      { rootMargin: "0px 0px -12% 0px", threshold: 0.15 },
+    );
+
+    io.observe(el);
+    return () => io.disconnect();
+  }, [enabled, seen]);
+
+  return { ref, seen };
+}
+
+/**
+ * A word that changes, with a caret after it.
+ *
+ * The sentence around it is fixed and only the last word moves, which is the
+ * one place on the page where motion is carrying meaning rather than
+ * decorating: it is saying that what people build here is not one thing.
+ */
+export function RotatingWord({ words }: { words: readonly string[] }) {
+  const [i, setI] = useState(0);
+  const [out, setOut] = useState(false);
+
+  useEffect(() => {
+    if (usesReducedMotion() || words.length < 2) return;
+
+    // Two timers: one to start the word leaving, one to swap it and bring the
+    // next in. Swapping on a single interval makes the exit and the entrance
+    // the same frame, which reads as a flicker rather than a change.
+    const hold = window.setInterval(() => {
+      setOut(true);
+      window.setTimeout(() => {
+        setI((n) => (n + 1) % words.length);
+        setOut(false);
+      }, 260);
+    }, 2600);
+
+    return () => window.clearInterval(hold);
+  }, [words.length]);
+
+  return (
+    <span className="es-rot">
+      <span className={`es-rot__word${out ? " es-rot__word--out" : ""}`}>{words[i]}</span>
+      <span className="es-rot__caret" aria-hidden="true" />
+    </span>
+  );
+}
+
+/**
+ * A number that counts up the first time it is seen.
+ *
+ * Only the digits animate. "$0" and "2023" still have to arrive as "$0" and
+ * "2023", so the prefix and suffix are split off and left alone rather than
+ * the whole string being treated as a number.
+ */
+export function CountUp({ value }: { value: string }) {
+  const match = value.match(/^(\D*)(\d[\d,]*)(.*)$/);
+  const target = match ? Number(match[2].replace(/,/g, "")) : NaN;
+
+  // Group only if the written value was grouped. "2023" is a year and
+  // toLocaleString turns it into "2,023", which is wrong and was shipped
+  // once; "$18,000" would want its comma back.
+  const grouped = match ? match[2].includes(",") : false;
+  const animatable = match !== null && Number.isFinite(target) && target > 0;
+
+  const { ref, seen } = useInView<HTMLSpanElement>(animatable);
+  const [n, setN] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!animatable || !seen || usesReducedMotion()) return;
+
+    let raf = 0;
+    const started = performance.now();
+    // Long enough to read as counting, short enough that nobody waits for it.
+    const ms = 1100;
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - started) / ms);
+      // Ease out: fast at the start, settling at the end, which is how a
+      // counter that is arriving somewhere behaves.
+      const eased = 1 - Math.pow(1 - t, 3);
+      setN(Math.round(target * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [animatable, seen, target]);
+
+  if (!animatable || n === null) return <span ref={ref}>{value}</span>;
+
+  return (
+    <span ref={ref}>
+      {match![1]}
+      {grouped ? n.toLocaleString("en-US") : String(n)}
+      {match![3]}
+    </span>
+  );
+}
+
+/**
+ * Lifts its children into place the first time they are scrolled to.
+ *
+ * One gesture, small, and it never runs twice. A page where every section
+ * animates on every pass is a page that is hard to read.
+ */
+export function Reveal({
+  children,
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+}) {
+  const { ref, seen } = useInView<HTMLDivElement>(true);
+
+  return (
+    <div
+      ref={ref}
+      className={`es-reveal${seen ? " es-reveal--in" : ""}`}
+      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * The vault dial.
+ *
+ * The one piece of real dimension on the page: four rings stacked in 3D,
+ * tilted, each turning at its own rate. A heist needs a lock, and a lock that
+ * is actually rotating in space says more about the event being built by
+ * people who can build things than any stock illustration would.
+ *
+ * Client-side only because it reads the pointer. It renders the whole dial on
+ * the server and simply does not respond to the mouse until hydrated, so it
+ * is never missing and never pops in.
+ */
+export function VaultDial() {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (usesReducedMotion()) return;
+    const el = ref.current;
+    if (!el) return;
+
+    // Parented to the window rather than to the dial, so it leans towards the
+    // pointer from anywhere on the page instead of only once you are on top
+    // of it, which is when you can no longer see it move.
+    const onMove = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      setTilt({
+        x: Math.max(-1, Math.min(1, (e.clientY - cy) / (window.innerHeight / 2))),
+        y: Math.max(-1, Math.min(1, (e.clientX - cx) / (window.innerWidth / 2))),
+      });
+    };
+
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className="es-dial"
+      aria-hidden="true"
+      style={
+        {
+          "--tx": `${-tilt.x * 9}deg`,
+          "--ty": `${tilt.y * 9}deg`,
+        } as React.CSSProperties
+      }
+    >
+      <div className="es-dial__stage">
+        <span className="es-dial__ring es-dial__ring--1" />
+        <span className="es-dial__ring es-dial__ring--2" />
+        <span className="es-dial__ring es-dial__ring--3" />
+        <span className="es-dial__ticks" />
+        <span className="es-dial__hub">
+          <span className="es-dial__spoke" />
+          <span className="es-dial__spoke" />
+          <span className="es-dial__spoke" />
+        </span>
+      </div>
+    </div>
+  );
+}

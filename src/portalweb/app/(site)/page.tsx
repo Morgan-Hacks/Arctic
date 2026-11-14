@@ -1,4 +1,5 @@
 import { ArrowUpRight, Frame, SectionHead } from "@/components/event-site/frame";
+import { CountUp, Reveal, RotatingWord, VaultDial } from "@/components/event-site/motion";
 import { Skyline } from "@/components/event-site/skyline";
 import { EVENT_SITE, isOn } from "@/lib/features";
 import { siteConfig } from "@/site.config";
@@ -114,51 +115,68 @@ function EventHome() {
   return (
     <Frame current="home">
       <section className="es-hero">
-        {/* The scene. A numeral cropped by the page edge, a screened halftone
-            and a bar of the second ink printed a degree out of register --
-            the three things a press would give you, standing in for the
-            illustrated world every other hackathon site has. */}
-        <div className="es-hero__scene" aria-hidden="true">
-          <span className="es-hero__dots" />
+        <div className="es-hero__top">
+          <div>
+            <p className="es-badge">
+              <span className="es-badge__dot" aria-hidden="true" />
+              {edition.eyebrow}
+            </p>
+
+            <h1 className="es-hero__title">
+              {edition.headlineLead}{" "}
+              <RotatingWord words={edition.rotating} />
+            </h1>
+
+            <p className="es-hero__deck">{edition.deck}</p>
+
+            <div className="es-hero__actions">
+              <a className="es-btn" href="/sponsors">
+                Sponsor us
+              </a>
+              <a className="es-btn es-btn--ghost" href="/editions">
+                Every edition
+              </a>
+            </div>
+
+            {/* No apply button, because there is nowhere for it to go. A
+                control that opens nothing is the thing the holding page
+                exists to avoid, which is a dead form left up. */}
+            <p className="es-note" style={{ marginTop: "1.25rem" }}>
+              Applications are not open yet. The dates are announced here first.
+            </p>
+          </div>
+
+          <VaultDial />
         </div>
 
-        <p className="es-hero__eyebrow es-label">{edition.eyebrow}</p>
-        <h1 className="es-hero__title">{edition.headline}</h1>
-        <hr className="es-hero__rule" />
-        <p className="es-hero__deck">{edition.deck}</p>
-
-        <div className="es-hero__actions">
-          {/* No apply button, because there is nowhere for it to go. A control
-              that opens nothing is worse than its absence: it is the thing the
-              holding page exists to avoid, which is a dead form left up. */}
-          <p className="es-note">
-            Applications are not open yet. The dates are announced here first.
-          </p>
+        <div className="es-panel">
+          <dl className="es-facts">
+            {facts.map((fact) => (
+              <div key={fact.label}>
+                <dt className="es-label">{fact.label}</dt>
+                <dd>{fact.value}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
 
-        {/* The city the event is in, across the foot of the hero. This is the
-            move HackUTD makes with Dallas, and it is the one piece of scenery
+        {/* Baltimore, as a blueprint over a grid. The one piece of scenery
             that is specific to MorganHacks rather than decoration that could
             belong to anybody. */}
-        <Skyline />
-
-        <dl className="es-facts">
-          {facts.map((fact) => (
-            <div key={fact.label}>
-              <dt className="es-label">{fact.label}</dt>
-              <dd>{fact.value}</dd>
-            </div>
-          ))}
-        </dl>
+        <div className="es-city">
+          <Skyline />
+        </div>
       </section>
 
       <section className="es-sec">
         <SectionHead folio="01" kicker="The event" heading="What it is." />
+        <Reveal>
         <div className="es-prose es-prose--two es-prose--drop">
           {edition.lede.map((para) => (
             <p key={para.slice(0, 24)}>{para}</p>
           ))}
         </div>
+        </Reveal>
       </section>
 
       <section className="es-sec">
@@ -168,6 +186,7 @@ function EventHome() {
           heading="Saturday to Sunday."
           lede="The running order is not set yet. The shape of it has been the same for five years."
         />
+        <Reveal>
         <div className="es-weekend">
           {weekend.map((part) => (
             <div key={part.heading}>
@@ -176,6 +195,7 @@ function EventHome() {
             </div>
           ))}
         </div>
+        </Reveal>
 
         <blockquote className="es-pull">
           You arrive with an idea or with none at all, and you leave having
@@ -184,10 +204,7 @@ function EventHome() {
         </blockquote>
       </section>
 
-      {/* The centrefold. A long page of one ground is a scroll; changing the
-          ground under the argument the whole site is making is what makes
-          somebody look up from it. */}
-      <section className="es-sec es-sec--spread">
+      <section className="es-sec">
         <SectionHead
           folio="03"
           kicker="The record"
@@ -198,13 +215,17 @@ function EventHome() {
         <dl className="es-figures">
           {figures.map((figure) => (
             <div key={figure.label}>
-              <dt className="es-figures__n">{figure.n}</dt>
+              <dt className="es-figures__n">
+                <CountUp value={figure.n} />
+              </dt>
               <dd className="es-figures__label">{figure.label}</dd>
             </div>
           ))}
         </dl>
 
-        <EditionLedger />
+        <Reveal>
+          <EditionLedger />
+        </Reveal>
       </section>
 
       <section className="es-sec">

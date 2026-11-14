@@ -111,6 +111,22 @@ export const siteConfig = {
      */
     headline: "Five Years",
 
+    /**
+     * The part of the headline that changes.
+     *
+     * One word, cycling, with the rest of the sentence fixed. It is the only
+     * motion on the page carrying meaning rather than decorating: it says
+     * that what people build here is not one kind of thing, which is the
+     * single most useful thing to tell somebody deciding whether they are
+     * the sort of person who comes to this.
+     *
+     * Keep them short and keep them true. A word that overpromises is worse
+     * here than anywhere else on the site, because it is the word everybody
+     * reads.
+     */
+    headlineLead: "Five years of building something",
+    rotating: ["real", "weird", "useful", "overnight", "from nothing"],
+
     /** The deck. Sits directly under the headline, larger than body copy. */
     deck:
       "The fifth MorganHacks returns to Morgan State University in April 2027. Twenty-four hours, free to attend, open to any student.",

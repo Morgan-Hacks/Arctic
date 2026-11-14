@@ -81,9 +81,15 @@ export function Frame({ current, children }: { current: NavId; children: React.R
         Skip to content
       </a>
 
-      <div className="es-shell">
-        <header className="es-masthead">
+      {/* Outside the shell, because a sticky bar that is only as wide as the
+          content column has two visible edges with the background showing
+          past them. It carries its own inner column instead. */}
+      <header className="es-masthead">
+        <div className="es-masthead__inner">
           <a className="es-masthead__mark" href="/">
+            {/* Two rings and a centre: a dial, small enough to read as a
+                mark rather than as an illustration of one. */}
+            <span className="es-masthead__dot" aria-hidden="true" />
             MorganHacks
           </a>
           <nav className="es-nav" aria-label="Pages">
@@ -97,8 +103,10 @@ export function Frame({ current, children }: { current: NavId; children: React.R
               </a>
             ))}
           </nav>
-        </header>
+        </div>
+      </header>
 
+      <div className="es-shell">
         <main id="main">{children}</main>
 
         <footer className="es-footer">
