@@ -175,8 +175,13 @@ public sealed class PostgresVolunteerShiftStore(NpgsqlDataSource dataSource) : I
         Value = value is null ? DBNull.Value : value,
     };
 
+    // Npgsql writes timestamptz from a UTC DateTimeOffset only; the instant
+    // an organizer typed in the event's zone is the same moment, converted.
+    // See PostgresEventStore, which does the same on the way to its date
+    // columns, for the reason this normalises here rather than at the
+    // endpoint: every write below goes through this one helper.
     private static NpgsqlParameter Instant(string name, DateTimeOffset? value) => new(name, NpgsqlTypes.NpgsqlDbType.TimestampTz)
     {
-        Value = value is null ? DBNull.Value : value,
+        Value = value is null ? DBNull.Value : value.Value.ToUniversalTime(),
     };
 }

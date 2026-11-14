@@ -232,6 +232,35 @@ public class VolunteerShiftTests(ApplicationsDatabase db)
     }
 
     [Fact]
+    public async Task Shift_times_round_trip_as_the_instants_they_name()
+    {
+        // Npgsql writes timestamptz from a UTC DateTimeOffset only, so a
+        // wall-clock instant in the event's zone -- the shape the console
+        // sends -- used to die with a 500 here rather than land in the row.
+        // The store normalises to UTC; the instants must read back unchanged.
+        var cookie = await PlannerAsync();
+        var eventId = await db.AddEventAsync();
+
+        var response = await Send(HttpMethod.Post,
+            $"/admin/volunteer-shifts?eventId={eventId}", cookie,
+            new
+            {
+                name = "Door",
+                startsAt = "2099-03-06T13:00:00-05:00",
+                endsAt = "2099-03-06T17:00:00-04:00",
+            });
+        response.EnsureSuccessStatusCode();
+
+        var body = await ReadAsync(response);
+        Assert.Equal(
+            DateTimeOffset.Parse("2099-03-06T13:00:00-05:00", System.Globalization.CultureInfo.InvariantCulture),
+            body["shift"]!["startsAt"]!.GetValue<DateTimeOffset>());
+        Assert.Equal(
+            DateTimeOffset.Parse("2099-03-06T17:00:00-04:00", System.Globalization.CultureInfo.InvariantCulture),
+            body["shift"]!["endsAt"]!.GetValue<DateTimeOffset>());
+    }
+
+    [Fact]
     public async Task A_shift_cannot_end_before_it_starts()
     {
         var cookie = await PlannerAsync();
