@@ -18,7 +18,7 @@
 .event-site {
   /* Warm off-white. Paper is never pure white, and #fff next to a serif at
      this contrast reads as a bug rather than as a choice. */
-  --paper: #faf8f4;
+  --paper: #f7f3e9;
 
   /* Warm near-black. 15.8:1 on the paper above. */
   --ink: #14110d;
@@ -36,13 +36,43 @@
   --accent: #8c2f26;
 
   /* A wash used behind pull quotes and the tier table's head. */
-  --tint: #f2eee6;
+  --tint: #efe9db;
+
+  /**
+   * The second ink.
+   *
+   * A riso press runs one colour at a time, and the look everybody recognises
+   * comes from two or three of them overprinting on cheap warm stock. One
+   * accent on white is a web page; two inks, grain and a little
+   * misregistration is a printed thing, and that is the difference between
+   * this and a page that looks generated.
+   *
+   * Mustard rather than a second red, so the two never compete for the same
+   * job: oxblood is the one that means something (links, the button, the
+   * marks in the matrix) and this one is scenery.
+   */
+  --gold: #d79b2b;
+
+  /* The ink used for a full-bleed dark spread. Not black: a very dark warm
+     green-brown holds grain far better than #000, which just looks flat. */
+  --dark: #1d1a14;
 
   --measure: 34em; /* reading width ceiling */
   --gutter: clamp(1.25rem, 5vw, 4.5rem);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  background: var(--paper);
+  /**
+   * Paper, with the tooth of it.
+   *
+   * The noise tile is the single cheapest thing that stops a page reading as
+   * generated: flat #fff with text on it is what every default looks like,
+   * and the eye reads an even, slightly dirty ground as something that was
+   * printed. Tiled rather than fixed, so it travels with the content the way
+   * a texture on stock would, and small enough (160px) that the repeat never
+   * resolves into a pattern.
+   */
+  background-color: var(--paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
   color: var(--ink);
   font-family: var(--font-text), Georgia, serif;
   font-size: 1.0625rem;
@@ -264,6 +294,186 @@ html:has(.event-site) body {
   max-width: 26em;
 }
 
+/* ----------------------------------------------------------- hero scene --- */
+
+/**
+ * The scene behind the headline.
+ *
+ * Every hackathon site worth looking at has a world rather than a centred
+ * column: Hack the North scrolls through an illustrated field, PennApps
+ * through a desert, HackIllinois throws geometric confetti across a dark
+ * ground. The common part is not the illustration, which needs an
+ * illustrator -- it is that the space around the type is doing something.
+ * An empty right-hand half is what reads as unfinished.
+ *
+ * So this builds one out of what a press would use: a numeral blown up past
+ * the edge of the page, a halftone field, and a bar of the second ink printed
+ * slightly out of register. No clip art, nothing bought, and it costs three
+ * elements.
+ */
+.es-hero {
+  position: relative;
+  isolation: isolate;
+}
+
+.es-hero__scene {
+  position: absolute;
+  /* Only as wide as the hero. The numeral is what hangs past the edge, and
+     it is cropped by this box's overflow -- an earlier version made the box
+     itself 40vw wider, which put the numeral's right edge off-screen and
+     left the scene looking like it had failed to load. */
+  inset: -2rem 0 -2rem 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/**
+ * A halftone field.
+ *
+ * Dots on a 14px grid, fading out across the block. This is what a screened
+ * tint looks like when it is printed, and at this opacity it reads as texture
+ * rather than as a pattern anybody is meant to notice.
+ */
+.es-hero__dots {
+  position: absolute;
+  right: 16vw;
+  top: 4%;
+  width: min(34rem, 60vw);
+  height: 22rem;
+  background-image: radial-gradient(var(--ink) 1.2px, transparent 1.3px);
+  background-size: 14px 14px;
+  opacity: 0.16;
+  mask-image: linear-gradient(115deg, #000, transparent 72%);
+  transform: rotate(-8deg);
+}
+
+@media (max-width: 60rem) {
+  /* The dots land where the facts list goes once the hero narrows. */
+  .es-hero__dots {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------- print rules --- */
+
+/**
+ * A rule with the second ink on it.
+ *
+ * Used where a section changes subject. A plain hairline is furniture; a
+ * hairline with a short bar of colour sitting on it is a decision, and it is
+ * the kind of small deliberate mark that separates a designed page from a
+ * styled one.
+ */
+.es-sec {
+  position: relative;
+}
+
+.es-sec::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 3.5rem;
+  height: 3px;
+  background: var(--gold);
+}
+
+.es-sec:last-of-type::before {
+  display: none;
+}
+
+/* ----------------------------------------------------------- the spread --- */
+
+/**
+ * One full-bleed dark section, breaking the run of paper.
+ *
+ * A long page of one ground is a scroll; a page with a spread in the middle
+ * of it has a rhythm. This is the centrefold -- it carries the five-year
+ * record, which is the argument the whole site is making, and the change of
+ * ground is what makes somebody look up.
+ *
+ * Full width without a wrapper element: the shell is padded and centred, so
+ * the background is pushed back out with a very wide box-shadow rather than
+ * with 100vw, which would overflow by the width of the scrollbar.
+ */
+.es-sec--spread {
+  background: var(--dark);
+  color: #efe9db;
+  box-shadow: 0 0 0 100vmax var(--dark);
+  clip-path: inset(0 -100vmax);
+  padding-top: clamp(3.5rem, 9vw, 6rem);
+  padding-bottom: clamp(3.5rem, 9vw, 6rem);
+  margin-top: clamp(3rem, 8vw, 5.5rem);
+  border-bottom: 0;
+}
+
+.es-sec--spread::before {
+  background: var(--gold);
+}
+
+.es-sec--spread .es-head__title,
+.es-sec--spread .es-year__num {
+  color: #f7f3e9;
+}
+
+.es-sec--spread .es-head__lede,
+.es-sec--spread .es-year__note,
+.es-sec--spread .es-year__link {
+  color: #b3ab99;
+}
+
+.es-sec--spread .es-label,
+.es-sec--spread .es-year__dates {
+  color: #9a917e;
+}
+
+.es-sec--spread .es-head__folio {
+  color: var(--gold);
+}
+
+.es-sec--spread .es-year {
+  border-top-color: #3a3429;
+}
+
+.es-sec--spread .es-year--now .es-year__num {
+  color: var(--gold);
+}
+
+.es-sec--spread .es-year__link:hover {
+  color: var(--gold);
+}
+
+/* ---------------------------------------------------------- pull quote --- */
+
+/**
+ * The one line on the page set large enough to be read from across a room.
+ *
+ * Every site looked at for this had one: a sentence pulled out of the prose
+ * and set as an object. It is what gives a long page a second thing to look
+ * at besides the headline.
+ */
+.es-pull {
+  margin: clamp(2.5rem, 6vw, 4rem) 0 0;
+  padding-left: clamp(1.25rem, 3vw, 2rem);
+  border-left: 3px solid var(--accent);
+  font-family: var(--font-serif-display), Georgia, serif;
+  font-size: clamp(1.625rem, 4vw, 2.625rem);
+  line-height: 1.15;
+  max-width: 20em;
+}
+
+.es-pull cite {
+  display: block;
+  margin-top: 0.875rem;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-style: normal;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 /* ---------------------------------------------------------------- facts --- */
 
 .es-facts {
@@ -396,6 +606,76 @@ html:has(.event-site) body {
 
 .es-weekend__body {
   color: var(--muted);
+}
+
+/* -------------------------------------------------------- the figures --- */
+
+/**
+ * Four numbers, set large.
+ *
+ * The one element every hackathon site has that this one did not. Usually it
+ * is attendance and projects submitted; these are the four facts that need no
+ * source, which is the honest version of the same gesture.
+ */
+.es-figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 2.5rem);
+  margin: 0 0 clamp(2.5rem, 6vw, 3.5rem);
+  padding-bottom: clamp(2rem, 5vw, 3rem);
+  border-bottom: 1px solid #3a3429;
+}
+
+@media (min-width: 48rem) {
+  .es-figures {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.es-figures__n {
+  font-family: var(--font-serif-display), Georgia, serif;
+  font-size: clamp(2.75rem, 7vw, 4.25rem);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  color: var(--gold);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.es-figures__label {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: #b3ab99;
+  max-width: 11em;
+}
+
+/* -------------------------------------------------------------- skyline --- */
+
+/**
+ * The city, across the foot of the hero.
+ *
+ * Full bleed past the shell's padding, because a skyline that stops short of
+ * the page edge looks like a picture of a skyline rather than a horizon. Set
+ * in the ink at low strength so it is the ground the type stands on and not
+ * a thing competing with it.
+ */
+.es-skyline {
+  display: block;
+  width: calc(100% + (2 * var(--gutter)));
+  margin: clamp(2rem, 5vw, 3.25rem) calc(-1 * var(--gutter)) 0;
+  height: auto;
+  color: var(--ink);
+  opacity: 0.4;
+}
+
+@media (max-width: 48rem) {
+  /* Wider than the screen and anchored right, so it reads as a horizon
+     continuing past the edge instead of a comb of thin buildings. */
+  .es-skyline {
+    width: 150%;
+    margin-left: calc(-1 * var(--gutter));
+    opacity: 0.3;
+  }
 }
 
 /* -------------------------------------------------------------- ledger ---- */

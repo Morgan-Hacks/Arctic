@@ -184,6 +184,28 @@ export const siteConfig = {
   ],
 
   /**
+   * Four numbers, set large.
+   *
+   * Every hackathon site has a row of these and they are usually attendance,
+   * projects submitted, prizes awarded. We have none of those: nobody has
+   * confirmed a figure for any past edition, and a made-up one on a page a
+   * sponsor reads is the worst kind of lie because it is checkable.
+   *
+   * So these are four things that are true and need no source -- the count of
+   * editions, the length of the weekend, the price, and the year it started.
+   * They carry the five-year argument without claiming a crowd.
+   *
+   * When somebody digs the real attendance out of last year's records, that
+   * is the number that belongs here, and it is worth more than all four.
+   */
+  figures: [
+    { n: "5", label: "editions, counting this one" },
+    { n: "24", label: "hours, start to finish" },
+    { n: "$0", label: "to attend, food included" },
+    { n: "2023", label: "the year of the first" },
+  ],
+
+  /**
    * The five editions, oldest first.
    *
    * Each year had its own site and each one is still up, so the links go out

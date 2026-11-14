@@ -1,8 +1,9 @@
 import { ArrowUpRight, Frame, SectionHead } from "@/components/event-site/frame";
+import { Skyline } from "@/components/event-site/skyline";
 import { EVENT_SITE, isOn } from "@/lib/features";
 import { siteConfig } from "@/site.config";
 
-const { announcement, contactEmail, socials, mlh, edition, facts, weekend, editions, sponsors } =
+const { announcement, contactEmail, socials, mlh, edition, facts, figures, weekend, editions, sponsors } =
   siteConfig;
 
 /**
@@ -113,6 +114,14 @@ function EventHome() {
   return (
     <Frame current="home">
       <section className="es-hero">
+        {/* The scene. A numeral cropped by the page edge, a screened halftone
+            and a bar of the second ink printed a degree out of register --
+            the three things a press would give you, standing in for the
+            illustrated world every other hackathon site has. */}
+        <div className="es-hero__scene" aria-hidden="true">
+          <span className="es-hero__dots" />
+        </div>
+
         <p className="es-hero__eyebrow es-label">{edition.eyebrow}</p>
         <h1 className="es-hero__title">{edition.headline}</h1>
         <hr className="es-hero__rule" />
@@ -126,6 +135,12 @@ function EventHome() {
             Applications are not open yet. The dates are announced here first.
           </p>
         </div>
+
+        {/* The city the event is in, across the foot of the hero. This is the
+            move HackUTD makes with Dallas, and it is the one piece of scenery
+            that is specific to MorganHacks rather than decoration that could
+            belong to anybody. */}
+        <Skyline />
 
         <dl className="es-facts">
           {facts.map((fact) => (
@@ -161,15 +176,34 @@ function EventHome() {
             </div>
           ))}
         </div>
+
+        <blockquote className="es-pull">
+          You arrive with an idea or with none at all, and you leave having
+          built something with people you had not met.
+          <cite>What the weekend is</cite>
+        </blockquote>
       </section>
 
-      <section className="es-sec">
+      {/* The centrefold. A long page of one ground is a scroll; changing the
+          ground under the argument the whole site is making is what makes
+          somebody look up from it. */}
+      <section className="es-sec es-sec--spread">
         <SectionHead
           folio="03"
           kicker="The record"
           heading="One April at a time."
           lede="Every edition had its own site, and every one of them is still up."
         />
+
+        <dl className="es-figures">
+          {figures.map((figure) => (
+            <div key={figure.label}>
+              <dt className="es-figures__n">{figure.n}</dt>
+              <dd className="es-figures__label">{figure.label}</dd>
+            </div>
+          ))}
+        </dl>
+
         <EditionLedger />
       </section>
 
