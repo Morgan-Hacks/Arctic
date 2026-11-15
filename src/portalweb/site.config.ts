@@ -173,6 +173,30 @@ export const siteConfig = {
   ],
 
   /**
+   * The band that scrolls across the page under the hero.
+   *
+   * Short, flat statements, every one of them already true and already said
+   * somewhere else on the site. A moving strip is the wrong place to put a
+   * fact somebody has to act on -- it is in motion, it repeats, and nobody
+   * can go back to it -- so nothing goes in here that is not also written
+   * down where it can be read at rest.
+   *
+   * Hours are deliberately absent. The 2025 site published a different
+   * number from the one in `figures`, and a claim under review does not
+   * belong in the one element on the page that says it over and over.
+   */
+  ticker: [
+    "Fifth edition",
+    "April 2027",
+    "Dates to come",
+    "Morgan State University",
+    "Baltimore, Maryland",
+    "Free to enter",
+    "Every April since 2023",
+    "Applications not open yet",
+  ],
+
+  /**
    * What the weekend is, in prose.
    *
    * This replaces both the step-by-step list and the hour-by-hour schedule the

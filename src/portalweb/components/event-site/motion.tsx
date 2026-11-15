@@ -3,16 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * The three bits of motion on the site, as small client islands.
+ * The motion that needs a browser, as small client islands.
  *
- * Everything else stays a server component. These are the only pieces that
- * need a browser, so they are the only pieces that ship JavaScript, and each
- * one renders its finished state on the server first -- the rotating word
- * starts on a real word, the counters start on their real number. With
- * JavaScript off, or before it loads, the page reads correctly and simply
- * does not move.
+ * Most of what moves on this site moves in CSS -- the words of the headline
+ * arriving, the ticker, the searchlight over the skyline, the scroll bar
+ * under the masthead, the laser rules drawing themselves in as each section
+ * is scrolled to. None of that is in here, because none of it needs state.
  *
- * All three check `prefers-reduced-motion` and do nothing when it is set.
+ * What is in here is the handful of pieces that have to read something only
+ * the browser knows: the time (the rotating word), the scroll position (the
+ * reveals and the counters), and the pointer (the dial and the torch).
+ * Everything else stays a server component, and each of these renders its
+ * finished state on the server first -- the rotating word starts on a real
+ * word, the counters start on their real number. With JavaScript off, or
+ * before it loads, the page reads correctly and simply does not move.
+ *
+ * Every one checks `prefers-reduced-motion` and does nothing when it is set.
  * Not reduced motion, none: a word swapping itself out is exactly what that
  * setting is asking you not to do.
  */
@@ -150,22 +156,37 @@ export function CountUp({ value }: { value: string }) {
 /**
  * Lifts its children into place the first time they are scrolled to.
  *
- * One gesture, small, and it never runs twice. A page where every section
- * animates on every pass is a page that is hard to read.
+ * One gesture, and it never runs twice. A page where every section animates
+ * on every pass is a page that is hard to read.
+ *
+ * `group` moves the items inside instead of the block itself, one after the
+ * next -- the three parts of the weekend, the five editions on the wall. The
+ * stagger lives in CSS, keyed off `:nth-child`, so this component still only
+ * has to answer the one question it can answer: has this been seen yet. The
+ * wrapper itself sits still in that mode, because a block that rises while
+ * its children are also rising is two gestures fighting over one object.
  */
 export function Reveal({
   children,
   delay = 0,
+  group = false,
 }: {
   children: React.ReactNode;
   delay?: number;
+  group?: boolean;
 }) {
   const { ref, seen } = useInView<HTMLDivElement>(true);
 
   return (
     <div
       ref={ref}
-      className={`es-reveal${seen ? " es-reveal--in" : ""}`}
+      className={[
+        "es-reveal",
+        group ? "es-reveal--group" : "",
+        seen ? "es-reveal--in" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={delay ? { transitionDelay: `${delay}ms` } : undefined}
     >
       {children}
@@ -236,4 +257,58 @@ export function VaultDial() {
       </div>
     </div>
   );
+}
+
+/**
+ * The torch.
+ *
+ * A warm pool of light that follows the pointer across the whole page, mixed
+ * into the room with `screen` so it brightens what it crosses rather than
+ * sitting on top of it as a grey disc. Somebody is in here with a flashlight,
+ * which is the one thing a heist needs that a static background cannot say.
+ *
+ * Deliberately cheap. The listener writes two custom properties and nothing
+ * else; the gradient is painted by the compositor from those two numbers, so
+ * moving the mouse across the page does no layout, no React render and no
+ * style recalculation beyond the one element. Coalesced to one write per
+ * frame, because a pointer can fire faster than the screen refreshes and the
+ * extra writes would be thrown away.
+ *
+ * It starts invisible and fades in on the first movement. On a touch screen
+ * there is no pointer to follow, so that movement never comes and the layer
+ * stays exactly where it started, which is gone.
+ */
+export function Torch() {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (usesReducedMotion()) return;
+    const el = ref.current;
+    if (!el) return;
+
+    let raf = 0;
+    let x = 0;
+    let y = 0;
+
+    const paint = () => {
+      raf = 0;
+      el.style.setProperty("--mx", `${x}px`);
+      el.style.setProperty("--my", `${y}px`);
+    };
+
+    const onMove = (e: PointerEvent) => {
+      x = e.clientX;
+      y = e.clientY;
+      el.classList.add("es-torch--on");
+      if (!raf) raf = requestAnimationFrame(paint);
+    };
+
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  return <div ref={ref} className="es-torch" aria-hidden="true" />;
 }

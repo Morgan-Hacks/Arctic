@@ -251,9 +251,17 @@ html:has(.event-site) body {
   border-radius: 50%;
 }
 
+/* Dashed, and it turns a quarter when you point at the mark. A plain ring
+   could rotate all day and look perfectly still; the dashes are what make
+   the rotation visible, which is the whole point of a dial. */
 .es-masthead__dot::before {
   inset: 3px;
-  border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--gold) 55%, transparent);
+  transition: rotate 0.55s var(--ease);
+}
+
+.es-masthead__mark:hover .es-masthead__dot::before {
+  rotate: 96deg;
 }
 
 .es-masthead__dot::after {
@@ -632,6 +640,34 @@ html:has(.event-site) body {
   height: 2px;
   background: var(--laser);
   box-shadow: 0 0 14px color-mix(in srgb, var(--laser) 70%, transparent);
+  transform-origin: left;
+}
+
+/**
+ * Each laser draws itself as its section comes up.
+ *
+ * A scroll timeline, so the rule is tied to where the page actually is
+ * rather than to a clock that started when something crossed a threshold --
+ * scroll back up and it retracts. There is no JavaScript behind this and no
+ * observer counting elements; a browser without scroll timelines simply
+ * shows all five rules at full length, which is what they looked like
+ * before.
+ */
+@supports (animation-timeline: view()) {
+  .es-sec::before {
+    animation: es-laser linear both;
+    animation-timeline: view();
+    animation-range: entry 8% entry 55%;
+  }
+
+  @keyframes es-laser {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
 }
 
 .es-head {
@@ -774,6 +810,46 @@ html:has(.event-site) body {
   mask-image: linear-gradient(transparent, #000 40%, #000 85%, transparent);
 }
 
+/**
+ * The searchlight.
+ *
+ * A soft band of the technical colour crossing the skyline every nine
+ * seconds, which is the sweep of a light somebody is standing behind. It
+ * starts at zero opacity and is only lifted by the keyframes, so when motion
+ * is turned off and the animation goes with it, the band is not left sitting
+ * across the city as a stray diagonal wash.
+ */
+.es-city::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 40%,
+    color-mix(in srgb, var(--cyan) 20%, transparent) 50%,
+    transparent 60%
+  );
+  animation: es-sweep 9s var(--ease) infinite;
+}
+
+@keyframes es-sweep {
+  0% {
+    translate: -110% 0;
+    opacity: 0;
+  }
+  18%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    translate: 110% 0;
+    opacity: 0;
+  }
+}
+
 .es-skyline {
   position: relative;
   display: block;
@@ -781,6 +857,29 @@ html:has(.event-site) body {
   height: auto;
   color: var(--cyan);
   opacity: 0.55;
+}
+
+/**
+ * The city drifts against the page as you scroll past it.
+ *
+ * Small on purpose -- a few per cent, not a parallax layer cake. It is doing
+ * one job: making the skyline read as something behind the page rather than
+ * a picture printed on it. The clip on .es-city hides the edges it exposes.
+ */
+@supports (animation-timeline: view()) {
+  .es-skyline {
+    animation: es-drift linear both;
+    animation-timeline: view();
+  }
+
+  @keyframes es-drift {
+    from {
+      translate: 0 7%;
+    }
+    to {
+      translate: 0 -7%;
+    }
+  }
 }
 
 /* ------------------------------------------------------------------- wall --- */
@@ -825,10 +924,12 @@ html:has(.event-site) body {
     box-shadow 0.28s var(--ease);
 }
 
+/* Lifted, and leaning back a degree. The rotation is what makes it a card
+   being picked up rather than a box moving north. */
 a.es-card__body:hover {
   border-color: color-mix(in srgb, var(--gold) 50%, transparent);
-  transform: translateY(-3px);
-  box-shadow: 0 22px 50px -28px #000;
+  transform: perspective(900px) rotateX(2.2deg) translateY(-4px) scale(1.004);
+  box-shadow: 0 26px 60px -30px #000;
 }
 
 /**
@@ -861,6 +962,34 @@ a.es-card__body:hover {
 a.es-card__body:hover .es-card__shot img {
   filter: none;
   transform: scale(1.04);
+}
+
+/**
+ * The sheen.
+ *
+ * A narrow bright diagonal that crosses the screenshot once when you point
+ * at the card, parked off the left edge the rest of the time. It is the
+ * oldest trick there is for making a flat rectangle read as a surface with
+ * light falling on it, and it costs one composited transform.
+ */
+.es-card__shot::before {
+  content: "";
+  position: absolute;
+  inset: -20% -40%;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    102deg,
+    transparent 42%,
+    color-mix(in srgb, #fff 16%, transparent) 50%,
+    transparent 58%
+  );
+  translate: -100% 0;
+  transition: translate 0.85s var(--ease);
+}
+
+a.es-card__body:hover .es-card__shot::before {
+  translate: 100% 0;
 }
 
 /* A hairline of the technical colour across the top of each shot, so the
@@ -1245,14 +1374,74 @@ a.es-card__body:hover .es-card__go {
   transform: none;
 }
 
-/* The hero does not wait to be scrolled to; it is already there. */
-.es-hero__top,
-.es-hero .es-panel {
+/**
+ * The arrival.
+ *
+ * The hero does not wait to be scrolled to, so none of this is tied to an
+ * observer: it is one sequence, written out in delays, that runs as the page
+ * paints. The order is the order somebody reads in -- the badge, then the
+ * headline a word at a time, then the deck, then the two buttons, with the
+ * dial coming up underneath the type and the facts and the city last.
+ *
+ * Every delay is under a second in total. A page that takes two seconds to
+ * assemble itself is a page that has decided its own entrance matters more
+ * than the person waiting to read it.
+ */
+.es-hero .es-badge,
+.es-hero__deck,
+.es-hero__actions,
+.es-hero .es-note,
+.es-dial,
+.es-hero .es-panel,
+.es-city {
   animation: es-rise 0.7s var(--ease) both;
 }
 
+.es-dial {
+  animation-delay: 0.18s;
+}
+
+.es-hero__deck {
+  animation-delay: 0.42s;
+}
+
+.es-hero__actions {
+  animation-delay: 0.52s;
+}
+
+.es-hero .es-note {
+  animation-delay: 0.6s;
+}
+
 .es-hero .es-panel {
-  animation-delay: 0.14s;
+  animation-delay: 0.66s;
+}
+
+.es-city {
+  animation-delay: 0.76s;
+}
+
+/* The words of the headline, each one a beat behind the last. `--i` is set
+   on the span by the component; this is the only place it is read. */
+.es-split {
+  display: inline;
+}
+
+.es-split__w {
+  display: inline-block;
+  animation: es-word 0.72s var(--ease) both;
+  animation-delay: calc(0.06s + var(--i) * 0.065s);
+}
+
+@keyframes es-word {
+  from {
+    opacity: 0;
+    transform: translateY(0.38em) rotate(1.2deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @keyframes es-rise {
@@ -1264,6 +1453,202 @@ a.es-card__body:hover .es-card__go {
     opacity: 1;
     transform: none;
   }
+}
+
+/* ------------------------------------------------------------------ torch --- */
+
+/**
+ * The pool of light that follows the pointer.
+ *
+ * `screen` rather than a plain overlay, so it adds light to whatever it
+ * crosses instead of laying a grey disc over it: the gold warms up, the type
+ * stays legible, and nothing underneath is hidden. On the same layer as the
+ * mesh and the grain, which is to say behind everything that is read.
+ *
+ * The two coordinates arrive as custom properties from the one client island
+ * that listens to the pointer. Until the first movement they are unset, the
+ * fallbacks put the light off the top of the screen and the layer is at zero
+ * opacity anyway -- which is also where it stays for the whole visit on a
+ * touch screen, where there is no pointer to follow.
+ */
+.es-torch {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: screen;
+  transition: opacity 0.7s var(--ease);
+  background: radial-gradient(
+    22rem 22rem at var(--mx, 50%) var(--my, -20%),
+    color-mix(in srgb, var(--gold) 24%, transparent),
+    color-mix(in srgb, var(--violet) 9%, transparent) 45%,
+    transparent 72%
+  );
+}
+
+.es-torch--on {
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------- progress --- */
+
+/**
+ * How far down the page you are.
+ *
+ * A scroll timeline on the root scroller, which means the browser owns it
+ * entirely: no scroll listener, no JavaScript, nothing to throttle, and it
+ * cannot fall behind the scroll the way a listener-driven bar does. Parked at
+ * `scaleX(0)` with no animation attached, so where the timeline is not
+ * supported there is simply no bar rather than a full-width line claiming you
+ * have reached the bottom.
+ */
+.es-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--laser), var(--gold));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--gold) 45%, transparent);
+}
+
+@supports (animation-timeline: scroll()) {
+  .es-progress {
+    animation: es-progress linear both;
+    animation-timeline: scroll(root block);
+  }
+
+  @keyframes es-progress {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+}
+
+/* ----------------------------------------------------------------- ticker --- */
+
+/**
+ * The band of statements under the hero.
+ *
+ * Full bleed, and faded out at both ends by a mask so the phrases arrive and
+ * leave rather than appearing and vanishing at a hard edge. The track holds
+ * two identical runs and travels exactly half its own width, so the moment it
+ * loops the second run is standing where the first one was and there is no
+ * seam to see.
+ *
+ * One transform on one element, for any number of phrases. The duration is
+ * long enough to read a phrase as it passes; faster looks busy and is the
+ * reason most of these end up unreadable.
+ */
+.es-ticker {
+  position: relative;
+  margin: 0 calc(-1 * var(--gutter));
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 45%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+
+.es-ticker__track {
+  display: flex;
+  width: max-content;
+  animation: es-marquee 46s linear infinite;
+}
+
+.es-ticker__run {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 0.8125rem 0;
+}
+
+.es-ticker__item {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 1.75rem;
+}
+
+/* The separator, drawn rather than typed. A rotated square on the alarm
+   colour: it reads as punctuation without being a middle dot. */
+.es-ticker__item::after {
+  content: "";
+  width: 4px;
+  height: 4px;
+  margin-left: 1.75rem;
+  rotate: 45deg;
+  background: var(--laser);
+  flex: none;
+}
+
+@keyframes es-marquee {
+  to {
+    translate: -50% 0;
+  }
+}
+
+/* --------------------------------------------------------------- stagger --- */
+
+/**
+ * The grouped reveal: the items move, the block does not.
+ *
+ * `Reveal` in group mode leaves its wrapper alone and hands the gesture to
+ * whatever is inside -- the three parts of the weekend, the five editions on
+ * the wall. The delays are written out against `:nth-child` rather than
+ * passed down as properties, because the component's job is to answer one
+ * question (has this been seen) and the order of children is something CSS
+ * already knows.
+ *
+ * Six steps, which covers every group on the site. A seventh item would
+ * simply arrive with the sixth, which is a better failure than a gap.
+ */
+.es-reveal--group {
+  opacity: 1;
+  transform: none;
+}
+
+.es-reveal--group > * > * {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.55s var(--ease), transform 0.55s var(--ease);
+}
+
+.es-reveal--group.es-reveal--in > * > * {
+  opacity: 1;
+  transform: none;
+}
+
+.es-reveal--group.es-reveal--in > * > *:nth-child(2) {
+  transition-delay: 0.08s;
+}
+
+.es-reveal--group.es-reveal--in > * > *:nth-child(3) {
+  transition-delay: 0.16s;
+}
+
+.es-reveal--group.es-reveal--in > * > *:nth-child(4) {
+  transition-delay: 0.24s;
+}
+
+.es-reveal--group.es-reveal--in > * > *:nth-child(5) {
+  transition-delay: 0.32s;
+}
+
+.es-reveal--group.es-reveal--in > * > *:nth-child(n + 6) {
+  transition-delay: 0.4s;
 }
 
 /* ----------------------------------------------------------------- motion --- */
@@ -1290,5 +1675,32 @@ a.es-card__body:hover .es-card__go {
 
   .es-dial__stage {
     transform: rotateX(58deg);
+  }
+
+  .es-reveal--group > * > * {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* No light to follow a pointer with, and no bar to fill. Both are hidden
+     rather than frozen, because a torch stuck in one place and a progress bar
+     stuck at nothing are both worse than their absence. */
+  .es-torch,
+  .es-progress {
+    display: none;
+  }
+
+  /* The sheen is a highlight travelling across a card and nothing else. With
+     the transition gone it would arrive instantly or not at all, so it is
+     removed rather than made to teleport. */
+  .es-card__shot::before {
+    display: none;
+  }
+
+  /* The ticker stops being a ticker. The phrases are all written out
+     elsewhere on the page, so the strip simply holds the first run and the
+     duplicate sits past the edge where it always was. */
+  .es-ticker__track {
+    translate: 0;
   }
 }

@@ -1,11 +1,22 @@
-import { ArrowUpRight, Frame, SectionHead } from "@/components/event-site/frame";
+import { ArrowUpRight, Frame, SectionHead, SplitWords, Ticker } from "@/components/event-site/frame";
 import { CountUp, Reveal, RotatingWord, VaultDial } from "@/components/event-site/motion";
 import { Skyline } from "@/components/event-site/skyline";
 import { EVENT_SITE, isOn } from "@/lib/features";
 import { siteConfig } from "@/site.config";
 
-const { announcement, contactEmail, socials, mlh, edition, facts, figures, weekend, editions, sponsors } =
-  siteConfig;
+const {
+  announcement,
+  contactEmail,
+  socials,
+  mlh,
+  edition,
+  facts,
+  ticker,
+  figures,
+  weekend,
+  editions,
+  sponsors,
+} = siteConfig;
 
 /**
  * The public page between editions.
@@ -151,8 +162,10 @@ function EventHome() {
               {edition.eyebrow}
             </p>
 
+            {/* The fixed part of the sentence arrives a word at a time, then
+                the part that changes starts changing. */}
             <h1 className="es-hero__title">
-              {edition.headlineLead}{" "}
+              <SplitWords text={edition.headlineLead} />{" "}
               <RotatingWord words={edition.rotating} />
             </h1>
 
@@ -197,6 +210,10 @@ function EventHome() {
         </div>
       </section>
 
+      {/* The band under the hero. Full bleed, moving, and every line of it
+          written down at rest somewhere further down the page. */}
+      <Ticker items={ticker} />
+
       <section className="es-sec">
         <SectionHead folio="01" kicker="The event" heading="What it is." />
         <Reveal>
@@ -215,7 +232,7 @@ function EventHome() {
           heading="Saturday to Sunday."
           lede="The running order is not set yet. The shape of it has been the same for five years."
         />
-        <Reveal>
+        <Reveal group>
         <div className="es-weekend">
           {weekend.map((part) => (
             <div key={part.heading}>
@@ -252,7 +269,7 @@ function EventHome() {
           ))}
         </dl>
 
-        <Reveal>
+        <Reveal group>
           <EditionGrid />
         </Reveal>
       </section>

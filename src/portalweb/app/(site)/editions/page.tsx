@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Frame, SectionHead } from "@/components/event-site/frame";
+import { Reveal } from "@/components/event-site/motion";
 import { EVENT_SITE, isOn } from "@/lib/features";
 import { EditionGrid } from "../page";
 
@@ -32,7 +33,9 @@ export default function EditionsPage() {
           heading="One April at a time."
           lede="Nothing here is reconstructed. The links go out to the sites each year's team built."
         />
-        <EditionGrid />
+        <Reveal group>
+          <EditionGrid />
+        </Reveal>
       </section>
 
       <section className="es-sec">

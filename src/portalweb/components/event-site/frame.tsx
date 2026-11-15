@@ -1,3 +1,6 @@
+import { Fragment } from "react";
+
+import { Torch } from "@/components/event-site/motion";
 import { siteConfig } from "@/site.config";
 
 /**
@@ -18,6 +21,73 @@ const NAV = [
 ] as const;
 
 export type NavId = (typeof NAV)[number]["id"];
+
+/**
+ * A line of type whose words arrive one after the next.
+ *
+ * Split on the server into one inline-block per word, each carrying its index
+ * as a custom property; the CSS turns that index into a delay. No JavaScript,
+ * no measuring, no layout shift, and the sentence is still one readable string
+ * in the HTML for anything that is not a browser.
+ *
+ * Words rather than letters. Per-letter staggers read as a gimmick at this
+ * size and, worse, they put each character in its own box, so a screen reader
+ * and a find-in-page both lose the word.
+ *
+ * The spaces are text nodes between the spans, not characters inside them: a
+ * space at the end of an inline-block is trimmed, and putting them inside
+ * runs the whole headline together into one word.
+ */
+export function SplitWords({ text }: { text: string }) {
+  const words = text.split(" ");
+
+  return (
+    <span className="es-split">
+      {words.map((word, i) => (
+        <Fragment key={`${i}-${word}`}>
+          <span className="es-split__w" style={{ "--i": i } as React.CSSProperties}>
+            {word}
+          </span>
+          {i < words.length - 1 ? " " : null}
+        </Fragment>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * The band of statements that scrolls across under the hero.
+ *
+ * Two identical runs in one track, moved by exactly half its width and then
+ * snapped back: the second run is where the first one was, so there is no
+ * seam and no point at which the strip is empty. It is the cheapest marquee
+ * there is -- one composited transform, no JavaScript, no clones made at
+ * runtime -- and the duplicate is hidden from assistive technology so the
+ * same eight phrases are not read out twice.
+ *
+ * The separator is a drawn diamond rather than a typed character, so nothing
+ * here is a middle dot pretending to be punctuation.
+ */
+export function Ticker({ items }: { items: readonly string[] }) {
+  const run = (hidden: boolean) => (
+    <div className="es-ticker__run" aria-hidden={hidden || undefined}>
+      {items.map((item) => (
+        <span key={item} className="es-ticker__item">
+          {item}
+        </span>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="es-ticker">
+      <div className="es-ticker__track">
+        {run(false)}
+        {run(true)}
+      </div>
+    </div>
+  );
+}
 
 export function ArrowUpRight() {
   return (
@@ -84,7 +154,17 @@ export function Frame({ current, children }: { current: NavId; children: React.R
       {/* Outside the shell, because a sticky bar that is only as wide as the
           content column has two visible edges with the background showing
           past them. It carries its own inner column instead. */}
+      {/* The pool of light that follows the pointer. First child, because it
+          is scenery: it sits on the same layer as the mesh and the grain,
+          under everything that is actually read. */}
+      <Torch />
+
       <header className="es-masthead">
+        {/* How far down the page you are, as a hot line under the bar. Driven
+            by a scroll timeline in CSS, so it costs no JavaScript at all and
+            simply does not appear in a browser that cannot do that. */}
+        <span className="es-progress" aria-hidden="true" />
+
         <div className="es-masthead__inner">
           <a className="es-masthead__mark" href="/">
             {/* Two rings and a centre: a dial, small enough to read as a
