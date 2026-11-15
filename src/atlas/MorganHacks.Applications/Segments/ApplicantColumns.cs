@@ -28,10 +28,17 @@ public enum ColumnKind
 /// <c>MergeFields.NameFor</c> — so <c>first_name</c> can only ever become
 /// <c>{{firstName}}</c>.
 /// <para>
-/// <see cref="OnAddressLists"/> is what a typed list of addresses can supply,
-/// which is an address and nothing else. The recipient there is frequently a
-/// sponsor contact this system has never heard of, so a template that greets
-/// people by name cannot be sent to one.
+/// <see cref="OnAddressLists"/> is what a typed list of addresses can supply:
+/// the address, and the two names, where whoever built the list gave them.
+/// Nothing else, because the rest is read out of an application and these
+/// recipients frequently have none — a sponsor contact this system has never
+/// heard of cannot have a shirt size on file.
+/// <para>
+/// True here does not promise every recipient has one. It says the shape can
+/// carry it, which is what decides whether the editor offers the placeholder
+/// at all; whether a particular send actually has one for everybody is the
+/// coverage check's question, asked against the resolved members.
+/// </para>
 /// </para>
 /// </remarks>
 public sealed record ApplicantColumn(
@@ -87,6 +94,27 @@ public static class ApplicantColumns
         OnAddressLists: true);
 
     /// <summary>
+    /// The recipient's first name.
+    /// </summary>
+    /// <remarks>
+    /// Named, like <see cref="Address"/>, because the resolver writes it for a
+    /// typed list of recipients and a literal "first_name" there would be a
+    /// second spelling of this column to keep in step.
+    /// </remarks>
+    public static readonly ApplicantColumn FirstName = new(
+        "first_name",
+        ColumnKind.Text,
+        "The recipient's first name, as their application has it.",
+        OnAddressLists: true);
+
+    /// <summary>The recipient's last name. Named for the same reason.</summary>
+    public static readonly ApplicantColumn LastName = new(
+        "last_name",
+        ColumnKind.Text,
+        "The recipient's last name, as their application has it.",
+        OnAddressLists: true);
+
+    /// <summary>
     /// The columns a broadcast may fill itself in from, in the order an editor
     /// lists them.
     /// </summary>
@@ -98,14 +126,8 @@ public static class ApplicantColumns
     public static readonly IReadOnlyList<ApplicantColumn> Mergeable =
     [
         Address,
-
-        new("first_name",
-            ColumnKind.Text,
-            "The recipient's first name, as their application has it."),
-
-        new("last_name",
-            ColumnKind.Text,
-            "The recipient's last name, as their application has it."),
+        FirstName,
+        LastName,
 
         new("school",
             ColumnKind.Text,

@@ -230,7 +230,17 @@ public static class CampaignEndpoints
             sourceId = value.TryGetProperty("eventId", out var eventId) ? eventId.GetString()
                 : value.TryGetProperty("formId", out var formId) ? formId.GetString() : null,
             statuses = value.TryGetProperty("statuses", out var statuses) ? statuses.Deserialize<string[]>() : null,
-            count = value.TryGetProperty("emails", out var emails) ? (int?)emails.GetArrayLength() : null,
+            // Both spellings of a typed list. `recipients` is what Segment
+            // writes now that the elements carry names; `emails` is what every
+            // campaign drafted before that has stored, and this list is where
+            // those are still read back. Counted straight off the document
+            // rather than by parsing it, because this runs once per row of the
+            // campaigns table.
+            count = value.TryGetProperty("recipients", out var recipients)
+                ? (int?)recipients.GetArrayLength()
+                : value.TryGetProperty("emails", out var emails)
+                    ? (int?)emails.GetArrayLength()
+                    : null,
 
             // The criterion an answer segment stores, read back as it was
             // written. The list says "Answered track with hardware" from these
@@ -404,9 +414,23 @@ public static class CampaignEndpoints
             return Results.BadRequest(new { error = unfillable });
         }
 
+        // Off unless somebody asks for it, rather than inherited from the
+        // template.
+        //
+        // This used to fall back to template.ClickTracking, and the new
+        // campaign dialog sends no choice at all -- so a template with click
+        // tracking on quietly produced tracked campaigns, and the only sign
+        // was a toggle already switched on two screens later. Open tracking
+        // puts a 1x1 image in the body and click tracking rewrites every link
+        // through our own domain, which are two of the clearest bulk signals
+        // a mail can carry, and neither was a decision anybody made per send.
+        //
+        // The toggle on the draft screen still turns it on, and updating a
+        // campaign still refuses a null, so this changes the default and not
+        // the choice.
         var campaign = await campaigns.CreateDraftAsync(
             template.Id, name, segment?.ToJson(), segment is null ? null : EventOf(segment), http.PersonId(), ct,
-            request?.TrackingEnabled ?? template.ClickTracking);
+            request?.TrackingEnabled ?? false);
 
         log.LogInformation(
             "A broadcast was drafted. {actor} {campaign} {segment} {event}",

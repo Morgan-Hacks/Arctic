@@ -121,6 +121,27 @@ public abstract record Segment
     }
 
     /// <summary>
+    /// One recipient on a typed list: an address, and a name if we were given
+    /// one.
+    /// </summary>
+    /// <remarks>
+    /// Both names are optional and frequently absent, which is the whole
+    /// reason this record exists rather than a wider required shape. The two
+    /// things a list of addresses is for pull in opposite directions: four
+    /// sponsors typed in by hand have no names on file anywhere, and four
+    /// hundred students lifted out of last year's spreadsheet do.
+    /// <para>
+    /// Nothing here refuses a missing name. What refuses is the coverage check
+    /// in <c>CampaignEndpoints</c>, at send, and only when the template
+    /// actually uses the placeholder — so a greeting template aimed at a list
+    /// with a blank in it is stopped, and a template that greets nobody still
+    /// reaches the sponsors. Requiring names here instead would mean the
+    /// sponsor case could no longer be expressed at all.
+    /// </para>
+    /// </remarks>
+    public sealed record AddressRecipient(string Email, string? FirstName, string? LastName);
+
+    /// <summary>
     /// These addresses and no others.
     /// </summary>
     /// <remarks>
@@ -133,8 +154,14 @@ public abstract record Segment
     /// 0015 added a unique index on (campaign_id, to_email): the person-based
     /// one from 0003 does not stop a duplicate when the person is unknown.
     /// </para>
+    /// <para>
+    /// Names ride along because the list is as often an import as it is four
+    /// addresses typed in. Carrying them here rather than looking them up is
+    /// the only option available: these people have no row to look anything up
+    /// in, which is what makes this segment the one they can be reached by.
+    /// </para>
     /// </remarks>
-    public sealed record Addresses(IReadOnlyList<string> Emails) : Segment
+    public sealed record Addresses(IReadOnlyList<AddressRecipient> Recipients) : Segment
     {
         public override string Type => "explicitList";
     }
@@ -184,7 +211,20 @@ public abstract record Segment
             question = s.Question,
             value = s.Value,
         }),
-        Addresses s => JsonSerializer.Serialize(new { type = s.Type, emails = s.Emails }),
+        // Written as `recipients` rather than the `emails` this used to store,
+        // because the elements are no longer addresses. Documents written
+        // before this are still read -- see TryAddresses -- so the rename
+        // costs nothing and the stored shape describes itself.
+        Addresses s => JsonSerializer.Serialize(new
+        {
+            type = s.Type,
+            recipients = s.Recipients.Select(r => new
+            {
+                email = r.Email,
+                firstName = r.FirstName,
+                lastName = r.LastName,
+            }),
+        }),
         _ => throw new InvalidOperationException($"No stored shape for '{Type}'."),
     };
 
@@ -361,14 +401,57 @@ public abstract record Segment
         return true;
     }
 
+    /// <summary>
+    /// The longest name this will carry into a message.
+    /// </summary>
+    /// <remarks>
+    /// A bound on text that ends up in a stored jsonb document and then,
+    /// rendered, in <c>notify.messages</c>. A spreadsheet column with a
+    /// paragraph in it is a mis-mapped column rather than somebody's name, and
+    /// the cheapest place to say so is before several hundred of them are
+    /// stored.
+    /// </remarks>
+    private const int MaxNameLength = 100;
+
+    /// <summary>
+    /// A typed list of recipients, in either shape it has ever been stored in.
+    /// </summary>
+    /// <remarks>
+    /// Two shapes on purpose. <c>recipients</c> is what this writes now: an
+    /// object per person carrying an address and optionally a name.
+    /// <c>emails</c> is what it wrote before names existed, a plain array of
+    /// strings, and every campaign drafted until then has one sitting in
+    /// <c>notify.campaigns.segment</c> — a document whose whole purpose is to
+    /// still be readable a month later. Dropping that branch would make those
+    /// campaigns unreadable rather than merely old.
+    /// <para>
+    /// A string inside <c>recipients</c> is read as an address with no names,
+    /// so a caller that has only addresses does not have to wrap each one in
+    /// an object to say nothing.
+    /// </para>
+    /// <para>
+    /// A blank name is stored as absent rather than as an empty string. They
+    /// mean the same thing to everything downstream, and one spelling of
+    /// nothing is what keeps the coverage check's count honest.
+    /// </para>
+    /// </remarks>
     private static bool TryAddresses(JsonElement json, out Segment? segment, out string? error)
     {
         segment = null;
         error = null;
 
-        if (!json.TryGetProperty("emails", out var listed)
-            || listed.ValueKind != JsonValueKind.Array
-            || listed.GetArrayLength() == 0)
+        if (!json.TryGetProperty("recipients", out var listed)
+            || listed.ValueKind != JsonValueKind.Array)
+        {
+            if (!json.TryGetProperty("emails", out listed)
+                || listed.ValueKind != JsonValueKind.Array)
+            {
+                error = "Add at least one address to send to.";
+                return false;
+            }
+        }
+
+        if (listed.GetArrayLength() == 0)
         {
             error = "Add at least one address to send to.";
             return false;
@@ -387,14 +470,34 @@ public abstract record Segment
         // are pasted out of a spreadsheet. Two spellings of one address in the
         // list would be caught by the unique index at send anyway; catching it
         // here is what makes the number on the preview screen the truth.
-        var emails = new List<string>();
+        //
+        // First spelling wins, names and all. A second row for the same person
+        // is a duplicate rather than a correction, and there is nothing here
+        // that could tell which of the two was meant.
+        var recipients = new List<AddressRecipient>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var element in listed.EnumerateArray())
         {
-            var email = element.ValueKind == JsonValueKind.String
-                ? element.GetString()?.Trim()
-                : null;
+            string? email;
+            string? firstName = null;
+            string? lastName = null;
+
+            if (element.ValueKind == JsonValueKind.String)
+            {
+                email = element.GetString()?.Trim();
+            }
+            else if (element.ValueKind == JsonValueKind.Object)
+            {
+                email = Trimmed(element, "email");
+                firstName = Trimmed(element, "firstName");
+                lastName = Trimmed(element, "lastName");
+            }
+            else
+            {
+                error = "One of those recipients is not an address.";
+                return false;
+            }
 
             if (string.IsNullOrEmpty(email))
             {
@@ -402,13 +505,24 @@ public abstract record Segment
                 return false;
             }
 
+            if (firstName?.Length > MaxNameLength || lastName?.Length > MaxNameLength)
+            {
+                error = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "A name longer than {0:N0} characters came through for {1}, "
+                    + "which usually means a column was mapped to the wrong thing.",
+                    MaxNameLength,
+                    email);
+                return false;
+            }
+
             if (seen.Add(email))
             {
-                emails.Add(email);
+                recipients.Add(new AddressRecipient(email, firstName, lastName));
             }
         }
 
-        segment = new Addresses(emails);
+        segment = new Addresses(recipients);
         return true;
     }
 

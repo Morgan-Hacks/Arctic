@@ -839,6 +839,88 @@ public class CampaignTests(ApplicationsDatabase db)
             p => p!.Contains("would receive the blank itself", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// An imported list can be greeted by name, and a gap in it stops the send.
+    /// </summary>
+    /// <remarks>
+    /// The two halves of why names were put on a typed list in the first
+    /// place. A list imported from a spreadsheet of last year's attendees is
+    /// almost always imported in order to write "Hi Ada", and until it could
+    /// carry names that template was refused outright. Now it is allowed, and
+    /// the one guarantee that had to survive is that a blank in the column
+    /// still stops the send rather than producing "Hi ,".
+    /// </remarks>
+    [Fact]
+    public async Task An_imported_list_can_be_greeted_and_a_missing_name_still_refuses()
+    {
+        var (_, author) = await Comms();
+        var (_, approver) = await Comms();
+        var named = Unique("named");
+        var nameless = Unique("nameless");
+
+        var key = await TemplateWith(
+            "Hello {{firstName}}", "<p>Hi {{firstName}}</p>", "Hi {{firstName}}");
+
+        var id = Id(await Body(await Create(author, new
+        {
+            type = "explicitList",
+            recipients = new object[]
+            {
+                new { email = named, firstName = "Ada", lastName = "Lovelace" },
+                new { email = nameless },
+            },
+        }, key)));
+
+        var preview = await Body(await Preview(id, author));
+
+        // Offered and filled for the one we were given a name for, which is
+        // the part that did not work before.
+        var firstName = CoverageOf(preview, "firstName");
+        Assert.Equal(2, firstName.GetProperty("total").GetInt32());
+        Assert.Equal(1, firstName.GetProperty("missing").GetInt32());
+        Assert.Equal(
+            [nameless],
+            firstName.GetProperty("examples").EnumerateArray().Select(e => e.GetString()));
+
+        // And the send is refused while that one is in the list, which is the
+        // guarantee that makes carrying optional names safe.
+        var refused = await Send(id, approver);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Contains(
+            "would receive the blank itself",
+            (await Body(refused)).GetProperty("error").GetString()!,
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The same list, with every name present, goes.
+    /// </summary>
+    /// <remarks>
+    /// The other side of the test above. Without this one, a bug that refused
+    /// every typed list would pass as "working".
+    /// </remarks>
+    [Fact]
+    public async Task An_imported_list_where_everybody_has_a_name_sends()
+    {
+        var (_, author) = await Comms();
+        var (_, approver) = await Comms();
+        var key = await TemplateWith(
+            "Hello {{firstName}}", "<p>Hi {{firstName}}</p>", "Hi {{firstName}}");
+
+        var id = Id(await Body(await Create(author, new
+        {
+            type = "explicitList",
+            recipients = new object[]
+            {
+                new { email = Unique("ada"), firstName = "Ada", lastName = "Lovelace" },
+                new { email = Unique("bo"), firstName = "Bo", lastName = "Ng" },
+            },
+        }, key)));
+
+        Assert.Equal(HttpStatusCode.OK, (await Send(id, approver)).StatusCode);
+        Assert.Equal(2, await MessageCount(id));
+    }
+
     [Fact]
     public async Task A_template_everybody_can_fill_reports_nothing_missing()
     {
@@ -956,6 +1038,41 @@ public class CampaignTests(ApplicationsDatabase db)
         Assert.Equal("draft", campaign.GetProperty("campaign").GetProperty("status").GetString());
     }
 
+    /// <summary>
+    /// A campaign starts untracked even when its template is tracked.
+    /// </summary>
+    /// <remarks>
+    /// The new campaign dialog sends no tracking choice, and this used to fall
+    /// back to the template's click_tracking -- so a tracked template produced
+    /// tracked campaigns and the only sign was a toggle already switched on
+    /// two screens later. Open tracking is a 1x1 image in the body and click
+    /// tracking rewrites every link through our own domain; both are plain
+    /// bulk signals, and neither should arrive by inheritance.
+    /// </remarks>
+    [Fact]
+    public async Task A_campaign_is_untracked_even_when_its_template_is_tracked()
+    {
+        var (_, cookie) = await Comms();
+        var key = await TemplateWith("Tracked", "<p>Body</p>", "Body");
+
+        await using (var on = db.DataSource.CreateCommand(
+            "UPDATE notify.templates SET click_tracking = true WHERE key = @key"))
+        {
+            on.Parameters.AddWithValue("key", key);
+            await on.ExecuteNonQueryAsync();
+        }
+
+        // No trackingEnabled in the request, exactly as the dialog sends it.
+        var id = Id(await Body(await Create(
+            cookie, new { type = "explicitList", emails = new[] { Unique("tracked") } }, key)));
+        var saved = await Body(await Client().SendAsync(
+            Request(HttpMethod.Get, $"/admin/campaigns/{id}", cookie)));
+
+        Assert.False(
+            saved.GetProperty("campaign").GetProperty("trackingEnabled").GetBoolean(),
+            "A campaign should not inherit tracking from its template.");
+    }
+
     // ------------------------------------------------------- placeholders ---
 
     [Fact]
@@ -978,7 +1095,7 @@ public class CampaignTests(ApplicationsDatabase db)
              "event.name", "event.startsAt", "event.endsAt",
              "event.registrationOpensAt", "event.registrationClosesAt",
              "event.decisionsAnnouncedAt", "event.capacity",
-             "link.portal", "link.forms", "link.console"],
+             "link.portal", "link.forms", "link.console", "link.unsubscribe"],
             listed.Select(p => p.GetProperty("name").GetString()));
 
         // Grouped, so twelve names arrive under headings rather than as one
@@ -992,11 +1109,15 @@ public class CampaignTests(ApplicationsDatabase db)
     }
 
     [Fact]
-    public async Task A_list_of_addresses_is_offered_only_the_address()
+    public async Task A_list_of_addresses_is_offered_the_address_and_the_names()
     {
-        // The narrowing that matters: these recipients are sponsors and
-        // mentors this system has never heard of, so a name offered here is a
-        // template that gets written and then refused at send.
+        // The narrowing that matters: these recipients may be sponsors and
+        // mentors this system has never heard of, so anything read out of an
+        // application is a template that gets written and then refused at
+        // send. The two names are not read out of an application -- they are
+        // carried on the list itself, by whoever imported it -- so they are
+        // offered, and a list that happens to have none is refused at send by
+        // the coverage check rather than silently here.
         var (_, cookie) = await Comms();
         var eventId = await db.AddEventAsync();
         await Applicant(eventId, Unique("ignored"), "accepted");
@@ -1010,11 +1131,11 @@ public class CampaignTests(ApplicationsDatabase db)
         // from an application is offered — but our own links do not depend on
         // who is receiving the mail, so they are.
         Assert.Equal(
-            ["email",
+            ["email", "firstName", "lastName",
              "event.name", "event.startsAt", "event.endsAt",
              "event.registrationOpensAt", "event.registrationClosesAt",
              "event.decisionsAnnouncedAt", "event.capacity",
-             "link.portal", "link.forms", "link.console"],
+             "link.portal", "link.forms", "link.console", "link.unsubscribe"],
             await PlaceholdersOn(addresses, cookie));
 
         Assert.Equal(
@@ -1023,7 +1144,7 @@ public class CampaignTests(ApplicationsDatabase db)
              "event.name", "event.startsAt", "event.endsAt",
              "event.registrationOpensAt", "event.registrationClosesAt",
              "event.decisionsAnnouncedAt", "event.capacity",
-             "link.portal", "link.forms", "link.console"],
+             "link.portal", "link.forms", "link.console", "link.unsubscribe"],
             await PlaceholdersOn(applicants, cookie));
     }
 

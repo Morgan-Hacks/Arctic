@@ -63,6 +63,39 @@ public sealed class SesEmailProvider(
             request.ReplyToAddresses = [message.ReplyTo];
         }
 
+        // Set on broadcasts only, because UnsubscribeStore only mints an
+        // address for that lane. The pair has to travel together: the header
+        // on its own is the old mailto-and-a-link convention, and it is
+        // List-Unsubscribe-Post that tells Gmail and Yahoo the URL can be
+        // POSTed without the reader being shown a confirmation page, which is
+        // what they mean by one-click and what they now require of bulk
+        // senders.
+        //
+        // The angle brackets are RFC 2369's and not decoration -- a bare URL
+        // in this header is ignored by some clients.
+        //
+        // Worth knowing rather than discovering: this does not move mail out
+        // of Gmail's Promotions tab and can push it further in, since the
+        // header is also how Gmail recognises bulk. It is here to keep
+        // complaints off the sending domain, which is the thing that would
+        // cost us the decision emails as well.
+        if (!string.IsNullOrWhiteSpace(message.UnsubscribeUrl))
+        {
+            request.Content.Simple.Headers =
+            [
+                new MessageHeader
+                {
+                    Name = "List-Unsubscribe",
+                    Value = $"<{message.UnsubscribeUrl}>",
+                },
+                new MessageHeader
+                {
+                    Name = "List-Unsubscribe-Post",
+                    Value = "List-Unsubscribe=One-Click",
+                },
+            ];
+        }
+
         try
         {
             var response = await ses.SendEmailAsync(request, ct);

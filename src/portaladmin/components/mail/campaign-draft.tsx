@@ -10,8 +10,40 @@ import { PersonalizedField } from "@/components/templates/personalized-field";
 import type { Placeholder } from "@/components/templates/types";
 import type { PreviewResult, SendResult } from "@/app/mail/actions";
 import { StatusPill } from "./status";
-import { APPLICANT_STATUSES, describeSegment, type Campaign, type CampaignAnalytics, type CampaignSaveResult, type CampaignUpdate, type EventChoice, type FormChoice, type FormQuestion, type FormQuestionsRead, type Preview, type Render, type Segment } from "./types";
+import { RecipientImport } from "./recipient-import";
+import { APPLICANT_STATUSES, describeSegment, type Campaign, type CampaignAnalytics, type CampaignSaveResult, type CampaignUpdate, type EventChoice, type FormChoice, type FormQuestion, type FormQuestionsRead, type ListRecipient, type Preview, type Render, type Segment, listRecipients } from "./types";
 import styles from "./campaign-draft.module.css";
+
+/**
+ * One entry per address, first spelling wins.
+ *
+ * Case-insensitive because these are pasted or imported out of a spreadsheet,
+ * where the same person appears twice in two capitalisations more often than
+ * anybody expects. The server applies the same rule when it parses the
+ * segment; doing it here as well is what makes the number on the screen the
+ * number that gets sent.
+ */
+function dedupe(recipients: ListRecipient[]): ListRecipient[] {
+  const seen = new Set<string>();
+  const kept: ListRecipient[] = [];
+
+  for (const recipient of recipients) {
+    const email = recipient.email.trim();
+    if (email === "") continue;
+
+    const key = email.toLowerCase();
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    kept.push({
+      email,
+      firstName: recipient.firstName?.trim() || undefined,
+      lastName: recipient.lastName?.trim() || undefined,
+    });
+  }
+
+  return kept;
+}
 
 const steps = ["Settings", "Design", "Recipients", "Review and send"];
 type Content = NonNullable<CampaignAnalytics["content"]>;
@@ -146,6 +178,13 @@ export function CampaignDraft({ campaign: initialCampaign, content, available, f
     ? answerQuestions.find(question => question.key === answer.question) ?? null
     : null;
   const audience = draft.segment ? describeSegment(draft.segment, formName ?? null) : "Not selected yet";
+
+  // How many of a typed list came in with a name on them. It decides whether
+  // the paste box is the only way to fill this audience -- and therefore
+  // whether it is required -- and it is what the "remove them" line counts.
+  const namedCount = draft.segment?.type === "explicitList"
+    ? listRecipients(draft.segment).filter(r => r.firstName || r.lastName).length
+    : 0;
   const problems = resolved?.problems ?? [];
   const missing = resolved?.placeholderCoverage?.filter(item => item.missing > 0) ?? [];
   const ready = Boolean(resolved && resolved.recipientCount > 0 && !problems.length && !missing.length && !changed && resolved.revision === draft.revision);
@@ -225,8 +264,14 @@ export function CampaignDraft({ campaign: initialCampaign, content, available, f
 
   async function persist() {
     if (!changed) return draft.revision;
+    // Deduplicated on the address and case-insensitively, because these come
+    // out of a spreadsheet. The first row for an address wins, names and all:
+    // a second row for the same person is a duplicate rather than a
+    // correction, and nothing here could tell which was meant. The server
+    // dedupes again on the same rule -- this one is what makes the count on
+    // the screen match what gets sent.
     const normalized = draft.segment?.type === "explicitList"
-      ? { ...draft, segment: { ...draft.segment, emails: [...new Set(draft.segment.emails.map(email => email.trim()).filter(Boolean))] } }
+      ? { ...draft, segment: { type: "explicitList" as const, recipients: dedupe(listRecipients(draft.segment)) } }
       : draft;
     const result = await save(normalized);
     if (!result.ok) { setError(result.error); return null; }
@@ -301,7 +346,7 @@ export function CampaignDraft({ campaign: initialCampaign, content, available, f
         // been read yet, and a criterion nobody chose is one somebody could
         // send on.
         : type === "formAnswer" ? { type, formId: forms[0]?.id ?? "", question: "", value: "" }
-          : { type, emails: [] });
+          : { type, recipients: [] });
   }
 
   const sectionTitle = ["Campaign settings", "Preview your design", "Choose your recipients", "Review your campaign"][step];
@@ -367,7 +412,7 @@ export function CampaignDraft({ campaign: initialCampaign, content, available, f
                 </div>
               </div>
               <div id="campaign-reply-to-editor" className={styles.field} hidden={!editingReplyTo}><label htmlFor="campaign-reply-to">Reply-to email <span>Optional</span></label><input ref={replyToInput} id="campaign-reply-to" type="email" value={draft.replyTo} onChange={event => set("replyTo", event.target.value)} placeholder={draft.fromEmail} aria-describedby="campaign-reply-to-help" autoComplete="off" spellCheck={false} /><p id="campaign-reply-to-help" className={styles.hint}>Leave empty to receive replies at the sender address.</p></div>
-              <label className={styles.tracking}><span><strong>Email tracking</strong><small>Track opens, clicks, devices, and approximate countries.</small></span><input type="checkbox" role="switch" checked={draft.trackingEnabled} onChange={event => set("trackingEnabled", event.target.checked)} /><span className={styles.switch} aria-hidden="true" /></label>
+              <label className={styles.tracking}><span><strong>Email tracking</strong><small>Track opens, clicks, devices, and approximate countries. Off by default: tracking adds a hidden image and routes every link through us, which is part of how Gmail decides a message is bulk.</small></span><input type="checkbox" role="switch" checked={draft.trackingEnabled} onChange={event => set("trackingEnabled", event.target.checked)} /><span className={styles.switch} aria-hidden="true" /></label>
             </fieldset>
             <button type="submit" style={{ display: "none" }} tabIndex={-1} aria-hidden="true">Continue to design</button>
           </form>
@@ -450,7 +495,33 @@ export function CampaignDraft({ campaign: initialCampaign, content, available, f
                   <p className={styles.hint}>Matched exactly, ignoring capitals. Nothing about the answer goes into the email — it only decides who receives it.</p>
                 </div>
               </> : null}
-              {draft.segment?.type === "explicitList" ? <div className={styles.field}><label htmlFor="campaign-addresses">Email addresses</label><textarea id="campaign-addresses" required rows={7} value={draft.segment.emails.join("\n")} onChange={event => set("segment", { type: "explicitList", emails: event.target.value.split(/[\n,;]/) })} placeholder={"name@example.com\nanother@example.com"} spellCheck={false} /><p className={styles.hint}>One per line, or separated by commas. Duplicate addresses are counted once.</p></div> : null}
+              {draft.segment?.type === "explicitList" ? <>
+                <div className={styles.field}>
+                  <label htmlFor="campaign-addresses">Email addresses</label>
+                  <textarea id="campaign-addresses" required={namedCount === 0} rows={7}
+                    value={listRecipients(draft.segment).filter(r => !r.firstName && !r.lastName).map(r => r.email).join("\n")}
+                    onChange={event => set("segment", {
+                      type: "explicitList",
+                      // Typed addresses replace the typed addresses and leave
+                      // imported rows alone, so editing this box cannot silently
+                      // drop four hundred names somebody just mapped.
+                      recipients: [
+                        ...(draft.segment?.type === "explicitList" ? listRecipients(draft.segment).filter(r => r.firstName || r.lastName) : []),
+                        ...event.target.value.split(/[\n,;]/).map(email => email.trim()).filter(Boolean).map(email => ({ email })),
+                      ],
+                    })}
+                    placeholder={"name@example.com\nanother@example.com"} spellCheck={false} />
+                  <p className={styles.hint}>One per line, or separated by commas. Duplicate addresses are counted once. Addresses typed here have no name, so a template that greets people cannot be sent to them.</p>
+                </div>
+                {namedCount > 0 ? <p className={styles.importReady}><Icon icon={Tick02Icon} size={16} /><span>{namedCount.toLocaleString()} imported {namedCount === 1 ? "recipient" : "recipients"} with names. <button type="button" className={styles.textButton} onClick={() => set("segment", { type: "explicitList", recipients: draft.segment?.type === "explicitList" ? listRecipients(draft.segment).filter(r => !r.firstName && !r.lastName) : [] })}>Remove them</button></span></p> : null}
+                <RecipientImport disabled={pending} onImport={recipients => set("segment", {
+                  type: "explicitList",
+                  recipients: dedupe([
+                    ...(draft.segment?.type === "explicitList" ? listRecipients(draft.segment) : []),
+                    ...recipients,
+                  ]),
+                })} />
+              </> : null}
               <button type="submit" style={{ display: "none" }} tabIndex={-1} aria-hidden="true">Refresh recipients</button>
             </fieldset>
           </form>

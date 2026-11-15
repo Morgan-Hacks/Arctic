@@ -324,23 +324,52 @@ public class MergeFieldValueTests
     }
 
     [Fact]
-    public void A_list_of_addresses_can_fill_nothing_that_depends_on_the_person()
+    public void A_list_of_addresses_can_fill_nothing_it_was_not_given()
     {
         // The rule is not "only the address" — it is that a typed list carries
-        // no answers, so nothing derived from an application can be filled.
-        // Our own links are the same sentence for everybody in the send and
-        // are unaffected by who is receiving it, so they stay offered.
+        // only what whoever built it supplied, so nothing read out of an
+        // application can be filled. Our own links are the same sentence for
+        // everybody in the send and are unaffected by who is receiving it, so
+        // they stay offered.
+        //
+        // The names are the exception, and the reason the shape carries them:
+        // an imported list is usually an export of people we mailed last year,
+        // and it has their names in two columns beside the address. The rest
+        // of the catalogue is still out, because a shirt size is on an
+        // application and these recipients may not have one.
         var fillable = MergeFields.Fillable(
-            new Segment.Addresses(["someone@example.invalid"]));
+            new Segment.Addresses([new Segment.AddressRecipient(
+                "someone@example.invalid", "Ada", "Lovelace")]));
 
         Assert.Contains("email", fillable);
         Assert.Contains("link.portal", fillable);
+        Assert.Contains("firstName", fillable);
+        Assert.Contains("lastName", fillable);
 
-        foreach (var personal in new[]
-                 { "firstName", "lastName", "school", "graduationYear", "shirtSize" })
+        foreach (var personal in new[] { "school", "graduationYear", "shirtSize" })
         {
             Assert.DoesNotContain(personal, fillable);
         }
+    }
+
+    /// <summary>
+    /// Offering a name is about the shape, not about one list having them.
+    /// </summary>
+    /// <remarks>
+    /// Fillable answers "can this kind of audience carry a name", because that
+    /// is what decides whether the editor offers the placeholder at all.
+    /// Whether this particular list has one for everybody is the coverage
+    /// check's question, asked at send against the resolved members — which is
+    /// what refuses the greeting template aimed at a list with a blank in it.
+    /// </remarks>
+    [Fact]
+    public void A_list_with_no_names_still_offers_them_and_is_refused_later_instead()
+    {
+        var fillable = MergeFields.Fillable(
+            new Segment.Addresses([new Segment.AddressRecipient(
+                "sponsor@example.invalid", null, null)]));
+
+        Assert.Contains("firstName", fillable);
     }
 
     [Fact]
@@ -781,7 +810,8 @@ public class MergeFieldValueTests
         var answers = Asks("survey", Question("shirt_size"));
 
         var fillable = MergeFields.Fillable(
-            new Segment.Addresses(["sponsor@example.invalid"]),
+            new Segment.Addresses([new Segment.AddressRecipient(
+                "sponsor@example.invalid", null, null)]),
             saved: null, aboutAForm: true, answers: answers);
 
         Assert.DoesNotContain("form.answer.shirt_size", fillable);
