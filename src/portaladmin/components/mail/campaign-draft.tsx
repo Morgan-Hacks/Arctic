@@ -11,7 +11,7 @@ import type { Placeholder } from "@/components/templates/types";
 import type { PreviewResult, SendResult } from "@/app/mail/actions";
 import { StatusPill } from "./status";
 import { RecipientImport } from "./recipient-import";
-import { APPLICANT_STATUSES, describeSegment, type Campaign, type CampaignAnalytics, type CampaignSaveResult, type CampaignUpdate, type EventChoice, type FormChoice, type FormQuestion, type FormQuestionsRead, type ListRecipient, type Preview, type Render, type Segment } from "./types";
+import { APPLICANT_STATUSES, describeSegment, type Campaign, type CampaignAnalytics, type CampaignSaveResult, type CampaignUpdate, type EventChoice, type FormChoice, type FormQuestion, type FormQuestionsRead, type ListRecipient, type Preview, type Render, type Segment, listRecipients } from "./types";
 import styles from "./campaign-draft.module.css";
 
 /**
@@ -183,7 +183,7 @@ export function CampaignDraft({ campaign: initialCampaign, content, available, f
   // the paste box is the only way to fill this audience -- and therefore
   // whether it is required -- and it is what the "remove them" line counts.
   const namedCount = draft.segment?.type === "explicitList"
-    ? draft.segment.recipients.filter(r => r.firstName || r.lastName).length
+    ? listRecipients(draft.segment).filter(r => r.firstName || r.lastName).length
     : 0;
   const problems = resolved?.problems ?? [];
   const missing = resolved?.placeholderCoverage?.filter(item => item.missing > 0) ?? [];
@@ -271,7 +271,7 @@ export function CampaignDraft({ campaign: initialCampaign, content, available, f
     // dedupes again on the same rule -- this one is what makes the count on
     // the screen match what gets sent.
     const normalized = draft.segment?.type === "explicitList"
-      ? { ...draft, segment: { ...draft.segment, recipients: dedupe(draft.segment.recipients) } }
+      ? { ...draft, segment: { type: "explicitList" as const, recipients: dedupe(listRecipients(draft.segment)) } }
       : draft;
     const result = await save(normalized);
     if (!result.ok) { setError(result.error); return null; }
@@ -499,25 +499,25 @@ export function CampaignDraft({ campaign: initialCampaign, content, available, f
                 <div className={styles.field}>
                   <label htmlFor="campaign-addresses">Email addresses</label>
                   <textarea id="campaign-addresses" required={namedCount === 0} rows={7}
-                    value={draft.segment.recipients.filter(r => !r.firstName && !r.lastName).map(r => r.email).join("\n")}
+                    value={listRecipients(draft.segment).filter(r => !r.firstName && !r.lastName).map(r => r.email).join("\n")}
                     onChange={event => set("segment", {
                       type: "explicitList",
                       // Typed addresses replace the typed addresses and leave
                       // imported rows alone, so editing this box cannot silently
                       // drop four hundred names somebody just mapped.
                       recipients: [
-                        ...(draft.segment?.type === "explicitList" ? draft.segment.recipients.filter(r => r.firstName || r.lastName) : []),
+                        ...(draft.segment?.type === "explicitList" ? listRecipients(draft.segment).filter(r => r.firstName || r.lastName) : []),
                         ...event.target.value.split(/[\n,;]/).map(email => email.trim()).filter(Boolean).map(email => ({ email })),
                       ],
                     })}
                     placeholder={"name@example.com\nanother@example.com"} spellCheck={false} />
                   <p className={styles.hint}>One per line, or separated by commas. Duplicate addresses are counted once. Addresses typed here have no name, so a template that greets people cannot be sent to them.</p>
                 </div>
-                {namedCount > 0 ? <p className={styles.importReady}><Icon icon={Tick02Icon} size={16} /><span>{namedCount.toLocaleString()} imported {namedCount === 1 ? "recipient" : "recipients"} with names. <button type="button" className={styles.textButton} onClick={() => set("segment", { type: "explicitList", recipients: draft.segment?.type === "explicitList" ? draft.segment.recipients.filter(r => !r.firstName && !r.lastName) : [] })}>Remove them</button></span></p> : null}
+                {namedCount > 0 ? <p className={styles.importReady}><Icon icon={Tick02Icon} size={16} /><span>{namedCount.toLocaleString()} imported {namedCount === 1 ? "recipient" : "recipients"} with names. <button type="button" className={styles.textButton} onClick={() => set("segment", { type: "explicitList", recipients: draft.segment?.type === "explicitList" ? listRecipients(draft.segment).filter(r => !r.firstName && !r.lastName) : [] })}>Remove them</button></span></p> : null}
                 <RecipientImport disabled={pending} onImport={recipients => set("segment", {
                   type: "explicitList",
                   recipients: dedupe([
-                    ...(draft.segment?.type === "explicitList" ? draft.segment.recipients : []),
+                    ...(draft.segment?.type === "explicitList" ? listRecipients(draft.segment) : []),
                     ...recipients,
                   ]),
                 })} />
