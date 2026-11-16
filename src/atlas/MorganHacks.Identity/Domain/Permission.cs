@@ -146,6 +146,18 @@ public readonly record struct Permission(string Value)
     /// </remarks>
     public static readonly Permission InventoryManage = new("inventory.manage");
 
+    /// <summary>Plan who covers which volunteer shift, and see the gaps.</summary>
+    /// <remarks>
+    /// One permission rather than a read and a write pair, for the reason
+    /// <see cref="InventoryManage"/> is: everybody who needs to look at the
+    /// coverage is somebody who moves names around on it, and a rota that
+    /// the people running the door cannot correct goes stale on the day it
+    /// matters most. Held by logistics and super admin -- the same holders
+    /// as the inventory it is planned beside -- and not by the volunteer
+    /// team itself, whose members scan rather than plan.
+    /// </remarks>
+    public static readonly Permission VolunteersManage = new("volunteers.manage");
+
     // Event ops — phase two
     public static readonly Permission CheckinScan = new("checkin.scan");
     public static readonly Permission SwagScan = new("swag.scan");
@@ -212,6 +224,7 @@ public readonly record struct Permission(string Value)
         CheckinScan, SwagScan, CheckinViewStats, CheckinOverride,
         JudgingScoreAssigned, JudgingViewAll, JudgingAssign,
         InventoryManage,
+        VolunteersManage,
         PeopleView, PeopleManageTeams, PeopleGrantPermissions, AuditView,
     };
 

@@ -499,6 +499,22 @@ public static class Events
     public const string SponsorReportExported = "sponsor.report_exported";
 
     /// <summary>
+    /// A volunteer shift was planned, removed, or had a name put on or taken
+    /// off it.
+    /// </summary>
+    /// <remarks>
+    /// Four names rather than one, because the question asked afterwards is
+    /// usually which of the four happened: a shift appearing, a shift going
+    /// away, or a name moving. Each carries the actor and the shift, and for
+    /// assignments the assignment id -- never the volunteer name or address,
+    /// which live on the row, behind a permission, where a log line is not.
+    /// </remarks>
+    public const string VolunteerShiftCreated = "volunteer_shift.created";
+    public const string VolunteerShiftRemoved = "volunteer_shift.removed";
+    public const string VolunteerShiftAssigned = "volunteer_shift.assigned";
+    public const string VolunteerShiftUnassigned = "volunteer_shift.unassigned";
+
+    /// <summary>
     /// Somebody took the money half out of the system.
     /// </summary>
     /// <remarks>
