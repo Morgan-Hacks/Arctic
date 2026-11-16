@@ -29,6 +29,18 @@ on:
       - "src/lark/**"
       - "libs/**"
       - "deploy/azure/**"
+      # Markdown under deploy/azure is documentation, and documentation does not
+      # deploy. Merging a docs-only PR (#276, which edited nothing but
+      # deploy/azure/README.md) rebuilt and pushed all four images, ran the
+      # migrations job, and rolled every staging app onto a new revision. The
+      # apps came up healthy, so the only costs were a few minutes of compute
+      # and three revisions nobody wanted -- but it also resets the KEDA poll
+      # window, which is what made a scaled-to-zero worker look stuck for an
+      # hour while being investigated.
+      #
+      # Negations have to follow the pattern they narrow; GitHub applies these
+      # in order.
+      - "!deploy/azure/**.md"
       - ".github/workflows/deploy-azure.yml"
   workflow_dispatch:
     inputs:
